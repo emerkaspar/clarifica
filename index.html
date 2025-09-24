@@ -1,407 +1,1153 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CLARIFICA - O seu farol de investimentos</title>
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste CLARIFICA - O seu farol de investimentos</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/favicon.png"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        body { background-color: #0f1011; color: #e0e0e0; font-family: 'Open Sans', sans-serif; margin: 0; padding: 0; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
-        .top-menu-container { background-color: #1a1b1e; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
-        .top-menu-left { display: flex; align-items: center; gap: 10px; }
-        .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
-        .logo img { height: 128px; width: auto; }
-        .logo-text { font-size: 1.4rem; font-weight: 600; color: #e0e0e0; }
-        .top-menu-right { display: flex; align-items: center; gap: 10px; }
-        #user-info { display: none; align-items: center; gap: 10px; background-color: #1a1b1e; padding: 8px 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); position: relative; cursor: pointer; }
-        #user-info img { width: 32px; height: 32px; border-radius: 50%; }
-        #user-info #user-name { font-weight: 600; color: #e0e0e0; }
-        #user-dropdown { position: absolute; top: calc(100% + 10px); right: 0; background-color: #1a1b1e; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); min-width: 220px; z-index: 1000; display: none; overflow: hidden; }
-        #user-dropdown.show { display: block; }
-        .user-dropdown-header { background-color: #00d9c3; color: #1f2937; padding: 15px; text-align: left; }
-        .user-dropdown-header p { margin: 0; font-weight: 600; font-size: 1.1rem; }
-        .user-dropdown-header span { font-size: 0.85rem; color: rgba(31, 41, 55, 0.8); }
-        .user-dropdown-item { display: flex; align-items: center; gap: 10px; padding: 12px 15px; color: #e0e0e0; text-decoration: none; cursor: pointer; transition: background-color 0.2s ease-in-out; border-top: 1px solid #2a2c30; }
-        .user-dropdown-item:hover { background-color: #2a2c30; }
-        .user-dropdown-item svg { width: 16px; height: 16px; fill: #e0e0e0; }
-        .main-content-wrapper { background-color: #161a22; border-radius: 8px; padding-top: 15px; }
-        .nav-tabs-wrapper { padding: 0 15px; border-bottom: 1px solid #2a2c30; }
-        .nav-tabs { display: flex; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; gap: 10px; }
-        .nav-tabs .nav-link { display: block; padding: 10px 18px; text-decoration: none; background-color: #2c313d; color: #a0a7b3; border: 1px solid #3a404d; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease-in-out; margin-bottom: -1px; }
-        .nav-tabs .nav-link:hover:not(.active) { background-color: #383d47; color: #00d9c3; border-color: #4b5261; }
-        .nav-tabs .nav-link.active { color: #1f2937; background-color: #d1d5db; border-color: #9ca3af; border-bottom: 1px solid #d1d5db; }
-        .tab-content { padding: 30px; }
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; }
-        .tab-pane > h2 { margin-top: 0; font-weight: 600; border-bottom: 1px solid #2a2c30; padding-bottom: 10px; color: #f8f9fa; }
-        #login-button-container { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 180px); padding: 20px; }
-        #btn-main-login-google { background-color: #00d9c3; color: #1f2937; font-size: 1.1rem; font-weight: 600; padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out; box-shadow: 0 4px 10px rgba(0, 217, 195, 0.2); }
-        #btn-main-login-google:hover { background-color: #00c2af; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 217, 195, 0.3); }
-        #btn-main-login-google img { width: 22px; height: 22px; }
-        #app-content { display: none; }
-        #form-wrapper { display: none; }
-        .lancamento-container { max-width: 600px; margin: 0 auto 40px auto; background-color: #1a1b1e; padding: 25px 30px; border-radius: 12px; border: 1px solid #2a2c30; }
-        .form-label { display: block; margin-bottom: 5px; color: #a0a7b3; font-size: 0.9rem; font-weight: 500; }
-        .form-input, .form-select { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #3a404d; background-color: #2a2c30; color: #e0e0e0; font-size: 1rem; box-sizing: border-box; }
-        .form-input:focus, .form-select:focus { outline: none; border-color: #00d9c3; box-shadow: 0 0 0 3px rgba(0, 217, 195, 0.2); }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 10px; }
-        .tipo-operacao { display: flex; gap: 10px; margin-bottom: 25px; }
-        .tipo-operacao button { flex-grow: 1; padding: 12px; font-size: 1rem; font-weight: 600; border: 1px solid #3a404d; background-color: #2a2c30; color: #a0a7b3; border-radius: 6px; cursor: pointer; transition: all 0.2s ease-in-out; }
-        .tipo-operacao button.active { background-color: #00d9c3; color: #1f2937; border-color: #00d9c3; }
-        .valor-total-box { grid-column: 1 / -1; background-color: #0f1011; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .valor-total-box span { font-size: 1.1rem; font-weight: 500; color: #a0a7b3; }
-        #valor-total-calculado { font-size: 1.4rem; font-weight: 600; color: #e0e0e0; }
-        .form-footer { display: flex; justify-content: flex-end; align-items: center; gap: 20px; margin-top: 25px; border-top: 1px solid #2a2c30; padding-top: 20px; }
-        .btn-cancelar { color: #a0a7b3; background: none; border: none; cursor: pointer; font-size: 1rem; font-weight: 600; }
-        .btn-cancelar:hover { color: #e0e0e0; }
-        .btn-adicionar { background-color: #00d9c3; color: #1f2937; font-weight: 600; font-size: 1rem; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background-color 0.2s ease-in-out; }
-        .btn-adicionar:hover { background-color: #00c2af; }
-        .historico-container { max-width: 900px; margin: 0 auto; }
-        .historico-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .historico-header h3 { color: #e0e0e0; margin: 0; }
-        #search-ativo { background-color: #2a2c30; border: 1px solid #3a404d; border-radius: 6px; color: #e0e0e0; padding: 8px 12px; font-size: 0.9rem; }
-        #btn-mostrar-form { font-size: 0.9rem; padding: 8px 15px; }
-        .historico-lista-header { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; gap: 15px; padding: 0 20px; margin-bottom: 5px; }
-        .header-col { color: #a0a7b3; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
-        .historico-item { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: center; background-color: #1a1b1e; padding: 12px 20px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #2a2c30; font-size: 0.9rem; }
-        .historico-item-valor { font-weight: 500; }
-        .tipo-ativo-badge { background-color: #2c313d; color: #a0a7b3; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
-        .operacao-compra { color: #22c55e; }
-        .operacao-venda { color: #ef4444; }
-        .historico-acoes { display: flex; gap: 10px; }
-        .btn-crud { background: none; border: none; cursor: pointer; padding: 5px; }
-        .btn-crud svg { width: 18px; height: 18px; transition: fill 0.2s ease-in-out; }
-        .btn-editar svg { fill: #a0a7b3; }
-        .btn-editar:hover svg { fill: #00d9c3; }
-        .btn-excluir svg { fill: #a0a7b3; }
-        .btn-excluir:hover svg { fill: #ef4444; }
-        #historico-lista p { text-align: center; color: #a0a7b3; padding: 20px; }
-        .input-wrapper {
-  position: relative; /* garante que o autocomplete fique preso dentro */
-}
+      body {
+        background-color: #0f1011;
+        color: #e0e0e0;
+        font-family: "Open Sans", sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .top-menu-container {
+        background-color: #1a1b1e;
+        padding: 10px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+      }
+      .top-menu-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: inherit;
+      }
+      .logo img {
+        height: 128px;
+        width: auto;
+      }
+      .logo-text {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #e0e0e0;
+      }
+      .top-menu-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #user-info {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        background-color: #1a1b1e;
+        padding: 8px 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        position: relative;
+        cursor: pointer;
+      }
+      #user-info img {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+      }
+      #user-info #user-name {
+        font-weight: 600;
+        color: #e0e0e0;
+      }
+      #user-dropdown {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        background-color: #1a1b1e;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        min-width: 220px;
+        z-index: 1000;
+        display: none;
+        overflow: hidden;
+      }
+      #user-dropdown.show {
+        display: block;
+      }
+      .user-dropdown-header {
+        background-color: #00d9c3;
+        color: #1f2937;
+        padding: 15px;
+        text-align: left;
+      }
+      .user-dropdown-header p {
+        margin: 0;
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+      .user-dropdown-header span {
+        font-size: 0.85rem;
+        color: rgba(31, 41, 55, 0.8);
+      }
+      .user-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 15px;
+        color: #e0e0e0;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+        border-top: 1px solid #2a2c30;
+      }
+      .user-dropdown-item:hover {
+        background-color: #2a2c30;
+      }
+      .user-dropdown-item svg {
+        width: 16px;
+        height: 16px;
+        fill: #e0e0e0;
+      }
+      .main-content-wrapper {
+        background-color: #161a22;
+        border-radius: 8px;
+        padding-top: 15px;
+      }
+      .nav-tabs-wrapper {
+        padding: 0 15px;
+        border-bottom: 1px solid #2a2c30;
+      }
+      .nav-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        gap: 10px;
+      }
+      .nav-tabs .nav-link {
+        display: block;
+        padding: 10px 18px;
+        text-decoration: none;
+        background-color: #2c313d;
+        color: #a0a7b3;
+        border: 1px solid #3a404d;
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+        margin-bottom: -1px;
+      }
+      .nav-tabs .nav-link:hover:not(.active) {
+        background-color: #383d47;
+        color: #00d9c3;
+        border-color: #4b5261;
+      }
+      .nav-tabs .nav-link.active {
+        color: #1f2937;
+        background-color: #d1d5db;
+        border-color: #9ca3af;
+        border-bottom: 1px solid #d1d5db;
+      }
+      .tab-content {
+        padding: 30px;
+      }
+      .tab-pane {
+        display: none;
+      }
+      .tab-pane.active {
+        display: block;
+      }
+      .tab-pane > h2 {
+        margin-top: 0;
+        font-weight: 600;
+        border-bottom: 1px solid #2a2c30;
+        padding-bottom: 10px;
+        color: #f8f9fa;
+      }
+      #login-button-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 180px);
+        padding: 20px;
+      }
+      #btn-main-login-google {
+        background-color: #00d9c3;
+        color: #1f2937;
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background-color 0.2s ease-in-out,
+          transform 0.2s ease-in-out;
+        box-shadow: 0 4px 10px rgba(0, 217, 195, 0.2);
+      }
+      #btn-main-login-google:hover {
+        background-color: #00c2af;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 217, 195, 0.3);
+      }
+      #btn-main-login-google img {
+        width: 22px;
+        height: 22px;
+      }
+      #app-content {
+        display: none;
+      }
+      #form-wrapper {
+        display: none;
+      }
+      .lancamento-container {
+        max-width: 600px;
+        margin: 0 auto 40px auto;
+        background-color: #1a1b1e;
+        padding: 25px 30px;
+        border-radius: 12px;
+        border: 1px solid #2a2c30;
+      }
+      .form-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #a0a7b3;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+      .form-input,
+      .form-select {
+        width: 100%;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #3a404d;
+        background-color: #2a2c30;
+        color: #e0e0e0;
+        font-size: 1rem;
+        box-sizing: border-box;
+      }
+      .form-input:focus,
+      .form-select:focus {
+        outline: none;
+        border-color: #00d9c3;
+        box-shadow: 0 0 0 3px rgba(0, 217, 195, 0.2);
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 10px;
+      }
+      .tipo-operacao {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+      }
+      .tipo-operacao button {
+        flex-grow: 1;
+        padding: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        border: 1px solid #3a404d;
+        background-color: #2a2c30;
+        color: #a0a7b3;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+      }
+      .tipo-operacao button.active {
+        background-color: #00d9c3;
+        color: #1f2937;
+        border-color: #00d9c3;
+      }
+      .valor-total-box {
+        grid-column: 1 / -1;
+        background-color: #0f1011;
+        padding: 15px 20px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+      }
+      .valor-total-box span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #a0a7b3;
+      }
+      #valor-total-calculado {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #e0e0e0;
+      }
+      .form-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 20px;
+        margin-top: 25px;
+        border-top: 1px solid #2a2c30;
+        padding-top: 20px;
+      }
+      .btn-cancelar {
+        color: #a0a7b3;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .btn-cancelar:hover {
+        color: #e0e0e0;
+      }
+      .btn-adicionar {
+        background-color: #00d9c3;
+        color: #1f2937;
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.2s ease-in-out;
+      }
+      .btn-adicionar:hover {
+        background-color: #00c2af;
+      }
+      .historico-container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      .historico-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .historico-header h3 {
+        color: #e0e0e0;
+        margin: 0;
+      }
+      #search-ativo {
+        background-color: #2a2c30;
+        border: 1px solid #3a404d;
+        border-radius: 6px;
+        color: #e0e0e0;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+      }
+      #btn-mostrar-form {
+        font-size: 0.9rem;
+        padding: 8px 15px;
+      }
+      .historico-lista-header {
+        display: grid;
+        grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto;
+        gap: 15px;
+        padding: 0 20px;
+        margin-bottom: 5px;
+      }
+      .header-col {
+        color: #a0a7b3;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .historico-item {
+        display: grid;
+        grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto;
+        gap: 15px;
+        align-items: center;
+        background-color: #1a1b1e;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border: 1px solid #2a2c30;
+        font-size: 0.9rem;
+      }
+      .historico-item-valor {
+        font-weight: 500;
+      }
+      .tipo-ativo-badge {
+        background-color: #2c313d;
+        color: #a0a7b3;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+      .operacao-compra {
+        color: #22c55e;
+      }
+      .operacao-venda {
+        color: #ef4444;
+      }
+      .historico-acoes {
+        display: flex;
+        gap: 10px;
+      }
+      .btn-crud {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+      }
+      .btn-crud svg {
+        width: 18px;
+        height: 18px;
+        transition: fill 0.2s ease-in-out;
+      }
+      .btn-editar svg {
+        fill: #a0a7b3;
+      }
+      .btn-editar:hover svg {
+        fill: #00d9c3;
+      }
+      .btn-excluir svg {
+        fill: #a0a7b3;
+      }
+      .btn-excluir:hover svg {
+        fill: #ef4444;
+      }
+      #historico-lista p {
+        text-align: center;
+        color: #a0a7b3;
+        padding: 20px;
+      }
+      .input-wrapper {
+        position: relative; /* garante que o autocomplete fique preso dentro */
+      }
 
-.sugestoes-lista {
-  position: absolute;
-  top: 100%;   /* logo abaixo do input */
-  left: 0;
-  right: 0;
-  background-color: #1a1b1e;
-  border: 1px solid #3a404d;
-  border-radius: 6px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 2000;
-}
-
-        
+      .sugestoes-lista {
+        position: absolute;
+        top: 100%; /* logo abaixo do input */
+        left: 0;
+        right: 0;
+        background-color: #1a1b1e;
+        border: 1px solid #3a404d;
+        border-radius: 6px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 2000;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="top-menu-container"><div class="top-menu-left"><a href="#" class="logo"><img src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png" alt="Logomarca Clarifica"><span class="logo-text">CLARIFICA</span></a></div><div class="top-menu-right"><div id="user-info"><img id="user-photo" src="" alt="Foto do usuário"><span id="user-name"></span><div id="user-dropdown"><div class="user-dropdown-header"><p id="dropdown-user-name"></p><span id="dropdown-user-email"></span></div><a href="#" id="btn-logout" class="user-dropdown-item"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg> Sair</a></div></div></div></div>
-        <div id="login-button-container"><button id="btn-main-login-google"><img src="https://raw.githubusercontent.com/emerkaspar/clarifica/main/favicon.png" alt="Logo Clarifica"> Fazer Login com Google</button></div>
-        <div id="app-content">
-            <div class="main-content-wrapper">
-                <div class="nav-tabs-wrapper"><ul class="nav-tabs" id="myTab"><li><a class="nav-link active" data-tab="patrimonio">Patrimônio</a></li><li><a class="nav-link" data-tab="rentabilidade">Rentabilidade</a></li><li><a class="nav-link" data-tab="acoes">Ações</a></li><li><a class="nav-link" data-tab="fiis">Fiis</a></li><li><a class="nav-link" data-tab="etf-cripto">Etf/Cripto</a></li><li><a class="nav-link" data-tab="renda-fixa">Renda Fixa</a></li><li><a class="nav-link" data-tab="calculos">Cálculos</a></li><li><a class="nav-link" data-tab="analises">Análises</a></li><li><a class="nav-link" data-tab="lancamentos">Lançamentos</a></li></ul></div>
-                <div class="tab-content" id="myTabContent">
-                    <div class="tab-pane active" id="patrimonio"><h2>Visão Geral do Patrimônio</h2><p>Aqui você verá a consolidação total da sua carteira, gráficos de evolução e alocação por tipo de ativo.</p></div>
-                    <div class="tab-pane" id="rentabilidade"><h2>Análise de Rentabilidade</h2><p>Acompanhe a rentabilidade da sua carteira, comparativos com benchmarks e desempenho de cada ativo.</p></div>
-                    <div class="tab-pane" id="acoes"><h2>Carteira de Ações</h2><p>Detalhes sobre suas posições em ações, dividendos recebidos, preço médio e resultados.</p></div>
-                    <div class="tab-pane" id="fiis"><h2>Carteira de FIIs</h2><p>Detalhes sobre seus Fundos Imobiliários, rendimentos mensais, valor patrimonial e indicadores.</p></div>
-                    <div class="tab-pane" id="etf-cripto"><h2>ETFs e Criptomoedas</h2><p>Consolidação de seus investimentos em ETFs e criptoativos.</p></div>
-                    <div class="tab-pane" id="renda-fixa"><h2>Renda Fixa</h2><p>Seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros ativos de renda fixa.</p></div>
-                    <div class="tab-pane" id="calculos"><h2>Cálculos e Projeções</h2><p>Ferramentas para cálculos de preço médio, projeção de aposentadoria e outras simulações.</p></div>
-                    <div class="tab-pane" id="analises"><h2>Análises Detalhadas</h2><p>Aqui você encontrará análises detalhadas de seus investimentos.</p></div>
-                    <div class="tab-pane" id="lancamentos">
-                        <div id="form-wrapper">
-                            <h2>Adicionar Ativo</h2>
-                            <div class="lancamento-container"><form id="form-novo-ativo"><input type="hidden" id="doc-id" name="doc-id"><div class="tipo-operacao"><button type="button" class="btn-compra active" data-op="compra">Compra</button><button type="button" class="btn-venda" data-op="venda">Venda</button></div><input type="hidden" id="operacao-tipo" name="operacao-tipo" value="compra"><div class="form-grid"><div><label for="tipo-ativo" class="form-label">Tipo de ativo</label><select id="tipo-ativo" name="tipo-ativo" class="form-select" required><option value="Ações">Ações</option><option value="FIIs">FIIs</option><option value="ETF">ETF</option><option value="Cripto">Criptomoedas</option></select></div><!-- Dentro do form de lançamentos -->
-<div class="input-wrapper">
-  <label for="ativo" class="form-label">Ativo</label>
-  <input type="text" id="ativo" name="ativo" placeholder="Ex: PETR4" 
-         class="form-input" required autocomplete="off">
-  <div id="ativo-sugestoes" class="sugestoes-lista"></div>
-</div>
-
-<style>
-  .sugestoes-lista {
-    position: absolute;
-    background-color: #1a1b1e;
-    border: 1px solid #3a404d;
-    border-radius: 6px;
-    max-height: 200px;
-    overflow-y: auto;
-    width: 90%;
-    z-index: 2000;
-  }
-  .sugestao-item {
-    padding: 8px 12px;
-    cursor: pointer;
-    color: #e0e0e0;
-  }
-  .sugestao-item:hover {
-    background-color: #2c313d;
-  }
-</style>
-<div><label for="data-operacao" class="form-label">Data da operação</label><input type="date" id="data-operacao" name="data-operacao" class="form-input" required></div><div><label for="quantidade" class="form-label">Quantidade</label><input type="number" id="quantidade" name="quantidade" value="1" step="any" class="form-input" required></div><div><label for="preco" class="form-label">Preço em R$</label><input type="number" id="preco" name="preco" placeholder="0,00" step="0.01" class="form-input" required></div><div><label for="outros-custos" class="form-label">Outros custos <span style="color: #888;">(Opcional)</span></label><input type="number" id="outros-custos" name="outros-custos" placeholder="0,00" step="0.01" class="form-input"></div></div><div class="valor-total-box"><span>Valor total</span><span id="valor-total-calculado">R$ 0,00</span></div><div class="form-footer"><button type="button" class="btn-cancelar">Cancelar</button><button type="submit" class="btn-adicionar">+ Adicionar Ativo</button></div></form></div>
-                        </div>
-                        <div class="historico-container">
-                            <div class="historico-header">
-                                <h3>Histórico de Lançamentos</h3>
-                                <div style="display: flex; align-items: center; gap: 15px;">
-                                    <input type="search" id="search-ativo" placeholder="Pesquisar ativo...">
-                                    <button id="btn-mostrar-form" class="btn-adicionar">+ Novo Lançamento</button>
-                                </div>
-                            </div>
-                            <div class="historico-lista-header"><div class="header-col">Ativo</div><div class="header-col">Tipo</div><div class="header-col">Ordem</div><div class="header-col">Quantidade</div><div class="header-col">Preço Unitário</div><div class="header-col">Total</div><div class="header-col">Ações</div></div>
-                            <div id="historico-lista"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <div class="top-menu-container">
+        <div class="top-menu-left">
+          <a href="#" class="logo"
+            ><img
+              src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png"
+              alt="Logomarca Clarifica"
+            /><span class="logo-text">CLARIFICA</span></a
+          >
         </div>
+        <div class="top-menu-right">
+          <div id="user-info">
+            <img id="user-photo" src="" alt="Foto do usuário" /><span
+              id="user-name"
+            ></span>
+            <div id="user-dropdown">
+              <div class="user-dropdown-header">
+                <p id="dropdown-user-name"></p>
+                <span id="dropdown-user-email"></span>
+              </div>
+              <a href="#" id="btn-logout" class="user-dropdown-item"
+                ><svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"
+                  />
+                  <path
+                    fill-rule="evenodd"
+                    d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"
+                  />
+                </svg>
+                Sair</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="login-button-container">
+        <button id="btn-main-login-google">
+          <img
+            src="https://raw.githubusercontent.com/emerkaspar/clarifica/main/favicon.png"
+            alt="Logo Clarifica"
+          />
+          Fazer Login com Google
+        </button>
+      </div>
+      <div id="app-content">
+        <div class="main-content-wrapper">
+          <div class="nav-tabs-wrapper">
+            <ul class="nav-tabs" id="myTab">
+              <li>
+                <a class="nav-link active" data-tab="patrimonio">Patrimônio</a>
+              </li>
+              <li>
+                <a class="nav-link" data-tab="rentabilidade">Rentabilidade</a>
+              </li>
+              <li><a class="nav-link" data-tab="acoes">Ações</a></li>
+              <li><a class="nav-link" data-tab="fiis">Fiis</a></li>
+              <li><a class="nav-link" data-tab="etf-cripto">Etf/Cripto</a></li>
+              <li><a class="nav-link" data-tab="renda-fixa">Renda Fixa</a></li>
+              <li><a class="nav-link" data-tab="calculos">Cálculos</a></li>
+              <li><a class="nav-link" data-tab="analises">Análises</a></li>
+              <li>
+                <a class="nav-link" data-tab="lancamentos">Lançamentos</a>
+              </li>
+            </ul>
+          </div>
+          <div class="tab-content" id="myTabContent">
+            <div class="tab-pane active" id="patrimonio">
+              <h2>Visão Geral do Patrimônio</h2>
+              <p>
+                Aqui você verá a consolidação total da sua carteira, gráficos de
+                evolução e alocação por tipo de ativo.
+              </p>
+            </div>
+            <div class="tab-pane" id="rentabilidade">
+              <h2>Análise de Rentabilidade</h2>
+              <p>
+                Acompanhe a rentabilidade da sua carteira, comparativos com
+                benchmarks e desempenho de cada ativo.
+              </p>
+            </div>
+            <div class="tab-pane" id="acoes">
+              <h2>Carteira de Ações</h2>
+              <p>
+                Detalhes sobre suas posições em ações, dividendos recebidos,
+                preço médio e resultados.
+              </p>
+            </div>
+            <div class="tab-pane" id="fiis">
+              <h2>Carteira de FIIs</h2>
+              <p>
+                Detalhes sobre seus Fundos Imobiliários, rendimentos mensais,
+                valor patrimonial e indicadores.
+              </p>
+            </div>
+            <div class="tab-pane" id="etf-cripto">
+              <h2>ETFs e Criptomoedas</h2>
+              <p>Consolidação de seus investimentos em ETFs e criptoativos.</p>
+            </div>
+            <div class="tab-pane" id="renda-fixa">
+              <h2>Renda Fixa</h2>
+              <p>
+                Seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros
+                ativos de renda fixa.
+              </p>
+            </div>
+            <div class="tab-pane" id="calculos">
+              <h2>Cálculos e Projeções</h2>
+              <p>
+                Ferramentas para cálculos de preço médio, projeção de
+                aposentadoria e outras simulações.
+              </p>
+            </div>
+            <div class="tab-pane" id="analises">
+              <h2>Análises Detalhadas</h2>
+              <p>
+                Aqui você encontrará análises detalhadas de seus investimentos.
+              </p>
+            </div>
+            <div class="tab-pane" id="lancamentos">
+              <div id="form-wrapper">
+                <h2>Adicionar Ativo</h2>
+                <div class="lancamento-container">
+                  <form id="form-novo-ativo">
+                    <input type="hidden" id="doc-id" name="doc-id" />
+                    <div class="tipo-operacao">
+                      <button
+                        type="button"
+                        class="btn-compra active"
+                        data-op="compra"
+                      >
+                        Compra</button
+                      ><button type="button" class="btn-venda" data-op="venda">
+                        Venda
+                      </button>
+                    </div>
+                    <input
+                      type="hidden"
+                      id="operacao-tipo"
+                      name="operacao-tipo"
+                      value="compra"
+                    />
+                    <div class="form-grid">
+                      <div>
+                        <label for="tipo-ativo" class="form-label"
+                          >Tipo de ativo</label
+                        ><select
+                          id="tipo-ativo"
+                          name="tipo-ativo"
+                          class="form-select"
+                          required
+                        >
+                          <option value="Ações">Ações</option>
+                          <option value="FIIs">FIIs</option>
+                          <option value="ETF">ETF</option>
+                          <option value="Cripto">Criptomoedas</option>
+                        </select>
+                      </div>
+                      <!-- Dentro do form de lançamentos -->
+                      <div class="input-wrapper">
+                        <label for="ativo" class="form-label">Ativo</label>
+                        <input
+                          type="text"
+                          id="ativo"
+                          name="ativo"
+                          placeholder="Ex: PETR4"
+                          class="form-input"
+                          required
+                          autocomplete="off"
+                        />
+                        <div id="ativo-sugestoes" class="sugestoes-lista"></div>
+                      </div>
+
+                      <style>
+                        .sugestoes-lista {
+                          position: absolute;
+                          background-color: #1a1b1e;
+                          border: 1px solid #3a404d;
+                          border-radius: 6px;
+                          max-height: 200px;
+                          overflow-y: auto;
+                          width: 90%;
+                          z-index: 2000;
+                        }
+                        .sugestao-item {
+                          padding: 8px 12px;
+                          cursor: pointer;
+                          color: #e0e0e0;
+                        }
+                        .sugestao-item:hover {
+                          background-color: #2c313d;
+                        }
+                      </style>
+                      <div>
+                        <label for="data-operacao" class="form-label"
+                          >Data da operação</label
+                        ><input
+                          type="date"
+                          id="data-operacao"
+                          name="data-operacao"
+                          class="form-input"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label for="quantidade" class="form-label"
+                          >Quantidade</label
+                        ><input
+                          type="number"
+                          id="quantidade"
+                          name="quantidade"
+                          value="1"
+                          step="any"
+                          class="form-input"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label for="preco" class="form-label">Preço em R$</label
+                        ><input
+                          type="number"
+                          id="preco"
+                          name="preco"
+                          placeholder="0,00"
+                          step="0.01"
+                          class="form-input"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label for="outros-custos" class="form-label"
+                          >Outros custos
+                          <span style="color: #888">(Opcional)</span></label
+                        ><input
+                          type="number"
+                          id="outros-custos"
+                          name="outros-custos"
+                          placeholder="0,00"
+                          step="0.01"
+                          class="form-input"
+                        />
+                      </div>
+                    </div>
+                    <div class="valor-total-box">
+                      <span>Valor total</span
+                      ><span id="valor-total-calculado">R$ 0,00</span>
+                    </div>
+                    <div class="form-footer">
+                      <button type="button" class="btn-cancelar">
+                        Cancelar</button
+                      ><button type="submit" class="btn-adicionar">
+                        + Adicionar Ativo
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <div class="historico-container">
+                <div class="historico-header">
+                  <h3>Histórico de Lançamentos</h3>
+                  <div style="display: flex; align-items: center; gap: 15px">
+                    <input
+                      type="search"
+                      id="search-ativo"
+                      placeholder="Pesquisar ativo..."
+                    />
+                    <button id="btn-mostrar-form" class="btn-adicionar">
+                      + Novo Lançamento
+                    </button>
+                  </div>
+                </div>
+                <div class="historico-lista-header">
+                  <div class="header-col">Ativo</div>
+                  <div class="header-col">Tipo</div>
+                  <div class="header-col">Ordem</div>
+                  <div class="header-col">Quantidade</div>
+                  <div class="header-col">Preço Unitário</div>
+                  <div class="header-col">Total</div>
+                  <div class="header-col">Ações</div>
+                </div>
+                <div id="historico-lista"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, orderBy, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        onSnapshot,
+        deleteDoc,
+        doc,
+        query,
+        where,
+        orderBy,
+        getDoc,
+        updateDoc,
+        serverTimestamp,
+      } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+      import {
+        getAuth,
+        GoogleAuthProvider,
+        signInWithPopup,
+        signOut,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
-        document.addEventListener('DOMContentLoaded', function () {
-            // --- INICIALIZAÇÃO E REFERÊNCIAS ---
-            const firebaseConfig = {
-              apiKey: "AIzaSyA08o5_6YY7I1eCZ3DCPCopAJAUiC2JNdA",
-              authDomain: "clarifica-invest.firebaseapp.com",
-              projectId: "clarifica-invest",
-              storageBucket: "clarifica-invest.appspot.com",
-              messagingSenderId: "865871192847",
-              appId: "1:865871192847:web:369d4b0edc96f74b29147a",
-              measurementId: "G-6PG9XZJPB9"
-            };
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            const provider = new GoogleAuthProvider();
-            const lancamentosCollection = collection(db, "lancamentos");
-            const btnMainLoginGoogle = document.getElementById('btn-main-login-google');
-            const userInfoDiv = document.getElementById('user-info');
-            const userPhoto = document.getElementById('user-photo');
-            const userName = document.getElementById('user-name');
-            const appContent = document.getElementById('app-content');
-            const loginButtonContainer = document.getElementById('login-button-container');
-            const userDropdown = document.getElementById('user-dropdown');
-            const btnLogout = document.getElementById('btn-logout');
-            const dropdownUserName = document.getElementById('dropdown-user-name');
-            const dropdownUserEmail = document.getElementById('dropdown-user-email');
+      document.addEventListener("DOMContentLoaded", function () {
+        // --- INICIALIZAÇÃO E REFERÊNCIAS ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyA08o5_6YY7I1eCZ3DCPCopAJAUiC2JNdA",
+          authDomain: "clarifica-invest.firebaseapp.com",
+          projectId: "clarifica-invest",
+          storageBucket: "clarifica-invest.appspot.com",
+          messagingSenderId: "865871192847",
+          appId: "1:865871192847:web:369d4b0edc96f74b29147a",
+          measurementId: "G-6PG9XZJPB9",
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+        const lancamentosCollection = collection(db, "lancamentos");
+        const btnMainLoginGoogle = document.getElementById(
+          "btn-main-login-google"
+        );
+        const userInfoDiv = document.getElementById("user-info");
+        const userPhoto = document.getElementById("user-photo");
+        const userName = document.getElementById("user-name");
+        const appContent = document.getElementById("app-content");
+        const loginButtonContainer = document.getElementById(
+          "login-button-container"
+        );
+        const userDropdown = document.getElementById("user-dropdown");
+        const btnLogout = document.getElementById("btn-logout");
+        const dropdownUserName = document.getElementById("dropdown-user-name");
+        const dropdownUserEmail = document.getElementById(
+          "dropdown-user-email"
+        );
 
-            // --- LÓGICA DE AUTENTICAÇÃO E UI PRINCIPAL ---
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    updateUIForLoggedInUser(user);
-                    setupLancamentosListeners(user.uid);
-                } else {
-                    updateUIForLoggedOutUser();
-                }
-            });
-            // --- AUTOCOMPLETE DE ATIVOS ---
-const ativoInput = document.getElementById("ativo");
-const sugestoesDiv = document.getElementById("ativo-sugestoes");
-
-let timeoutBusca;
-ativoInput.addEventListener("input", () => {
-  clearTimeout(timeoutBusca);
-  const termo = ativoInput.value.trim().toUpperCase();
-
-  if (termo.length < 2) {
-    sugestoesDiv.innerHTML = "";
-    return;
-  }
-
-  timeoutBusca = setTimeout(async () => {
-    try {
-      // Exemplo: BRAPI - lista tickers da B3
-      const resp = await fetch(`https://brapi.dev/api/available?search=${termo}`);
-      const data = await resp.json();
-
-      sugestoesDiv.innerHTML = "";
-      if (data && data.stocks) {
-        data.stocks.slice(0, 10).forEach(stock => {
-          const div = document.createElement("div");
-          div.classList.add("sugestao-item");
-          div.textContent = `${stock}`;
-          div.addEventListener("click", () => {
-            ativoInput.value = stock;
-            sugestoesDiv.innerHTML = "";
-          });
-          sugestoesDiv.appendChild(div);
+        // --- LÓGICA DE AUTENTICAÇÃO E UI PRINCIPAL ---
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            updateUIForLoggedInUser(user);
+            setupLancamentosListeners(user.uid);
+          } else {
+            updateUIForLoggedOutUser();
+          }
         });
-      }
-    } catch (e) {
-      console.error("Erro ao buscar ativos:", e);
-    }
-  }, 400); // debounce
-});
+        // --- AUTOCOMPLETE DE ATIVOS ---
+        const ativoInput = document.getElementById("ativo");
+        const sugestoesDiv = document.getElementById("ativo-sugestoes");
 
-// Fecha sugestões ao clicar fora
-document.addEventListener("click", (e) => {
-  if (!ativoInput.contains(e.target) && !sugestoesDiv.contains(e.target)) {
-    sugestoesDiv.innerHTML = "";
-  }
-});
+        let timeoutBusca;
+        ativoInput.addEventListener("input", () => {
+          clearTimeout(timeoutBusca);
+          const termo = ativoInput.value.trim().toUpperCase();
 
-            btnMainLoginGoogle.addEventListener('click', () => signInWithPopup(auth, provider).catch(e => console.error(e)));
-            btnLogout.addEventListener('click', (e) => { e.preventDefault(); signOut(auth).catch(e => console.error(e)); });
-            userInfoDiv.addEventListener('click', () => userDropdown.classList.toggle('show'));
-            document.addEventListener('click', (e) => { if (userInfoDiv && !userInfoDiv.contains(e.target)) userDropdown.classList.remove('show'); });
+          if (termo.length < 2) {
+            sugestoesDiv.innerHTML = "";
+            return;
+          }
 
-            function updateUIForLoggedInUser(user) { loginButtonContainer.style.display = 'none'; appContent.style.display = 'block'; userInfoDiv.style.display = 'flex'; userName.textContent = user.displayName; userPhoto.src = user.photoURL; dropdownUserName.textContent = user.displayName; dropdownUserEmail.textContent = user.email; }
-            function updateUIForLoggedOutUser() { loginButtonContainer.style.display = 'flex'; appContent.style.display = 'none'; userInfoDiv.style.display = 'none'; userDropdown.classList.remove('show'); }
+          timeoutBusca = setTimeout(async () => {
+            try {
+              // Exemplo: BRAPI - lista tickers da B3
+              const resp = await fetch(
+                `https://brapi.dev/api/available?search=${termo}`
+              );
+              const data = await resp.json();
 
-            const tabs = document.querySelectorAll('.nav-tabs .nav-link');
-            const tabPanes = document.querySelectorAll('.tab-pane');
-            tabs.forEach(tab => { tab.addEventListener('click', function (e) { e.preventDefault(); tabs.forEach(t => t.classList.remove('active')); tabPanes.forEach(p => p.classList.remove('active')); this.classList.add('active'); const activeTab = document.getElementById(this.getAttribute('data-tab')); if (activeTab) activeTab.classList.add('active'); }); });
-
-            // --- LÓGICA DA ABA LANÇAMENTOS ---
-            function setupLancamentosListeners(userId) {
-                const formWrapper = document.getElementById('form-wrapper');
-                const btnMostrarForm = document.getElementById('btn-mostrar-form');
-                const form = document.getElementById('form-novo-ativo');
-                const docIdInput = document.getElementById('doc-id');
-                const operacaoTipoInput = document.getElementById('operacao-tipo');
-                const dataOperacaoInput = document.getElementById('data-operacao');
-                const quantidadeInput = document.getElementById('quantidade');
-                const precoInput = document.getElementById('preco');
-                const outrosCustosInput = document.getElementById('outros-custos');
-                const valorTotalDisplay = document.getElementById('valor-total-calculado');
-                const btnCompra = form.querySelector('.btn-compra');
-                const btnVenda = form.querySelector('.btn-venda');
-                const btnAdicionar = form.querySelector('.btn-adicionar');
-                const btnCancelar = form.querySelector('.btn-cancelar');
-                const historicoListaDiv = document.getElementById('historico-lista');
-                const searchInput = document.getElementById('search-ativo');
-                let allLancamentos = [];
-
-                const hoje = new Date().toISOString().split('T')[0];
-
-                const showForm = () => {
-                    formWrapper.style.display = 'block';
-                    btnMostrarForm.style.display = 'none';
-                    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                };
-
-                const hideForm = () => {
-                    formWrapper.style.display = 'none';
-                    btnMostrarForm.style.display = 'inline-flex';
-                };
-
-                const resetForm = () => {
-                    form.reset();
-                    docIdInput.value = '';
-                    dataOperacaoInput.value = hoje;
-                    btnAdicionar.textContent = '+ Adicionar Ativo';
-                    btnCompra.classList.add('active');
-                    btnVenda.classList.remove('active');
-                    operacaoTipoInput.value = 'compra';
-                    calcularTotal();
-                    hideForm();
-                };
-
-                const calcularTotal = () => {
-                    const qtd = parseFloat(quantidadeInput.value) || 0;
-                    const prc = parseFloat(precoInput.value) || 0;
-                    const cst = parseFloat(outrosCustosInput.value) || 0;
-                    const total = (qtd * prc) + cst;
-                    valorTotalDisplay.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                };
-
-                btnMostrarForm.addEventListener('click', showForm);
-                btnCancelar.addEventListener('click', resetForm);
-                [quantidadeInput, precoInput, outrosCustosInput].forEach(el => el.addEventListener('input', calcularTotal));
-                btnCompra.addEventListener('click', () => { btnCompra.classList.add('active'); btnVenda.classList.remove('active'); operacaoTipoInput.value = 'compra'; });
-                btnVenda.addEventListener('click', () => { btnVenda.classList.add('active'); btnCompra.classList.remove('active'); operacaoTipoInput.value = 'venda'; });
-
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const docId = docIdInput.value;
-                    const lancamento = {
-                        userId, tipoOperacao: operacaoTipoInput.value, tipoAtivo: form['tipo-ativo'].value, ativo: form.ativo.value.toUpperCase(), data: dataOperacaoInput.value, quantidade: parseFloat(quantidadeInput.value), preco: parseFloat(precoInput.value), custos: parseFloat(outrosCustosInput.value) || 0, valorTotal: (parseFloat(quantidadeInput.value) * parseFloat(precoInput.value)) + (parseFloat(outrosCustosInput.value) || 0), timestamp: serverTimestamp()
-                    };
-                    try {
-                        if (docId) { delete lancamento.timestamp; await updateDoc(doc(db, "lancamentos", docId), lancamento); alert('Ativo atualizado com sucesso!'); } 
-                        else { await addDoc(lancamentosCollection, lancamento); alert('Ativo adicionado com sucesso!'); }
-                        resetForm();
-                    } catch (error) { console.error("Erro ao salvar:", error); alert('Ocorreu um erro ao salvar: ' + error.message); }
+              sugestoesDiv.innerHTML = "";
+              if (data && data.stocks) {
+                data.stocks.slice(0, 10).forEach((stock) => {
+                  const div = document.createElement("div");
+                  div.classList.add("sugestao-item");
+                  div.textContent = `${stock}`;
+                  div.addEventListener("click", () => {
+                    ativoInput.value = stock;
+                    sugestoesDiv.innerHTML = "";
+                  });
+                  sugestoesDiv.appendChild(div);
                 });
+              }
+            } catch (e) {
+              console.error("Erro ao buscar ativos:", e);
+            }
+          }, 400); // debounce
+        });
 
-                const renderHistorico = (lancamentos) => {
-                    if (lancamentos.length === 0) { historicoListaDiv.innerHTML = "<p>Nenhum lançamento encontrado.</p>"; return; }
-                    historicoListaDiv.innerHTML = lancamentos.map(l => {
-                        const dataFormatada = new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR');
-                        return `
+        // Fecha sugestões ao clicar fora
+        document.addEventListener("click", (e) => {
+          if (
+            !ativoInput.contains(e.target) &&
+            !sugestoesDiv.contains(e.target)
+          ) {
+            sugestoesDiv.innerHTML = "";
+          }
+        });
+
+        btnMainLoginGoogle.addEventListener("click", () =>
+          signInWithPopup(auth, provider).catch((e) => console.error(e))
+        );
+        btnLogout.addEventListener("click", (e) => {
+          e.preventDefault();
+          signOut(auth).catch((e) => console.error(e));
+        });
+        userInfoDiv.addEventListener("click", () =>
+          userDropdown.classList.toggle("show")
+        );
+        document.addEventListener("click", (e) => {
+          if (userInfoDiv && !userInfoDiv.contains(e.target))
+            userDropdown.classList.remove("show");
+        });
+
+        function updateUIForLoggedInUser(user) {
+          loginButtonContainer.style.display = "none";
+          appContent.style.display = "block";
+          userInfoDiv.style.display = "flex";
+          userName.textContent = user.displayName;
+          userPhoto.src = user.photoURL;
+          dropdownUserName.textContent = user.displayName;
+          dropdownUserEmail.textContent = user.email;
+        }
+        function updateUIForLoggedOutUser() {
+          loginButtonContainer.style.display = "flex";
+          appContent.style.display = "none";
+          userInfoDiv.style.display = "none";
+          userDropdown.classList.remove("show");
+        }
+
+        const tabs = document.querySelectorAll(".nav-tabs .nav-link");
+        const tabPanes = document.querySelectorAll(".tab-pane");
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", function (e) {
+            e.preventDefault();
+            tabs.forEach((t) => t.classList.remove("active"));
+            tabPanes.forEach((p) => p.classList.remove("active"));
+            this.classList.add("active");
+            const activeTab = document.getElementById(
+              this.getAttribute("data-tab")
+            );
+            if (activeTab) activeTab.classList.add("active");
+          });
+        });
+
+        // --- LÓGICA DA ABA LANÇAMENTOS ---
+        function setupLancamentosListeners(userId) {
+          const formWrapper = document.getElementById("form-wrapper");
+          const btnMostrarForm = document.getElementById("btn-mostrar-form");
+          const form = document.getElementById("form-novo-ativo");
+          const docIdInput = document.getElementById("doc-id");
+          const operacaoTipoInput = document.getElementById("operacao-tipo");
+          const dataOperacaoInput = document.getElementById("data-operacao");
+          const quantidadeInput = document.getElementById("quantidade");
+          const precoInput = document.getElementById("preco");
+          const outrosCustosInput = document.getElementById("outros-custos");
+          const valorTotalDisplay = document.getElementById(
+            "valor-total-calculado"
+          );
+          const btnCompra = form.querySelector(".btn-compra");
+          const btnVenda = form.querySelector(".btn-venda");
+          const btnAdicionar = form.querySelector(".btn-adicionar");
+          const btnCancelar = form.querySelector(".btn-cancelar");
+          const historicoListaDiv = document.getElementById("historico-lista");
+          const searchInput = document.getElementById("search-ativo");
+          let allLancamentos = [];
+
+          const hoje = new Date().toISOString().split("T")[0];
+
+          const showForm = () => {
+            formWrapper.style.display = "block";
+            btnMostrarForm.style.display = "none";
+            form.scrollIntoView({ behavior: "smooth", block: "center" });
+          };
+
+          const hideForm = () => {
+            formWrapper.style.display = "none";
+            btnMostrarForm.style.display = "inline-flex";
+          };
+
+          const resetForm = () => {
+            form.reset();
+            docIdInput.value = "";
+            dataOperacaoInput.value = hoje;
+            btnAdicionar.textContent = "+ Adicionar Ativo";
+            btnCompra.classList.add("active");
+            btnVenda.classList.remove("active");
+            operacaoTipoInput.value = "compra";
+            calcularTotal();
+            hideForm();
+          };
+
+          const calcularTotal = () => {
+            const qtd = parseFloat(quantidadeInput.value) || 0;
+            const prc = parseFloat(precoInput.value) || 0;
+            const cst = parseFloat(outrosCustosInput.value) || 0;
+            const total = qtd * prc + cst;
+            valorTotalDisplay.textContent = total.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            });
+          };
+
+          btnMostrarForm.addEventListener("click", showForm);
+          btnCancelar.addEventListener("click", resetForm);
+          [quantidadeInput, precoInput, outrosCustosInput].forEach((el) =>
+            el.addEventListener("input", calcularTotal)
+          );
+          btnCompra.addEventListener("click", () => {
+            btnCompra.classList.add("active");
+            btnVenda.classList.remove("active");
+            operacaoTipoInput.value = "compra";
+          });
+          btnVenda.addEventListener("click", () => {
+            btnVenda.classList.add("active");
+            btnCompra.classList.remove("active");
+            operacaoTipoInput.value = "venda";
+          });
+
+          form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const docId = docIdInput.value;
+            const lancamento = {
+              userId,
+              tipoOperacao: operacaoTipoInput.value,
+              tipoAtivo: form["tipo-ativo"].value,
+              ativo: form.ativo.value.toUpperCase(),
+              data: dataOperacaoInput.value,
+              quantidade: parseFloat(quantidadeInput.value),
+              preco: parseFloat(precoInput.value),
+              custos: parseFloat(outrosCustosInput.value) || 0,
+              valorTotal:
+                parseFloat(quantidadeInput.value) *
+                  parseFloat(precoInput.value) +
+                (parseFloat(outrosCustosInput.value) || 0),
+              timestamp: serverTimestamp(),
+            };
+            try {
+              if (docId) {
+                delete lancamento.timestamp;
+                await updateDoc(doc(db, "lancamentos", docId), lancamento);
+                alert("Ativo atualizado com sucesso!");
+              } else {
+                await addDoc(lancamentosCollection, lancamento);
+                alert("Ativo adicionado com sucesso!");
+              }
+              resetForm();
+            } catch (error) {
+              console.error("Erro ao salvar:", error);
+              alert("Ocorreu um erro ao salvar: " + error.message);
+            }
+          });
+
+          const renderHistorico = (lancamentos) => {
+            if (lancamentos.length === 0) {
+              historicoListaDiv.innerHTML =
+                "<p>Nenhum lançamento encontrado.</p>";
+              return;
+            }
+            historicoListaDiv.innerHTML = lancamentos
+              .map((l) => {
+                const dataFormatada = new Date(
+                  l.data + "T00:00:00"
+                ).toLocaleDateString("pt-BR");
+                return `
                             <div class="historico-item">
-                                <div class="historico-item-valor">${l.ativo}</div>
-                                <div><span class="tipo-ativo-badge">${l.tipoAtivo}</span></div>
-                                <div class="historico-item-valor ${l.tipoOperacao === 'compra' ? 'operacao-compra' : 'operacao-venda'}">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)}</div>
-                                <div class="historico-item-valor">${l.quantidade.toLocaleString('pt-BR')}</div>
-                                <div class="historico-item-valor">${l.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                                <div class="historico-item-valor">${l.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                                <div class="historico-item-valor">${
+                                  l.ativo
+                                }</div>
+                                <div><span class="tipo-ativo-badge">${
+                                  l.tipoAtivo
+                                }</span></div>
+                                <div class="historico-item-valor ${
+                                  l.tipoOperacao === "compra"
+                                    ? "operacao-compra"
+                                    : "operacao-venda"
+                                }">${
+                  l.tipoOperacao.charAt(0).toUpperCase() +
+                  l.tipoOperacao.slice(1)
+                }</div>
+                                <div class="historico-item-valor">${l.quantidade.toLocaleString(
+                                  "pt-BR"
+                                )}</div>
+                                <div class="historico-item-valor">${l.preco.toLocaleString(
+                                  "pt-BR",
+                                  { style: "currency", currency: "BRL" }
+                                )}</div>
+                                <div class="historico-item-valor">${l.valorTotal.toLocaleString(
+                                  "pt-BR",
+                                  { style: "currency", currency: "BRL" }
+                                )}</div>
                                 <div class="historico-acoes">
-                                    <button class="btn-crud btn-editar" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                                    <button class="btn-crud btn-excluir" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                                    <button class="btn-crud btn-editar" data-id="${
+                                      l.id
+                                    }"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                                    <button class="btn-crud btn-excluir" data-id="${
+                                      l.id
+                                    }"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
                                 </div>
                             </div>
                         `;
-                    }).join('');
-                };
+              })
+              .join("");
+          };
 
-                searchInput.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toUpperCase();
-                    const lancamentosFiltrados = allLancamentos.filter(l => l.ativo.toUpperCase().includes(searchTerm));
-                    renderHistorico(lancamentosFiltrados);
-                });
+          searchInput.addEventListener("input", (e) => {
+            const searchTerm = e.target.value.toUpperCase();
+            const lancamentosFiltrados = allLancamentos.filter((l) =>
+              l.ativo.toUpperCase().includes(searchTerm)
+            );
+            renderHistorico(lancamentosFiltrados);
+          });
 
-                const q = query(lancamentosCollection, where("userId", "==", userId), orderBy("data", "desc"));
-                onSnapshot(q, (snapshot) => {
-                    allLancamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    const searchTerm = searchInput.value.toUpperCase();
-                    const lancamentosFiltrados = searchTerm ? allLancamentos.filter(l => l.ativo.toUpperCase().includes(searchTerm)) : allLancamentos;
-                    renderHistorico(lancamentosFiltrados);
-                });
+          const q = query(
+            lancamentosCollection,
+            where("userId", "==", userId),
+            orderBy("data", "desc")
+          );
+          onSnapshot(q, (snapshot) => {
+            allLancamentos = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+            const searchTerm = searchInput.value.toUpperCase();
+            const lancamentosFiltrados = searchTerm
+              ? allLancamentos.filter((l) =>
+                  l.ativo.toUpperCase().includes(searchTerm)
+                )
+              : allLancamentos;
+            renderHistorico(lancamentosFiltrados);
+          });
 
-                historicoListaDiv.addEventListener('click', async (e) => {
-                    const button = e.target.closest('button');
-                    if (!button) return;
-                    const docId = button.dataset.id;
-                    if (button.classList.contains('btn-excluir')) {
-                        if (confirm('Tem certeza que deseja excluir?')) {
-                            await deleteDoc(doc(db, "lancamentos", docId)).catch(err => console.error(err));
-                        }
-                    } else if (button.classList.contains('btn-editar')) {
-                        const docSnap = await getDoc(doc(db, "lancamentos", docId));
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            docIdInput.value = docId;
-                            form['operacao-tipo'].value = data.tipoOperacao;
-                            if (data.tipoOperacao === 'compra') { btnCompra.classList.add('active'); btnVenda.classList.remove('active'); } else { btnVenda.classList.add('active'); btnCompra.classList.remove('active'); }
-                            form['tipo-ativo'].value = data.tipoAtivo;
-                            form.ativo.value = data.ativo;
-                            form['data-operacao'].value = data.data;
-                            form.quantidade.value = data.quantidade;
-                            form.preco.value = data.preco;
-                            form['outros-custos'].value = data.custos;
-                            btnAdicionar.textContent = 'Atualizar Ativo';
-                            calcularTotal();
-                            showForm();
-                        }
-                    }
-                });
-                resetForm();
+          historicoListaDiv.addEventListener("click", async (e) => {
+            const button = e.target.closest("button");
+            if (!button) return;
+            const docId = button.dataset.id;
+            if (button.classList.contains("btn-excluir")) {
+              if (confirm("Tem certeza que deseja excluir?")) {
+                await deleteDoc(doc(db, "lancamentos", docId)).catch((err) =>
+                  console.error(err)
+                );
+              }
+            } else if (button.classList.contains("btn-editar")) {
+              const docSnap = await getDoc(doc(db, "lancamentos", docId));
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                docIdInput.value = docId;
+                form["operacao-tipo"].value = data.tipoOperacao;
+                if (data.tipoOperacao === "compra") {
+                  btnCompra.classList.add("active");
+                  btnVenda.classList.remove("active");
+                } else {
+                  btnVenda.classList.add("active");
+                  btnCompra.classList.remove("active");
+                }
+                form["tipo-ativo"].value = data.tipoAtivo;
+                form.ativo.value = data.ativo;
+                form["data-operacao"].value = data.data;
+                form.quantidade.value = data.quantidade;
+                form.preco.value = data.preco;
+                form["outros-custos"].value = data.custos;
+                btnAdicionar.textContent = "Atualizar Ativo";
+                calcularTotal();
+                showForm();
+              }
             }
-        });
+          });
+          resetForm();
+        }
+      });
     </script>
-</body>
+  </body>
 </html>
