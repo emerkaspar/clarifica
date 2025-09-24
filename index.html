@@ -5,247 +5,198 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CLARIFICA - O seu farol de investimentos</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/favicon.png">
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-
     <style>
-        /* Estilos gerais do corpo da página */
-        body {
-            background-color: #0f1011;
-            color: #e0e0e0;
-            font-family: 'Open Sans', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* Container principal para centralizar o conteúdo */
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Menu superior */
-        .top-menu-container {
-            background-color: #1a1b1e;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .top-menu-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        /* Estilos para a Logomarca */
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .logo img {
-            /* --- AJUSTE AQUI --- */
-            height: 128px; /* Aumentado para 128px */
-            width: auto;
-        }
-
-        .logo-text {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: #e0e0e0;
-        }
-        /* Fim dos estilos da Logomarca */
-
-
+        /* Estilos CSS continuam os mesmos */
+        body { background-color: #0f1011; color: #e0e0e0; font-family: 'Open Sans', sans-serif; margin: 0; padding: 0; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .top-menu-container { background-color: #1a1b1e; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .top-menu-left { display: flex; align-items: center; gap: 10px; }
+        .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+        .logo img { height: 128px; width: auto; }
+        .logo-text { font-size: 1.4rem; font-weight: 600; color: #e0e0e0; }
         .top-menu-right { display: flex; align-items: center; gap: 10px; }
-        .top-menu-button { 
-            background-color: #2a2c30; 
-            color: #e0e0e0; 
-            border: none; 
-            padding: 8px 15px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-size: 0.9rem; 
-            font-weight: 600;
-            transition: background-color 0.2s ease-in-out; 
-            display: flex; 
-            align-items: center; 
-            gap: 5px; 
-        }
+        .top-menu-button { background-color: #2a2c30; color: #e0e0e0; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: background-color 0.2s ease-in-out; display: flex; align-items: center; gap: 5px; }
         .top-menu-button:hover { background-color: #3a3d42; }
         .top-menu-button.icon-only { padding: 8px; border-radius: 50%; }
         .top-menu-button svg { width: 16px; height: 16px; fill: #e0e0e0; }
-        
-        /* Wrapper para unir Abas e Conteúdo */
-        .main-content-wrapper {
-            background-color: #161a22;
-            border-radius: 8px;
-            padding-top: 15px;
-        }
-        
-        /* Estilos da barra de navegação de abas */
-        .nav-tabs-wrapper {
-             padding: 0 15px;
-             border-bottom: 1px solid #2a2c30;
-        }
-
-        .nav-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            gap: 10px;
-        }
-
-        .nav-tabs .nav-link {
-            display: block;
-            padding: 10px 18px;
-            text-decoration: none;
-            background-color: #2c313d;
-            color: #a0a7b3;
-            border: 1px solid #3a404d;
-            border-radius: 6px 6px 0 0; 
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s ease-in-out;
-            margin-bottom: -1px;
-        }
-
-        /* Efeito hover como na print */
-        .nav-tabs .nav-link:hover:not(.active) {
-            background-color: #383d47;
-            color: #00d9c3;
-            border-color: #4b5261;
-        }
-
-        /* Aba ativa com fundo cinza claro */
-        .nav-tabs .nav-link.active {
-            color: #1f2937;
-            background-color: #d1d5db;
-            border-color: #9ca3af;
-            border-bottom: 1px solid #d1d5db;
-        }
-
-        /* Conteúdo das abas */
-        .tab-content {
-            padding: 30px;
-        }
-
-        .tab-pane {
-            display: none;
-        }
-
-        .tab-pane.active {
-            display: block;
-        }
-        
-        .tab-pane h2 {
-            margin-top: 0;
-            font-weight: 600;
-            border-bottom: 1px solid #2a2c30;
-            padding-bottom: 10px;
-            color: #f8f9fa;
-        }
+        .main-content-wrapper { background-color: #161a22; border-radius: 8px; padding-top: 15px; }
+        .nav-tabs-wrapper { padding: 0 15px; border-bottom: 1px solid #2a2c30; }
+        .nav-tabs { display: flex; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; gap: 10px; }
+        .nav-tabs .nav-link { display: block; padding: 10px 18px; text-decoration: none; background-color: #2c313d; color: #a0a7b3; border: 1px solid #3a404d; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease-in-out; margin-bottom: -1px; }
+        .nav-tabs .nav-link:hover:not(.active) { background-color: #383d47; color: #00d9c3; border-color: #4b5261; }
+        .nav-tabs .nav-link.active { color: #1f2937; background-color: #d1d5db; border-color: #9ca3af; border-bottom: 1px solid #d1d5db; }
+        .tab-content { padding: 30px; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .tab-pane h2 { margin-top: 0; font-weight: 600; border-bottom: 1px solid #2a2c30; padding-bottom: 10px; color: #f8f9fa; }
+        .lancamentos-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .lancamentos-table th, .lancamentos-table td { border: 1px solid #2a2c30; padding: 8px 12px; text-align: left; }
+        .lancamentos-table th { background-color: #2c313d; color: #a0a7b3; }
+        .lancamentos-section h3 { color: #00d9c3; margin-top: 25px; border-bottom: 1px solid #3a3d42; padding-bottom: 5px; }
+        #form-lancamento { background-color: #1a1b1e; padding: 20px; border-radius: 8px; margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        #form-lancamento input, #form-lancamento select, #form-lancamento button { padding: 10px; border-radius: 5px; border: 1px solid #3a404d; background-color: #2a2c30; color: #e0e0e0; font-size: 0.9rem; }
+        #form-lancamento button { background-color: #00d9c3; color: #1f2937; font-weight: 600; cursor: pointer; grid-column: 1 / -1; }
+        .btn-delete { background-color: #5c2c2c; color: #e0e0e0; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        
-        <div class="top-menu-container">
-            <div class="top-menu-left">
-                
-                <a href="#" class="logo">
-                    <img src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png" alt="Logomarca Clarifica">
-                    <span class="logo-text">CLARIFICA</span>
-                </a>
-                
-            </div>
-            <div class="top-menu-right">
-                <button class="top-menu-button icon-only" title="Mudar tema"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 4.343a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zM6.464 13.536a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 01-1.06 0l-1.06-1.06a.75.75 0 011.06-1.06l1.06 1.06a.75.75 0 010 1.06zM5.394 6.464a.75.75 0 01-1.06 0L3.272 5.394a.75.75 0 011.06-1.061l1.061 1.06a.75.75 0 010 1.061z"/></svg></button>
-                <button class="top-menu-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1.34 8.25A8.75 8.75 0 0110 2.5v0a8.75 8.75 0 018.66 5.75H1.34zM2.5 10a8.75 8.75 0 0115 0h-15zM1.34 11.75A8.75 8.75 0 0110 17.5v0a8.75 8.75 0 018.66-5.75H1.34z" clip-rule="evenodd" /></svg> Carteira Global</button>
-                <button class="top-menu-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg> Gerenciar ativos</button>
-            </div>
-        </div>
-        
+        <div class="top-menu-container"><div class="top-menu-left"><a href="#" class="logo"><img src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png" alt="Logomarca Clarifica"><span class="logo-text">CLARIFICA</span></a></div><div class="top-menu-right"><button class="top-menu-button icon-only" title="Mudar tema"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 4.343a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zM6.464 13.536a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 01-1.06 0l-1.06-1.06a.75.75 0 011.06-1.06l1.06 1.06a.75.75 0 010 1.06zM5.394 6.464a.75.75 0 01-1.06 0L3.272 5.394a.75.75 0 011.06-1.061l1.061 1.06a.75.75 0 010 1.061z"></path></svg></button><button class="top-menu-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1.34 8.25A8.75 8.75 0 0110 2.5v0a8.75 8.75 0 018.66 5.75H1.34zM2.5 10a8.75 8.75 0 0115 0h-15zM1.34 11.75A8.75 8.75 0 0110 17.5v0a8.75 8.75 0 018.66-5.75H1.34z" clip-rule="evenodd"></path></svg> Carteira Global</button><button class="top-menu-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg> Gerenciar ativos</button></div></div>
         <div class="main-content-wrapper">
-            <div class="nav-tabs-wrapper">
-                <ul class="nav-tabs" id="myTab">
-                    <li><a class="nav-link active" data-tab="patrimonio">Patrimônio</a></li>
-                    <li><a class="nav-link" data-tab="rentabilidade">Rentabilidade</a></li>
-                    <li><a class="nav-link" data-tab="acoes">Ações</a></li>
-                    <li><a class="nav-link" data-tab="fiis">Fiis</a></li>
-                    <li><a class="nav-link" data-tab="etf-cripto">Etf/Cripto</a></li>
-                    <li><a class="nav-link" data-tab="renda-fixa">Renda Fixa</a></li>
-                    <li><a class="nav-link" data-tab="calculos">Cálculos</a></li>
-                </ul>
-            </div>
-
+            <div class="nav-tabs-wrapper"><ul class="nav-tabs" id="myTab"><li><a class="nav-link active" data-tab="patrimonio">Patrimônio</a></li><li><a class="nav-link" data-tab="rentabilidade">Rentabilidade</a></li><li><a class="nav-link" data-tab="acoes">Ações</a></li><li><a class="nav-link" data-tab="fiis">Fiis</a></li><li><a class="nav-link" data-tab="etf-cripto">Etf/Cripto</a></li><li><a class="nav-link" data-tab="renda-fixa">Renda Fixa</a></li><li><a class="nav-link" data-tab="calculos">Cálculos</a></li><li><a class="nav-link" data-tab="analises">Análises</a></li><li><a class="nav-link" data-tab="lancamentos">Lançamentos</a></li></ul></div>
             <div class="tab-content" id="myTabContent">
-                <div class="tab-pane active" id="patrimonio">
-                    <h2>Visão Geral do Patrimônio</h2>
-                    <p>Aqui você verá a consolidação total da sua carteira, gráficos de evolução e alocação por tipo de ativo.</p>
-                </div>
-                <div class="tab-pane" id="rentabilidade">
-                    <h2>Análise de Rentabilidade</h2>
-                    <p>Acompanhe a rentabilidade da sua carteira, comparativos com benchmarks e desempenho de cada ativo.</p>
-                </div>
-                <div class="tab-pane" id="acoes">
-                    <h2>Carteira de Ações</h2>
-                    <p>Detalhes sobre suas posições em ações, dividendos recebidos, preço médio e resultados.</p>
-                </div>
-                <div class="tab-pane" id="fiis">
-                    <h2>Carteira de FIIs</h2>
-                    <p>Detalhes sobre seus Fundos Imobiliários, rendimentos mensais, valor patrimonial e indicadores.</p>
-                </div>
-                <div class="tab-pane" id="etf-cripto">
-                    <h2>ETFs e Criptomoedas</h2>
-                    <p>Consolidação de seus investimentos em ETFs e criptoativos.</p>
-                </div>
-                <div class="tab-pane" id="renda-fixa">
-                    <h2>Renda Fixa</h2>
-                    <p>Seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros ativos de renda fixa.</p>
-                </div>
-                <div class="tab-pane" id="calculos">
-                    <h2>Cálculos e Projeções</h2>
-                    <p>Ferramentas para cálculos de preço médio, projeção de aposentadoria e outras simulações.</p>
+                <div class="tab-pane active" id="patrimonio"><h2>Visão Geral do Patrimônio</h2><p>Aqui você verá a consolidação total da sua carteira, gráficos de evolução e alocação por tipo de ativo.</p></div>
+                <div class="tab-pane" id="rentabilidade"><h2>Análise de Rentabilidade</h2><p>Acompanhe a rentabilidade da sua carteira, comparativos com benchmarks e desempenho de cada ativo.</p></div>
+                <div class="tab-pane" id="acoes"><h2>Carteira de Ações</h2><p>Detalhes sobre suas posições em ações, dividendos recebidos, preço médio e resultados.</p></div>
+                <div class="tab-pane" id="fiis"><h2>Carteira de FIIs</h2><p>Detalhes sobre seus Fundos Imobiliários, rendimentos mensais, valor patrimonial e indicadores.</p></div>
+                <div class="tab-pane" id="etf-cripto"><h2>ETFs e Criptomoedas</h2><p>Consolidação de seus investimentos em ETFs e criptoativos.</p></div>
+                <div class="tab-pane" id="renda-fixa"><h2>Renda Fixa</h2><p>Seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros ativos de renda fixa.</p></div>
+                <div class="tab-pane" id="calculos"><h2>Cálculos e Projeções</h2><p>Ferramentas para cálculos de preço médio, projeção de aposentadoria e outras simulações.</p></div>
+                <div class="tab-pane" id="analises"><h2>Análises Detalhadas</h2><p>Aqui você encontrará análises detalhadas de seus investimentos.</p></div>
+                <div class="tab-pane" id="lancamentos">
+                    <h2>Histórico de Lançamentos</h2>
+                    <div id="lancamentos-content">Conectando ao banco de dados...</div>
+                    <h2>Adicionar Novo Lançamento</h2>
+                    <form id="form-lancamento">
+                        <input type="date" id="data" required>
+                        <input type="text" id="ticker" placeholder="Ticker" required>
+                        <input type="text" id="preco" placeholder="Preço (ex: R$ 10,50)" required>
+                        <input type="number" id="quantidade" placeholder="Quantidade" step="any" required>
+                        <select id="classe" required>
+                            <option value="Ações">Ações</option>
+                            <option value="FIIs">FIIs</option>
+                            <option value="Criptomoedas">Criptomoedas</option>
+                        </select>
+                        <button type="submit">Adicionar Lançamento</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        // Importa as funções necessárias do Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
         document.addEventListener('DOMContentLoaded', function () {
+            // Configuração das abas (sem alteração)
             const tabs = document.querySelectorAll('.nav-tabs .nav-link');
             const tabPanes = document.querySelectorAll('.tab-pane');
-
             tabs.forEach(tab => {
                 tab.addEventListener('click', function (event) {
                     event.preventDefault();
-
                     tabs.forEach(t => t.classList.remove('active'));
                     tabPanes.forEach(p => p.classList.remove('active'));
-
                     this.classList.add('active');
                     const activeTabContentId = this.getAttribute('data-tab');
                     document.getElementById(activeTabContentId).classList.add('active');
                 });
             });
+
+            // --- CONFIGURAÇÃO E CÓDIGO DO FIREBASE (SINTAXE MODULAR) ---
+            
+            // Suas chaves de configuração do Firebase
+            const firebaseConfig = {
+              apiKey: "AIzaSyA08o5_6YY7I1eCZ3DCPCopAJAUiC2JNdA",
+              authDomain: "clarifica-invest.firebaseapp.com",
+              projectId: "clarifica-invest",
+              storageBucket: "clarifica-invest.appspot.com",
+              messagingSenderId: "865871192847",
+              appId: "1:865871192847:web:369d4b0edc96f74b29147a",
+              measurementId: "G-6PG9XZJPB9"
+            };
+
+            // Inicializa o Firebase
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const lancamentosCollectionRef = collection(db, 'lancamentos');
+
+            // 1. CARREGAR DADOS EM TEMPO REAL
+            const q = query(lancamentosCollectionRef, orderBy("data", "desc"));
+            onSnapshot(q, (snapshot) => {
+                const todosLancamentos = [];
+                snapshot.forEach(doc => {
+                    todosLancamentos.push({ id: doc.id, ...doc.data() });
+                });
+                gerarHTMLlancamentos(todosLancamentos);
+            }, error => {
+                console.error("Erro ao buscar lançamentos: ", error);
+                document.getElementById('lancamentos-content').innerHTML = "<p>Não foi possível conectar ao banco de dados.</p>";
+            });
+
+            // 2. GERAR HTML
+            function gerarHTMLlancamentos(lancamentos) {
+                const container = document.getElementById('lancamentos-content');
+                if (lancamentos.length === 0) {
+                    container.innerHTML = '<p>Nenhum lançamento encontrado. Adicione o primeiro!</p>';
+                    return;
+                }
+                const agrupados = lancamentos.reduce((acc, lancamento) => {
+                    const classe = lancamento.classe;
+                    if (!acc[classe]) acc[classe] = [];
+                    acc[classe].push(lancamento);
+                    return acc;
+                }, {});
+                
+                let htmlFinal = '';
+                for (const classe in agrupados) {
+                    htmlFinal += `<div class="lancamentos-section"><h3>${classe}</h3><table class="lancamentos-table"><thead><tr><th>Data</th><th>Ticker</th><th>Preço</th><th>Quantidade</th><th>Ações</th></tr></thead><tbody>`;
+                    agrupados[classe].forEach(lancamento => {
+                        htmlFinal += `
+                            <tr>
+                                <td>${lancamento.data}</td>
+                                <td>${lancamento.ticker}</td>
+                                <td>${lancamento.preco}</td>
+                                <td>${lancamento.quantidade}</td>
+                                <td><button class="btn-delete" data-id="${lancamento.id}" data-ticker="${lancamento.ticker}">Excluir</button></td>
+                            </tr>
+                        `;
+                    });
+                    htmlFinal += `</tbody></table></div>`;
+                }
+                container.innerHTML = htmlFinal;
+            }
+
+            // 3. ADICIONAR LANÇAMENTO
+            const form = document.getElementById('form-lancamento');
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const novoLancamento = {
+                    data: document.getElementById('data').value,
+                    ticker: document.getElementById('ticker').value.toUpperCase(),
+                    preco: document.getElementById('preco').value,
+                    quantidade: document.getElementById('quantidade').value,
+                    classe: document.getElementById('classe').value
+                };
+                
+                try {
+                    await addDoc(lancamentosCollectionRef, novoLancamento);
+                    form.reset();
+                } catch (error) {
+                    console.error("Erro ao adicionar documento: ", error);
+                }
+            });
+
+            // 4. EXCLUIR LANÇAMENTO (usando event delegation)
+            const contentDiv = document.getElementById('lancamentos-content');
+            contentDiv.addEventListener('click', async (event) => {
+                if (event.target.classList.contains('btn-delete')) {
+                    const id = event.target.dataset.id;
+                    const ticker = event.target.dataset.ticker;
+                    if (confirm(`Tem certeza que deseja excluir o lançamento de ${ticker}?`)) {
+                        try {
+                            await deleteDoc(doc(db, 'lancamentos', id));
+                        } catch (error) {
+                            console.error("Erro ao remover documento: ", error);
+                        }
+                    }
+                }
+            });
         });
     </script>
-
 </body>
 </html>
