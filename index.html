@@ -22,6 +22,8 @@
         .top-menu-button:hover { background-color: #3a3d42; }
         .top-menu-button.icon-only { padding: 8px; border-radius: 50%; }
         .top-menu-button svg { width: 16px; height: 16px; fill: #e0e0e0; }
+        #user-info { display: flex; align-items: center; gap: 10px; }
+        #user-info img { width: 32px; height: 32px; border-radius: 50%; }
         .main-content-wrapper { background-color: #161a22; border-radius: 8px; padding-top: 15px; }
         .nav-tabs-wrapper { padding: 0 15px; border-bottom: 1px solid #2a2c30; }
         .nav-tabs { display: flex; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; gap: 10px; }
@@ -40,38 +42,66 @@
         #form-lancamento input, #form-lancamento select, #form-lancamento button { padding: 10px; border-radius: 5px; border: 1px solid #3a404d; background-color: #2a2c30; color: #e0e0e0; font-size: 0.9rem; }
         #form-lancamento button { background-color: #00d9c3; color: #1f2937; font-weight: 600; cursor: pointer; grid-column: 1 / -1; }
         .btn-delete { background-color: #5c2c2c; color: #e0e0e0; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        #app-content, #user-info { display: none; } /* Esconde o conteúdo principal e info do usuário por padrão */
+        #login-message { text-align: center; padding: 50px; font-size: 1.2rem; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="top-menu-container"><div class="top-menu-left"><a href="#" class="logo"><img src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png" alt="Logomarca Clarifica"><span class="logo-text">CLARIFICA</span></a></div><div class="top-menu-right"><button class="top-menu-button icon-only" title="Mudar tema"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 4.343a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zM6.464 13.536a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 01-1.06 0l-1.06-1.06a.75.75 0 011.06-1.06l1.06 1.06a.75.75 0 010 1.06zM5.394 6.464a.75.75 0 01-1.06 0L3.272 5.394a.75.75 0 011.06-1.061l1.061 1.06a.75.75 0 010 1.061z"></path></svg></button><button class="top-menu-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1.34 8.25A8.75 8.75 0 0110 2.5v0a8.75 8.75 0 018.66 5.75H1.34zM2.5 10a8.75 8.75 0 0115 0h-15zM1.34 11.75A8.75 8.75 0 0110 17.5v0a8.75 8.75 0 018.66-5.75H1.34z" clip-rule="evenodd"></path></svg> Carteira Global</button><button class="top-menu-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg> Gerenciar ativos</button></div></div>
-        <div class="main-content-wrapper">
-            <div class="nav-tabs-wrapper"><ul class="nav-tabs" id="myTab"><li><a class="nav-link active" data-tab="patrimonio">Patrimônio</a></li><li><a class="nav-link" data-tab="rentabilidade">Rentabilidade</a></li><li><a class="nav-link" data-tab="acoes">Ações</a></li><li><a class="nav-link" data-tab="fiis">Fiis</a></li><li><a class="nav-link" data-tab="etf-cripto">Etf/Cripto</a></li><li><a class="nav-link" data-tab="renda-fixa">Renda Fixa</a></li><li><a class="nav-link" data-tab="calculos">Cálculos</a></li><li><a class="nav-link" data-tab="analises">Análises</a></li><li><a class="nav-link" data-tab="lancamentos">Lançamentos</a></li></ul></div>
-            <div class="tab-content" id="myTabContent">
-                <div class="tab-pane active" id="patrimonio"><h2>Visão Geral do Patrimônio</h2><p>Aqui você verá a consolidação total da sua carteira, gráficos de evolução e alocação por tipo de ativo.</p></div>
-                <div class="tab-pane" id="rentabilidade"><h2>Análise de Rentabilidade</h2><p>Acompanhe a rentabilidade da sua carteira, comparativos com benchmarks e desempenho de cada ativo.</p></div>
-                <div class="tab-pane" id="acoes"><h2>Carteira de Ações</h2><p>Detalhes sobre suas posições em ações, dividendos recebidos, preço médio e resultados.</p></div>
-                <div class="tab-pane" id="fiis"><h2>Carteira de FIIs</h2><p>Detalhes sobre seus Fundos Imobiliários, rendimentos mensais, valor patrimonial e indicadores.</p></div>
-                <div class="tab-pane" id="etf-cripto"><h2>ETFs e Criptomoedas</h2><p>Consolidação de seus investimentos em ETFs e criptoativos.</p></div>
-                <div class="tab-pane" id="renda-fixa"><h2>Renda Fixa</h2><p>Seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros ativos de renda fixa.</p></div>
-                <div class="tab-pane" id="calculos"><h2>Cálculos e Projeções</h2><p>Ferramentas para cálculos de preço médio, projeção de aposentadoria e outras simulações.</p></div>
-                <div class="tab-pane" id="analises"><h2>Análises Detalhadas</h2><p>Aqui você encontrará análises detalhadas de seus investimentos.</p></div>
-                <div class="tab-pane" id="lancamentos">
-                    <h2>Histórico de Lançamentos</h2>
-                    <div id="lancamentos-content">Conectando ao banco de dados...</div>
-                    <h2>Adicionar Novo Lançamento</h2>
-                    <form id="form-lancamento">
-                        <input type="date" id="data" required>
-                        <input type="text" id="ticker" placeholder="Ticker" required>
-                        <input type="text" id="preco" placeholder="Preço (ex: R$ 10,50)" required>
-                        <input type="number" id="quantidade" placeholder="Quantidade" step="any" required>
-                        <select id="classe" required>
-                            <option value="Ações">Ações</option>
-                            <option value="FIIs">FIIs</option>
-                            <option value="Criptomoedas">Criptomoedas</option>
-                        </select>
-                        <button type="submit">Adicionar Lançamento</button>
-                    </form>
+        <div class="top-menu-container">
+            <div class="top-menu-left">
+                <a href="#" class="logo">
+                    <img src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png" alt="Logomarca Clarifica">
+                    <span class="logo-text">CLARIFICA</span>
+                </a>
+            </div>
+            <div class="top-menu-right">
+                <button class="top-menu-button" id="btn-login">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-google" viewBox="0 0 16 16"><path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.25C2.806 7.66 2.5 8.5 2.5 9.5s.306 1.84.814 2.583C3.934 13.593 5.713 15 8 15c1.464 0 2.766-.56 3.762-1.454L14.455 14.6A7.933 7.933 0 0 1 8 16z"/></svg>
+                    Login com Google
+                </button>
+                <div id="user-info">
+                    <img id="user-photo" src="" alt="Foto do usuário">
+                    <span id="user-name"></span>
+                    <button class="top-menu-button" id="btn-logout">Sair</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="login-message">
+            <h2>Bem-vindo ao Clarifica</h2>
+            <p>Faça login com sua conta Google para gerenciar seus investimentos.</p>
+        </div>
+
+        <div id="app-content">
+            <div class="main-content-wrapper">
+                <div class="nav-tabs-wrapper"><ul class="nav-tabs" id="myTab"><li><a class="nav-link active" data-tab="patrimonio">Patrimônio</a></li><li><a class="nav-link" data-tab="rentabilidade">Rentabilidade</a></li><li><a class="nav-link" data-tab="acoes">Ações</a></li><li><a class="nav-link" data-tab="fiis">Fiis</a></li><li><a class="nav-link" data-tab="etf-cripto">Etf/Cripto</a></li><li><a class="nav-link" data-tab="renda-fixa">Renda Fixa</a></li><li><a class="nav-link" data-tab="calculos">Cálculos</a></li><li><a class="nav-link" data-tab="analises">Análises</a></li><li><a class="nav-link" data-tab="lancamentos">Lançamentos</a></li></ul></div>
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane active" id="patrimonio"><h2>Visão Geral do Patrimônio</h2><p>Aqui você verá a consolidação total da sua carteira, gráficos de evolução e alocação por tipo de ativo.</p></div>
+                    <div class="tab-pane" id="rentabilidade"><h2>Análise de Rentabilidade</h2><p>Acompanhe a rentabilidade da sua carteira, comparativos com benchmarks e desempenho de cada ativo.</p></div>
+                    <div class="tab-pane" id="acoes"><h2>Carteira de Ações</h2><p>Detalhes sobre suas posições em ações, dividendos recebidos, preço médio e resultados.</p></div>
+                    <div class="tab-pane" id="fiis"><h2>Carteira de FIIs</h2><p>Detalhes sobre seus Fundos Imobiliários, rendimentos mensais, valor patrimonial e indicadores.</p></div>
+                    <div class="tab-pane" id="etf-cripto"><h2>ETFs e Criptomoedas</h2><p>Consolidação de seus investimentos em ETFs e criptoativos.</p></div>
+                    <div class="tab-pane" id="renda-fixa"><h2>Renda Fixa</h2><p>Seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros ativos de renda fixa.</p></div>
+                    <div class="tab-pane" id="calculos"><h2>Cálculos e Projeções</h2><p>Ferramentas para cálculos de preço médio, projeção de aposentadoria e outras simulações.</p></div>
+                    <div class="tab-pane" id="analises"><h2>Análises Detalhadas</h2><p>Aqui você encontrará análises detalhadas de seus investimentos.</p></div>
+                    <div class="tab-pane" id="lancamentos">
+                        <h2>Histórico de Lançamentos</h2>
+                        <div id="lancamentos-content">Conectando ao banco de dados...</div>
+                        <h2>Adicionar Novo Lançamento</h2>
+                        <form id="form-lancamento">
+                            <input type="date" id="data" required>
+                            <input type="text" id="ticker" placeholder="Ticker" required>
+                            <input type="text" id="preco" placeholder="Preço (ex: R$ 10,50)" required>
+                            <input type="number" id="quantidade" placeholder="Quantidade" step="any" required>
+                            <select id="classe" required>
+                                <option value="Ações">Ações</option>
+                                <option value="FIIs">FIIs</option>
+                                <option value="Criptomoedas">Criptomoedas</option>
+                            </select>
+                            <button type="submit">Adicionar Lançamento</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -81,25 +111,10 @@
         // Importa as funções necessárias do Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Configuração das abas (sem alteração)
-            const tabs = document.querySelectorAll('.nav-tabs .nav-link');
-            const tabPanes = document.querySelectorAll('.tab-pane');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function (event) {
-                    event.preventDefault();
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tabPanes.forEach(p => p.classList.remove('active'));
-                    this.classList.add('active');
-                    const activeTabContentId = this.getAttribute('data-tab');
-                    document.getElementById(activeTabContentId).classList.add('active');
-                });
-            });
-
-            // --- CONFIGURAÇÃO E CÓDIGO DO FIREBASE (SINTAXE MODULAR) ---
-            
-            // Suas chaves de configuração do Firebase
+            // --- CONFIGURAÇÃO DO FIREBASE ---
             const firebaseConfig = {
               apiKey: "AIzaSyA08o5_6YY7I1eCZ3DCPCopAJAUiC2JNdA",
               authDomain: "clarifica-invest.firebaseapp.com",
@@ -110,23 +125,94 @@
               measurementId: "G-6PG9XZJPB9"
             };
 
-            // Inicializa o Firebase
+            // Inicializa o Firebase e seus serviços
             const app = initializeApp(firebaseConfig);
             const db = getFirestore(app);
-            const lancamentosCollectionRef = collection(db, 'lancamentos');
+            const auth = getAuth(app);
+            const provider = new GoogleAuthProvider();
 
-            // 1. CARREGAR DADOS EM TEMPO REAL
-            const q = query(lancamentosCollectionRef, orderBy("data", "desc"));
-            onSnapshot(q, (snapshot) => {
-                const todosLancamentos = [];
-                snapshot.forEach(doc => {
-                    todosLancamentos.push({ id: doc.id, ...doc.data() });
-                });
-                gerarHTMLlancamentos(todosLancamentos);
-            }, error => {
-                console.error("Erro ao buscar lançamentos: ", error);
-                document.getElementById('lancamentos-content').innerHTML = "<p>Não foi possível conectar ao banco de dados.</p>";
+            // --- REFERÊNCIAS AOS ELEMENTOS DO DOM ---
+            const btnLogin = document.getElementById('btn-login');
+            const btnLogout = document.getElementById('btn-logout');
+            const userInfoDiv = document.getElementById('user-info');
+            const userPhoto = document.getElementById('user-photo');
+            const userName = document.getElementById('user-name');
+            const appContent = document.getElementById('app-content');
+            const loginMessage = document.getElementById('login-message');
+            
+            // --- LÓGICA DE AUTENTICAÇÃO ---
+
+            // Observador do estado de autenticação
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // Usuário está logado
+                    console.log("Usuário logado:", user);
+                    updateUIForLoggedInUser(user);
+                    // IMPORTANTE: Inicia a lógica do banco de dados APENAS para usuários logados
+                    setupFirestoreListeners(user.uid); 
+                } else {
+                    // Usuário está deslogado
+                    console.log("Nenhum usuário logado.");
+                    updateUIForLoggedOutUser();
+                }
             });
+
+            // Função de Login
+            btnLogin.addEventListener('click', () => {
+                signInWithPopup(auth, provider)
+                    .catch((error) => {
+                        console.error("Erro no login com Google: ", error);
+                    });
+            });
+
+            // Função de Logout
+            btnLogout.addEventListener('click', () => {
+                signOut(auth).catch((error) => {
+                    console.error("Erro ao fazer logout: ", error);
+                });
+            });
+
+
+            // --- ATUALIZAÇÃO DA INTERFACE ---
+            function updateUIForLoggedInUser(user) {
+                loginMessage.style.display = 'none';
+                appContent.style.display = 'block';
+                userInfoDiv.style.display = 'flex';
+                btnLogin.style.display = 'none';
+                
+                userName.textContent = user.displayName;
+                userPhoto.src = user.photoURL;
+            }
+
+            function updateUIForLoggedOutUser() {
+                loginMessage.style.display = 'block';
+                appContent.style.display = 'none';
+                userInfoDiv.style.display = 'none';
+                btnLogin.style.display = 'block';
+
+                document.getElementById('lancamentos-content').innerHTML = ''; // Limpa a lista de lançamentos
+            }
+
+
+            // --- LÓGICA DO FIRESTORE (BANCO DE DADOS) ---
+            function setupFirestoreListeners(userId) {
+                // A referência da coleção agora pode ser específica para o usuário se desejar
+                // Ex: collection(db, 'users', userId, 'lancamentos');
+                const lancamentosCollectionRef = collection(db, 'lancamentos');
+
+                // 1. CARREGAR DADOS EM TEMPO REAL
+                const q = query(lancamentosCollectionRef, orderBy("data", "desc"));
+                onSnapshot(q, (snapshot) => {
+                    const todosLancamentos = [];
+                    snapshot.forEach(doc => {
+                        todosLancamentos.push({ id: doc.id, ...doc.data() });
+                    });
+                    gerarHTMLlancamentos(todosLancamentos);
+                }, error => {
+                    console.error("Erro ao buscar lançamentos: ", error);
+                    document.getElementById('lancamentos-content').innerHTML = "<p>Não foi possível conectar ao banco de dados.</p>";
+                });
+            }
 
             // 2. GERAR HTML
             function gerarHTMLlancamentos(lancamentos) {
@@ -170,11 +256,12 @@
                     ticker: document.getElementById('ticker').value.toUpperCase(),
                     preco: document.getElementById('preco').value,
                     quantidade: document.getElementById('quantidade').value,
-                    classe: document.getElementById('classe').value
+                    classe: document.getElementById('classe').value,
+                    //userId: auth.currentUser.uid // Opcional: associar o lançamento ao usuário
                 };
                 
                 try {
-                    await addDoc(lancamentosCollectionRef, novoLancamento);
+                    await addDoc(collection(db, 'lancamentos'), novoLancamento);
                     form.reset();
                 } catch (error) {
                     console.error("Erro ao adicionar documento: ", error);
@@ -195,6 +282,20 @@
                         }
                     }
                 }
+            });
+            
+            // Lógica das Abas (sem alteração)
+            const tabs = document.querySelectorAll('.nav-tabs .nav-link');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabPanes.forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                    const activeTabContentId = this.getAttribute('data-tab');
+                    document.getElementById(activeTabContentId).classList.add('active');
+                });
             });
         });
     </script>
