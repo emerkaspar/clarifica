@@ -1,0 +1,38 @@
+{
+  "Ações": [
+    {
+      "data": "02/01/2024",
+      "ticker": "PETR4",
+      "preco": "R$ 37,25",
+      "quantidade": "100"
+    },
+    {
+      "data": "15/01/2024",
+      "ticker": "VALE3",
+      "preco": "R$ 70,50",
+      "quantidade": "50"
+    }
+  ],
+  "FIIs": [
+    {
+      "data": "05/01/2024",
+      "ticker": "MXRF11",
+      "preco": "R$ 10,80",
+      "quantidade": "200"
+    },
+    {
+      "data": "20/01/2024",
+      "ticker": "HGLG11",
+      "preco": "R$ 165,30",
+      "quantidade": "30"
+    }
+  ],
+  "Criptomoedas": [
+    {
+      "data": "10/01/2024",
+      "ticker": "BTC",
+      "preco": "R$ 210.000,00",
+      "quantidade": "0.01"
+    }
+  ]
+}
