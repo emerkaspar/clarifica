@@ -1,0 +1,19 @@
+Agora é preciso criar na aba de FII's uma tabela que traga as informações agrupadas por ativo da aba lançamentos. Essa tabela vai ter de ter: 
+
+Ativo (nome do ativo)
+
+Quantidade (soma das quantidades)
+
+Preço médio (cálcular o preço médio pago por cada ativo)
+
+Preço atual (esse preço deverá ser buscado via API e deverá trazer o preço do ticker atalizado)
+
+Variação (diferença percentual entre o preço atual e o preço médio)
+
+Proventos: (trazer a soma dos roventos do ticker da aba proventos) 
+
+Rentabilidade (diferença percentual entre o preço atual e o preço médio + proventos)
+
+Dividend Yield: (cálculo: Proventos recebido nos últimos 12 meses / preço atual)
+
+Yield on cost: (cálculo: Proventos recebidos nos últimos 12 meses / preço médio)

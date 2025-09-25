@@ -19,6 +19,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
       body {
         background-color: #0f1011;
@@ -295,6 +296,15 @@
       #app-content {
         display: none;
       }
+      
+      /* --- ESTILO PARA O CONTAINER DO GRÁFICO --- */
+      #movimentacao-chart-container {
+        margin-bottom: 30px;
+        background-color: #1a1b1e;
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid #2a2c30;
+      }
 
       /* --- MODAL (USADO PARA LANÇAMENTO E CLASSIFICAÇÃO) --- */
       .modal-overlay {
@@ -406,7 +416,7 @@
       }
       .sugestoes-lista {
         position: absolute;
-        top: 100%;
+        top: calc(100% - 5px); /* Ajustado para cobrir o input */
         left: 0;
         right: 0;
         background-color: #252a33;
@@ -553,7 +563,7 @@
         padding: 8px 12px;
         font-size: 0.9rem;
       }
-      #btn-mostrar-form {
+      #btn-mostrar-form, #btn-lancamento-provento {
         font-size: 0.9rem;
         padding: 8px 15px;
       }
@@ -601,6 +611,9 @@
       .operacao-venda {
         color: #ef4444;
       }
+      .provento-recebido {
+        color: #00d9c3;
+      }
       .lista-acoes {
         display: flex;
         gap: 10px;
@@ -629,7 +642,7 @@
       .btn-excluir:hover svg {
         fill: #ef4444;
       }
-      #historico-lista p, #classificacao-lista p {
+      #historico-lista p, #classificacao-lista p, #proventos-lista p {
         text-align: center;
         color: #a0a7b3;
         padding: 20px;
@@ -800,7 +813,30 @@
           <div class="tab-content" id="myTabContent">
             <div class="tab-pane active" id="patrimonio"> <h2>Visão Geral do Patrimônio</h2> <p> Em breve: consolidação total da sua carteira, gráficos de evolução e alocação por tipo de ativo. </p> </div>
             <div class="tab-pane" id="rentabilidade"> <h2>Análise de Rentabilidade</h2> <p> Em breve: acompanhe a rentabilidade da sua carteira, comparativos com benchmarks e desempenho de cada ativo. </p> </div>
-            <div class="tab-pane" id="proventos"> <h2>Acompanhamento de Proventos</h2> <p> Em breve: visualize os dividendos, juros sobre capital próprio e outros proventos recebidos. </p> </div>
+            
+            <div class="tab-pane" id="proventos"> 
+                <div class="content-container">
+                    <div class="content-header">
+                        <h3>Acompanhamento de Proventos</h3>
+                        <button id="btn-lancamento-provento" class="btn-adicionar">
+                            <i class="fas fa-plus"></i> Lançar Provento
+                        </button>
+                    </div>
+                    <div class="lista-wrapper">
+                         <div class="lista-header" style="grid-template-columns: 2fr 1fr 1.5fr 1.5fr 1.5fr auto; min-width: 600px;">
+                            <div class="header-col">Ativo</div>
+                            <div class="header-col">Tipo</div>
+                            <div class="header-col">Provento</div>
+                            <div class="header-col">Data Pagamento</div>
+                            <div class="header-col">Valor (R$)</div>
+                            <div class="header-col" style="text-align: right;">Ações</div>
+                        </div>
+                        <div id="proventos-lista">
+                            </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="tab-pane" id="acoes"> <h2>Carteira de Ações</h2> <p> Em breve: detalhes sobre suas posições em ações, dividendos recebidos, preço médio e resultados. </p> </div>
             <div class="tab-pane" id="fiis"> <h2>Carteira de FIIs</h2> <p> Em breve: detalhes sobre seus Fundos Imobiliários, rendimentos mensais, valor patrimonial e indicadores. </p> </div>
             <div class="tab-pane" id="etf-cripto"> <h2>ETFs e Criptomoedas</h2> <p> Em breve: consolidação de seus investimentos em ETFs e criptoativos. </p> </div>
@@ -810,6 +846,11 @@
             
             <div class="tab-pane" id="lancamentos">
               <div class="content-container">
+                <div id="movimentacao-chart-container" style="margin-bottom: 30px;">
+                    <h3 style="color: #e0e0e0; margin-top: 0; margin-bottom: 15px;">Movimentação (Últimos 6 Meses)</h3>
+                    <canvas id="movimentacao-chart"></canvas>
+                </div>
+
                 <div class="content-header">
                   <h3>Histórico de Lançamentos</h3>
                   <div style="display: flex; align-items: center; gap: 15px">
@@ -865,7 +906,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 id="lancamento-modal-title">Adicionar Lançamento</h2>
-          <button class="modal-close-btn">&times;</button>
+          <button class="modal-close-btn" data-modal="lancamento-modal">&times;</button>
         </div>
         <div class="modal-body">
           <form id="form-novo-ativo">
@@ -917,7 +958,7 @@
               <span class="value" id="valor-total-calculado">R$ 0,00</span>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn-cancelar"> Cancelar </button>
+              <button type="button" class="btn-cancelar" data-modal="lancamento-modal"> Cancelar </button>
               <button type="submit" class="btn-adicionar"> <i class="fas fa-plus"></i> Adicionar </button>
             </div>
           </form>
@@ -925,11 +966,61 @@
       </div>
     </div>
 
+    <div id="provento-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="provento-modal-title">Lançar Provento Recebido</h2>
+                <button class="modal-close-btn" data-modal="provento-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-novo-provento">
+                    <input type="hidden" id="provento-doc-id" name="doc-id" />
+                    <div class="tipo-operacao-modal" style="margin-bottom: 25px;">
+                        <button type="button" class="btn-tipo-provento active" data-tipo="Ações"> <i class="fas fa-chart-line"></i> Ações </button>
+                        <button type="button" class="btn-tipo-provento" data-tipo="FIIs"> <i class="fas fa-building"></i> FIIs </button>
+                    </div>
+                    <input type="hidden" id="provento-tipo-ativo" name="provento-tipo-ativo" value="Ações"/>
+
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="input-wrapper">
+                            <label for="provento-ativo" class="form-label">Ticker do Ativo</label>
+                            <input type="text" id="provento-ativo" name="provento-ativo" placeholder="Ex: PETR4 ou HGBS11" class="form-input" required autocomplete="off"/>
+                            <div id="provento-ativo-sugestoes" class="sugestoes-lista"></div>
+                        </div>
+                        <div>
+                            <label for="provento-tipo-provento" class="form-label">Tipo de Provento</label>
+                            <select id="provento-tipo-provento" name="provento-tipo-provento" class="form-select" required>
+                                <option value="Dividendos">Dividendos</option>
+                                <option value="JCP">JCP (Juros s/ Capital Próprio)</option>
+                                <option value="Premios por opção">Prêmios por opção</option>
+                            </select>
+                        </div>
+                        <div class="input-icon-wrapper">
+                            <label for="provento-data-pagamento" class="form-label">Data de Pagamento</label>
+                            <i class="fas fa-calendar-alt"></i>
+                            <input type="date" id="provento-data-pagamento" name="provento-data-pagamento" class="form-input" required/>
+                        </div>
+                        <div>
+                            <label for="provento-valor" class="form-label">Valor Recebido em R$ (Total)</label>
+                            <input type="number" id="provento-valor" name="provento-valor" placeholder="0,00" step="0.01" class="form-input" required/>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
+                        <button type="button" class="btn-cancelar" data-modal="provento-modal">Cancelar</button>
+                        <button type="submit" class="btn-adicionar"><i class="fas fa-plus"></i> Lançar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
     <div id="classificacao-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="classificacao-modal-title">Classificar Ativo</h2>
-                <button class="modal-close-btn">&times;</button>
+                <button class="modal-close-btn" data-modal="classificacao-modal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="form-classificacao">
@@ -939,7 +1030,7 @@
                     <div id="classificacao-fields-container" class="form-grid" style="margin-bottom: 0;">
                         </div>
                     <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
-                        <button type="button" class="btn-cancelar">Cancelar</button>
+                        <button type="button" class="btn-cancelar" data-modal="classificacao-modal">Cancelar</button>
                         <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar</button>
                     </div>
                 </form>
@@ -974,6 +1065,7 @@
         const provider = new GoogleAuthProvider();
 
         let currentuserID = null;
+        let movimentacaoChart = null; // Instância do Chart.js para o gráfico de movimentação
 
         // --- LÓGICA DE AUTENTICAÇÃO E UI GERAL ---
         const btnHeaderLoginGoogle = document.getElementById("btn-header-login-google");
@@ -1034,14 +1126,21 @@
         function initializeAppData(userID) {
             const lancamentosCollection = collection(db, "lancamentos");
             const ativosClassificadosCollection = collection(db, "ativosClassificados");
+            const proventosCollection = collection(db, "proventos"); 
+
+            // Queries
             const qLancamentos = query(lancamentosCollection, where("userID", "==", userID), orderBy("timestamp", "desc"));
+            const qClassificacoes = query(ativosClassificadosCollection, where("userID", "==", userID));
+            // Ordena proventos por data de pagamento (desc) para mostrar os mais recentes primeiro
+            const qProventos = query(proventosCollection, where("userID", "==", userID), orderBy("dataPagamento", "desc"));
 
             let allLancamentos = [];
             let allClassificacoes = {};
+            // let allProventos = []; // Não é mais necessário, o listener abaixo já renderiza
 
             // Listener para classificações
-            const qClassificacoes = query(ativosClassificadosCollection, where("userID", "==", userID));
             onSnapshot(qClassificacoes, (snapshot) => {
+                allClassificacoes = {};
                 snapshot.docs.forEach(doc => {
                     allClassificacoes[doc.id] = doc.data();
                 });
@@ -1053,11 +1152,174 @@
                 allLancamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderHistorico(allLancamentos);
                 renderClassificacao(allLancamentos, allClassificacoes);
+                renderMovimentacaoChart(allLancamentos); 
             });
+            
+            // Listener para proventos
+            onSnapshot(qProventos, (snapshot) => {
+                 const allProventos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                 renderProventos(allProventos);
+            });
+
 
             setupLancamentosModal(userID);
             setupClassificacaoModal(userID, ativosClassificadosCollection);
+            setupProventoModal(userID); 
         }
+        
+        // --- LÓGICA DA ABA DE PROVENTOS (LISTAGEM) ---
+        const proventosListaDiv = document.getElementById("proventos-lista");
+        
+        const renderProventos = (proventos) => {
+            if (proventos.length === 0) {
+                proventosListaDiv.innerHTML = `<p>Nenhum provento lançado ainda.</p>`;
+                return;
+            }
+
+            proventosListaDiv.innerHTML = proventos.map(p => `
+                <div class="lista-item" style="grid-template-columns: 2fr 1fr 1.5fr 1.5fr 1.5fr auto; min-width: 600px;">
+                    <div class="lista-item-valor">${p.ativo}</div>
+                    <div><span class="tipo-ativo-badge">${p.tipoAtivo}</span></div>
+                    <div class="lista-item-valor provento-recebido">${p.tipoProvento}</div>
+                    <div class="lista-item-valor">${p.dataPagamento}</div>
+                    <div class="lista-item-valor">${p.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                    <div class="lista-acoes">
+                        <button class="btn-crud btn-excluir-provento" data-id="${p.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        proventosListaDiv.addEventListener("click", async (e) => {
+            const button = e.target.closest("button.btn-excluir-provento");
+            if (!button || !currentuserID) return;
+            const docId = button.dataset.id;
+            
+            if (confirm("Tem certeza que deseja excluir este provento?")) {
+                await deleteDoc(doc(db, "proventos", docId)).catch(err => alert("Erro ao excluir: " + err.message));
+            }
+        });
+
+
+        // --- LÓGICA DO GRÁFICO DE MOVIMENTAÇÃO (ÚLTIMOS 6 MESES) ---
+        const renderMovimentacaoChart = (lancamentos) => {
+            const chartCanvas = document.getElementById('movimentacao-chart');
+            if (!chartCanvas || typeof Chart === 'undefined') return;
+
+            // 1. Calcular o intervalo de 6 meses
+            const now = new Date();
+            const last6MonthsData = {};
+            const labels = [];
+            const dataAtual = new Date();
+            dataAtual.setDate(1); // Começa no 1º dia do mês
+
+            // Preencher com os 6 meses anteriores (incluindo o mês atual)
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date(dataAtual.getFullYear(), dataAtual.getMonth() - i, 1);
+                // Formato 'YYYY-MM' para a chave do objeto (facilita a ordenação)
+                const monthYearKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                // Formato de exibição para o label
+                labels.push(date.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }));
+                last6MonthsData[monthYearKey] = { compra: 0, venda: 0 };
+            }
+
+            // 2. Agregar dados
+            const minDateKey = Object.keys(last6MonthsData)[0]; // O mês mais antigo na chave YYYY-MM
+            lancamentos.forEach(l => {
+                // O campo 'data' vem no formato 'YYYY-MM-DD'
+                const [year, month, day] = l.data.split('-').map(Number);
+                const dataOp = new Date(year, month - 1, day);
+                const monthYearKey = `${dataOp.getFullYear()}-${String(dataOp.getMonth() + 1).padStart(2, '0')}`;
+                
+                // Só agrega se estiver dentro dos 6 meses
+                if (monthYearKey >= minDateKey) { 
+                    const valor = l.valorTotal || 0;
+                    if (l.tipoOperacao === 'compra' && last6MonthsData[monthYearKey]) {
+                        last6MonthsData[monthYearKey].compra += valor;
+                    } else if (l.tipoOperacao === 'venda' && last6MonthsData[monthYearKey]) {
+                        last6MonthsData[monthYearKey].venda += valor;
+                    }
+                }
+            });
+
+            // 3. Formatar dados para Chart.js
+            const compras = Object.values(last6MonthsData).map(data => data.compra);
+            const vendas = Object.values(last6MonthsData).map(data => data.venda);
+            
+            const data = {
+                labels: labels, // Labels já estão ordenados de forma crescente
+                datasets: [
+                    {
+                        label: 'Compras (R$)',
+                        data: compras,
+                        backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                        borderColor: 'rgb(34, 197, 94)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Vendas (R$)',
+                        data: vendas,
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderColor: 'rgb(239, 68, 68)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }
+                ]
+            };
+
+            // 4. Renderizar o gráfico
+            if (movimentacaoChart) {
+                movimentacaoChart.destroy();
+            }
+
+            movimentacaoChart = new Chart(chartCanvas, {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: { color: '#2a2c30' },
+                            ticks: { color: '#e0e0e0' }
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: true,
+                            grid: { color: '#2a2c30' },
+                            ticks: { 
+                                color: '#e0e0e0',
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0' }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
 
         // --- LÓGICA DA ABA DE LANÇAMENTOS ---
         const historicoListaDiv = document.getElementById("historico-lista");
@@ -1105,7 +1367,7 @@
         });
         
         searchInput.addEventListener("input", () => {
-            // A re-renderização agora é tratada pelo listener do onSnapshot, mas podemos forçar se necessário.
+            // A re-renderização é forçada aqui para atualizar a lista imediatamente
             const q = query(collection(db, "lancamentos"), where("userID", "==", currentuserID), orderBy("timestamp", "desc"));
             getDocs(q).then(snapshot => {
                 const allLancamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1168,7 +1430,18 @@
 
         // --- SETUP DOS MODAIS ---
 
-        // MODAL DE LANÇAMENTO
+        // Função de utilidade para fechar modais
+        const closeModal = (modalId) => {
+            document.getElementById(modalId).classList.remove("show");
+        }
+        document.querySelectorAll(".modal-close-btn, .btn-cancelar").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                const modalId = e.currentTarget.dataset.modal || e.currentTarget.closest(".modal-overlay").id;
+                closeModal(modalId);
+            });
+        });
+
+        // MODAL DE LANÇAMENTO DE ATIVOS
         function setupLancamentosModal(userID) {
             const modal = document.getElementById("lancamento-modal");
             const form = document.getElementById("form-novo-ativo");
@@ -1178,12 +1451,14 @@
             const ativoInput = form.querySelector("#ativo");
             const sugestoesDiv = form.querySelector("#ativo-sugestoes");
             let timeoutBusca;
+
             ativoInput.addEventListener("input", () => {
                 clearTimeout(timeoutBusca);
                 const termo = ativoInput.value.trim().toUpperCase();
                 if (termo.length < 2) { sugestoesDiv.style.display = "none"; return; }
                 timeoutBusca = setTimeout(async () => {
                     try {
+                        // Usando API da Brapi para sugestão de tickers
                         const resp = await fetch(`https://brapi.dev/api/available?search=${termo}`);
                         const data = await resp.json();
                         sugestoesDiv.innerHTML = "";
@@ -1203,6 +1478,12 @@
                     } catch (e) { console.error("Erro ao buscar ativos:", e); sugestoesDiv.style.display = "none";}
                 }, 400);
             });
+            document.addEventListener("click", (e) => { 
+                if (ativoInput && !ativoInput.contains(e.target) && !sugestoesDiv.contains(e.target)) {
+                    sugestoesDiv.style.display = "none";
+                }
+            });
+
 
             // Lógica do formulário
             const calcularTotal = () => {
@@ -1240,7 +1521,7 @@
                         await addDoc(collection(db, "lancamentos"), lancamentoData);
                         alert("Lançamento adicionado!");
                     }
-                    modal.classList.remove("show");
+                    closeModal("lancamento-modal");
                 } catch (error) {
                     alert("Erro ao salvar: " + error.message);
                 }
@@ -1248,9 +1529,7 @@
 
             // Abrir/Fechar
             document.getElementById("btn-mostrar-form").addEventListener("click", () => openLancamentoModal());
-            modal.querySelector(".modal-close-btn").addEventListener("click", () => modal.classList.remove("show"));
-            modal.querySelector(".btn-cancelar").addEventListener("click", () => modal.classList.remove("show"));
-            modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("show"); });
+            modal.addEventListener("click", e => { if (e.target === modal) closeModal("lancamento-modal"); });
 
             window.openLancamentoModal = (data = {}, id = "") => {
                 form.reset();
@@ -1271,6 +1550,91 @@
                 modal.classList.add("show");
             };
         }
+
+
+        // NOVO SETUP: MODAL DE LANÇAMENTO DE PROVENTOS
+        function setupProventoModal(userID) {
+            const modal = document.getElementById("provento-modal");
+            const form = document.getElementById("form-novo-provento");
+            const hoje = new Date().toISOString().split("T")[0];
+            
+            // Auto complete
+            const ativoInput = form.querySelector("#provento-ativo");
+            const sugestoesDiv = form.querySelector("#provento-ativo-sugestoes");
+            let timeoutBusca;
+
+            ativoInput.addEventListener("input", () => {
+                clearTimeout(timeoutBusca);
+                const termo = ativoInput.value.trim().toUpperCase();
+                if (termo.length < 2) { sugestoesDiv.style.display = "none"; return; }
+                timeoutBusca = setTimeout(async () => {
+                    try {
+                        const resp = await fetch(`https://brapi.dev/api/available?search=${termo}`);
+                        const data = await resp.json();
+                        sugestoesDiv.innerHTML = "";
+                        if (data && data.stocks && data.stocks.length > 0) {
+                            sugestoesDiv.style.display = "block";
+                            data.stocks.slice(0, 10).forEach(stock => {
+                                const div = document.createElement("div");
+                                div.className = "sugestao-item";
+                                div.textContent = stock;
+                                div.onclick = () => {
+                                    ativoInput.value = stock;
+                                    sugestoesDiv.style.display = "none";
+                                };
+                                sugestoesDiv.appendChild(div);
+                            });
+                        } else { sugestoesDiv.style.display = "none"; }
+                    } catch (e) { console.error("Erro ao buscar ativos:", e); sugestoesDiv.style.display = "none";}
+                }, 400);
+            });
+            document.addEventListener("click", (e) => { 
+                if (ativoInput && !ativoInput.contains(e.target) && !sugestoesDiv.contains(e.target)) {
+                    sugestoesDiv.style.display = "none";
+                }
+            });
+
+            // Lógica de seleção Ações/FIIs
+            form.querySelectorAll(".btn-tipo-provento").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    form.querySelectorAll(".btn-tipo-provento").forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    form.querySelector("#provento-tipo-ativo").value = btn.dataset.tipo;
+                });
+            });
+
+            // Lógica de submissão do formulário
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const proventoData = {
+                    userID: userID,
+                    tipoAtivo: form["provento-tipo-ativo"].value,
+                    ativo: form["provento-ativo"].value.toUpperCase(),
+                    tipoProvento: form["provento-tipo-provento"].value, // NOVO CAMPO
+                    dataPagamento: form["provento-data-pagamento"].value,
+                    valor: parseFloat(form["provento-valor"].value),
+                    timestamp: serverTimestamp(),
+                };
+
+                try {
+                    await addDoc(collection(db, "proventos"), proventoData);
+                    alert("Provento lançado com sucesso!");
+                    form.reset();
+                    closeModal("provento-modal");
+                } catch (error) {
+                    alert("Erro ao lançar provento: " + error.message);
+                }
+            });
+
+            // Abrir/Fechar
+            document.getElementById("btn-lancamento-provento").addEventListener("click", () => {
+                 form["provento-data-pagamento"].value = hoje; // Define a data inicial
+                 form["provento-tipo-provento"].value = "Dividendos"; // Define o default
+                 modal.classList.add("show");
+            });
+            modal.addEventListener("click", e => { if (e.target === modal) closeModal("provento-modal"); });
+        }
+
 
         // MODAL DE CLASSIFICAÇÃO
         function setupClassificacaoModal(userID, collectionRef) {
@@ -1342,16 +1706,14 @@
                         classificacoes: classificacoes
                     });
                     alert("Classificação salva com sucesso!");
-                    modal.classList.remove("show");
+                    closeModal("classificacao-modal");
                 } catch (error) {
                     alert("Erro ao salvar classificação: " + error.message);
                 }
             });
 
             // Abrir/Fechar
-            modal.querySelector(".modal-close-btn").addEventListener("click", () => modal.classList.remove("show"));
-            modal.querySelector(".btn-cancelar").addEventListener("click", () => modal.classList.remove("show"));
-            modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("show"); });
+            modal.addEventListener("click", e => { if (e.target === modal) closeModal("classificacao-modal"); });
 
             window.openClassificacaoModal = (ticker, tipo, valores = {}) => {
                 form.reset();
