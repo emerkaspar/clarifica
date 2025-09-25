@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link
@@ -58,15 +58,42 @@
         height: 128px;
         width: auto;
       }
-      .logo-text {
-        font-size: 1.4rem;
-        font-weight: 600;
-        color: #e0e0e0;
+      .header-nav {
+        display: none; /* Escondido por padrão */
+        gap: 25px;
       }
+      .header-nav a {
+        color: #a0a7b3;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: color 0.2s ease-in-out;
+      }
+      .header-nav a:hover {
+        color: #00d9c3;
+      }
+
       .top-menu-right {
         display: flex;
         align-items: center;
         gap: 10px;
+      }
+      #btn-header-login-google {
+        background-color: #00d9c3;
+        color: #1f2937;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.2s ease-in-out;
+      }
+      #btn-header-login-google:hover {
+        background-color: #00c2af;
       }
       #user-info {
         display: none;
@@ -142,43 +169,55 @@
         border-radius: 8px;
         padding-top: 15px;
       }
+
+      /* --- NOVO ESTILO DO MENU --- */
       .nav-tabs-wrapper {
-        padding: 0 15px;
+        padding: 0 25px;
         border-bottom: 1px solid #2a2c30;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .nav-tabs-wrapper::-webkit-scrollbar {
+        height: 2px;
+      }
+      .nav-tabs-wrapper::-webkit-scrollbar-thumb {
+        background: #3a404d;
       }
       .nav-tabs {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         list-style: none;
         padding: 0;
         margin: 0;
-        gap: 10px;
+        gap: 25px;
       }
       .nav-tabs .nav-link {
         display: block;
-        padding: 10px 18px;
+        padding: 12px 0;
         text-decoration: none;
-        background-color: #2c313d;
+        background-color: transparent;
         color: #a0a7b3;
-        border: 1px solid #3a404d;
-        border-radius: 6px 6px 0 0;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
         cursor: pointer;
         font-size: 0.9rem;
         font-weight: 500;
         transition: all 0.2s ease-in-out;
         margin-bottom: -1px;
+        white-space: nowrap;
       }
       .nav-tabs .nav-link:hover:not(.active) {
-        background-color: #383d47;
-        color: #00d9c3;
-        border-color: #4b5261;
+        color: #e0e0e0;
+        border-bottom-color: #3a404d;
       }
       .nav-tabs .nav-link.active {
-        color: #1f2937;
-        background-color: #d1d5db;
-        border-color: #9ca3af;
-        border-bottom: 1px solid #d1d5db;
+        color: #00d9c3;
+        background-color: transparent;
+        border-bottom: 2px solid #00d9c3;
+        font-weight: 600;
       }
+
       .tab-content {
         padding: 30px;
       }
@@ -195,38 +234,64 @@
         padding-bottom: 10px;
         color: #f8f9fa;
       }
-      #login-button-container {
+
+      /* --- NOVA SEÇÃO DE BOAS-VINDAS --- */
+      #welcome-section {
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
-        min-height: calc(100vh - 180px);
+        justify-content: center;
+        text-align: center;
+        min-height: calc(100vh - 200px);
         padding: 20px;
       }
-      #btn-main-login-google {
-        background-color: #00d9c3;
-        color: #1f2937;
+      .welcome-content h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 15px;
+        color: #f8f9fa;
+      }
+      .welcome-content .highlight {
+        color: #00d9c3;
+      }
+      .welcome-content p {
+        max-width: 600px;
+        margin: 0 auto 40px auto;
         font-size: 1.1rem;
-        font-weight: 600;
-        padding: 15px 30px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
+        line-height: 1.6;
+        color: #a0a7b3;
+      }
+      .features {
         display: flex;
-        align-items: center;
-        gap: 10px;
-        transition: background-color 0.2s ease-in-out,
-          transform 0.2s ease-in-out;
-        box-shadow: 0 4px 10px rgba(0, 217, 195, 0.2);
+        justify-content: center;
+        gap: 30px;
+        flex-wrap: wrap;
       }
-      #btn-main-login-google:hover {
-        background-color: #00c2af;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(0, 217, 195, 0.3);
+      .feature-item {
+        background-color: #161a22;
+        padding: 25px;
+        border-radius: 8px;
+        border: 1px solid #2a2c30;
+        width: 250px;
+        text-align: center;
       }
-      #btn-main-login-google img {
-        width: 22px;
-        height: 22px;
+      .feature-item i {
+        font-size: 2rem;
+        color: #00d9c3;
+        margin-bottom: 15px;
       }
+      .feature-item h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.2rem;
+        color: #e0e0e0;
+      }
+      .feature-item p {
+        font-size: 0.9rem;
+        color: #a0a7b3;
+        line-height: 1.5;
+        margin: 0;
+      }
+
       #app-content {
         display: none;
       }
@@ -473,6 +538,8 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
       }
       .historico-header h3 {
         color: #e0e0e0;
@@ -490,12 +557,16 @@
         font-size: 0.9rem;
         padding: 8px 15px;
       }
+      .historico-lista-wrapper {
+        overflow-x: auto;
+      }
       .historico-lista-header {
         display: grid;
         grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto;
         gap: 15px;
         padding: 0 20px;
         margin-bottom: 5px;
+        min-width: 700px;
       }
       .header-col {
         color: #a0a7b3;
@@ -514,6 +585,7 @@
         margin-bottom: 8px;
         border: 1px solid #2a2c30;
         font-size: 0.9rem;
+        min-width: 700px;
       }
       .historico-item-valor {
         font-weight: 500;
@@ -564,6 +636,43 @@
         color: #a0a7b3;
         padding: 20px;
       }
+
+      /* --- MEDIA QUERIES PARA RESPONSIVIDADE --- */
+      @media (max-width: 768px) {
+        .container {
+          padding: 10px;
+        }
+        .logo img {
+          height: 90px;
+        }
+        .header-nav {
+          display: none;
+        }
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .tab-content {
+          padding: 20px;
+        }
+        .nav-tabs-wrapper {
+          padding: 0 15px;
+        }
+        .welcome-content h1 {
+          font-size: 2rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .logo img {
+          height: 64px;
+        }
+        .top-menu-container {
+          padding: 5px 10px;
+        }
+        #user-info #user-name {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -574,10 +683,17 @@
             ><img
               src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png"
               alt="Logomarca Clarifica"
-            /><span class="logo-text">CLARIFICA</span></a
-          >
+          /></a>
         </div>
+        <nav class="header-nav">
+          <a href="#">Funcionalidades</a>
+          <a href="#">Para Quem é?</a>
+          <a href="#">Contato</a>
+        </nav>
         <div class="top-menu-right">
+          <button id="btn-header-login-google">
+            <i class="fab fa-google"></i> Fazer Login
+          </button>
           <div id="user-info">
             <img id="user-photo" src="" alt="Foto do usuário" /><span
               id="user-name"
@@ -610,15 +726,47 @@
           </div>
         </div>
       </div>
-      <div id="login-button-container">
-        <button id="btn-main-login-google">
-          <img
-            src="https://raw.githubusercontent.com/emerkaspar/clarifica/main/favicon.png"
-            alt="Logo Clarifica"
-          />
-          Fazer Login com Google
-        </button>
+
+      <div id="welcome-section">
+        <div class="welcome-content">
+          <h1>
+            Seu portfólio de investimentos,
+            <span class="highlight">claro e consolidado.</span>
+          </h1>
+          <p>
+            Acompanhe todos os seus ativos em um só lugar. Ações, FIIs, ETFs,
+            Criptomoedas e Renda Fixa. Tome decisões melhores com análises e
+            relatórios intuitivos.
+          </p>
+          <div class="features">
+            <div class="feature-item">
+              <i class="fas fa-chart-pie"></i>
+              <h3>Consolide</h3>
+              <p>
+                Tenha uma visão unificada de todo o seu patrimônio em diferentes
+                corretoras e classes de ativos.
+              </p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-hand-holding-usd"></i>
+              <h3>Acompanhe</h3>
+              <p>
+                Monitore a rentabilidade, o recebimento de proventos e a
+                evolução de cada ativo da sua carteira.
+              </p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-lightbulb"></i>
+              <h3>Clarifique</h3>
+              <p>
+                Use nossas ferramentas e análises para entender seus
+                investimentos e planejar os próximos passos.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
+
       <div id="app-content">
         <div class="main-content-wrapper">
           <div class="nav-tabs-wrapper">
@@ -629,6 +777,7 @@
               <li>
                 <a class="nav-link" data-tab="rentabilidade">Rentabilidade</a>
               </li>
+              <li><a class="nav-link" data-tab="proventos">Proventos</a></li>
               <li><a class="nav-link" data-tab="acoes">Ações</a></li>
               <li><a class="nav-link" data-tab="fiis">Fiis</a></li>
               <li><a class="nav-link" data-tab="etf-cripto">Etf/Cripto</a></li>
@@ -637,6 +786,9 @@
               <li><a class="nav-link" data-tab="analises">Análises</a></li>
               <li>
                 <a class="nav-link" data-tab="lancamentos">Lançamentos</a>
+              </li>
+              <li>
+                <a class="nav-link" data-tab="classificacao">Classificação</a>
               </li>
             </ul>
           </div>
@@ -653,6 +805,13 @@
               <p>
                 Acompanhe a rentabilidade da sua carteira, comparativos com
                 benchmarks e desempenho de cada ativo.
+              </p>
+            </div>
+            <div class="tab-pane" id="proventos">
+              <h2>Acompanhamento de Proventos</h2>
+              <p>
+                Visualize os dividendos, juros sobre capital próprio e outros
+                proventos recebidos de seus ativos.
               </p>
             </div>
             <div class="tab-pane" id="acoes">
@@ -736,6 +895,10 @@
                             <option value="FIIs">FIIs</option>
                             <option value="ETF">ETF</option>
                             <option value="Cripto">Criptomoedas</option>
+                            <option value="Renda Fixa">Renda Fixa</option>
+                            <option value="Tesouro Direto">
+                              Tesouro Direto
+                            </option>
                           </select>
                         </div>
                         <div class="input-wrapper">
@@ -849,17 +1012,26 @@
                     </button>
                   </div>
                 </div>
-                <div class="historico-lista-header">
-                  <div class="header-col">Ativo</div>
-                  <div class="header-col">Tipo</div>
-                  <div class="header-col">Ordem</div>
-                  <div class="header-col">Quantidade</div>
-                  <div class="header-col">Preço Unitário</div>
-                  <div class="header-col">Total</div>
-                  <div class="header-col">Ações</div>
+                <div class="historico-lista-wrapper">
+                  <div class="historico-lista-header">
+                    <div class="header-col">Ativo</div>
+                    <div class="header-col">Tipo</div>
+                    <div class="header-col">Ordem</div>
+                    <div class="header-col">Quantidade</div>
+                    <div class="header-col">Preço Unitário</div>
+                    <div class="header-col">Total</div>
+                    <div class="header-col">Ações</div>
+                  </div>
+                  <div id="historico-lista"></div>
                 </div>
-                <div id="historico-lista"></div>
               </div>
+            </div>
+            <div class="tab-pane" id="classificacao">
+              <h2>Classificação de Ativos</h2>
+              <p>
+                Aqui você poderá classificar e organizar seus ativos em
+                diferentes categorias.
+              </p>
             </div>
           </div>
         </div>
@@ -906,22 +1078,23 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
         const lancamentosCollection = collection(db, "lancamentos");
-        const btnMainLoginGoogle = document.getElementById(
-          "btn-main-login-google"
+
+        // Elementos da UI
+        const btnHeaderLoginGoogle = document.getElementById(
+          "btn-header-login-google"
         );
         const userInfoDiv = document.getElementById("user-info");
         const userPhoto = document.getElementById("user-photo");
         const userName = document.getElementById("user-name");
         const appContent = document.getElementById("app-content");
-        const loginButtonContainer = document.getElementById(
-          "login-button-container"
-        );
+        const welcomeSection = document.getElementById("welcome-section");
         const userDropdown = document.getElementById("user-dropdown");
         const btnLogout = document.getElementById("btn-logout");
         const dropdownUserName = document.getElementById("dropdown-user-name");
         const dropdownUserEmail = document.getElementById(
           "dropdown-user-email"
         );
+        const headerNav = document.querySelector(".header-nav");
 
         // --- LÓGICA DE AUTENTICAÇÃO E UI PRINCIPAL ---
         onAuthStateChanged(auth, (user) => {
@@ -933,7 +1106,7 @@
           }
         });
 
-        btnMainLoginGoogle.addEventListener("click", () =>
+        btnHeaderLoginGoogle.addEventListener("click", () =>
           signInWithPopup(auth, provider).catch((e) => console.error(e))
         );
         btnLogout.addEventListener("click", (e) => {
@@ -949,18 +1122,23 @@
         });
 
         function updateUIForLoggedInUser(user) {
-          loginButtonContainer.style.display = "none";
+          welcomeSection.style.display = "none";
           appContent.style.display = "block";
           userInfoDiv.style.display = "flex";
+          btnHeaderLoginGoogle.style.display = "none";
+          headerNav.style.display = "none";
           userName.textContent = user.displayName;
           userPhoto.src = user.photoURL;
           dropdownUserName.textContent = user.displayName;
           dropdownUserEmail.textContent = user.email;
         }
+
         function updateUIForLoggedOutUser() {
-          loginButtonContainer.style.display = "flex";
+          welcomeSection.style.display = "flex";
           appContent.style.display = "none";
           userInfoDiv.style.display = "none";
+          btnHeaderLoginGoogle.style.display = "flex";
+          headerNav.style.display = "flex";
           userDropdown.classList.remove("show");
         }
 
@@ -1116,7 +1294,7 @@
             e.preventDefault();
             const docId = docIdInput.value;
             const lancamento = {
-              userID: userId, // <-- ATENÇÃO: Corrigido para corresponder ao banco
+              userID: userId,
               tipoOperacao: operacaoTipoInput.value,
               tipoAtivo: form["tipo-ativo"].value,
               ativo: form.ativo.value.toUpperCase(),
@@ -1150,7 +1328,7 @@
           const renderHistorico = (lancamentos) => {
             if (lancamentos.length === 0) {
               historicoListaDiv.innerHTML =
-                "<p>Nenhum lançamento encontrado. Verifique se os dados no Firestore possuem os campos 'userID' e 'timestamp' corretamente preenchidos.</p>";
+                '<p>Você ainda não possui lançamentos. Clique em "+ Novo Lançamento" para adicionar sua primeira operação e começar a acompanhar seus investimentos.</p>';
               return;
             }
             historicoListaDiv.innerHTML = lancamentos
@@ -1202,11 +1380,10 @@
             renderHistorico(lancamentosFiltrados);
           });
 
-          // >>>>> PONTO PRINCIPAL DA CORREÇÃO <<<<<
           const q = query(
             lancamentosCollection,
-            where("userID", "==", userId), // CORRIGIDO: de "userId" para "userID"
-            orderBy("timestamp", "desc") // MANTIDO: Garante a ordem correta
+            where("userID", "==", userId),
+            orderBy("timestamp", "desc")
           );
 
           onSnapshot(q, (snapshot) => {
