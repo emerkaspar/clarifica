@@ -973,7 +973,7 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        let currentUserId = null;
+        let currentuserID = null;
 
         // --- LÓGICA DE AUTENTICAÇÃO E UI GERAL ---
         const btnHeaderLoginGoogle = document.getElementById("btn-header-login-google");
@@ -983,11 +983,11 @@
 
         onAuthStateChanged(auth, (user) => {
           if (user) {
-            currentUserId = user.uid;
+            currentuserID = user.uid;
             updateUIForLoggedInUser(user);
             initializeAppData(user.uid);
           } else {
-            currentUserId = null;
+            currentuserID = null;
             updateUIForLoggedOutUser();
           }
         });
@@ -1031,16 +1031,16 @@
         });
 
         // --- LÓGICA PRINCIPAL DA APLICAÇÃO ---
-        function initializeAppData(userId) {
+        function initializeAppData(userID) {
             const lancamentosCollection = collection(db, "lancamentos");
             const ativosClassificadosCollection = collection(db, "ativosClassificados");
-            const qLancamentos = query(lancamentosCollection, where("userID", "==", userId), orderBy("timestamp", "desc"));
+            const qLancamentos = query(lancamentosCollection, where("userID", "==", userID), orderBy("timestamp", "desc"));
 
             let allLancamentos = [];
             let allClassificacoes = {};
 
             // Listener para classificações
-            const qClassificacoes = query(ativosClassificadosCollection, where("userID", "==", userId));
+            const qClassificacoes = query(ativosClassificadosCollection, where("userID", "==", userID));
             onSnapshot(qClassificacoes, (snapshot) => {
                 snapshot.docs.forEach(doc => {
                     allClassificacoes[doc.id] = doc.data();
@@ -1055,8 +1055,8 @@
                 renderClassificacao(allLancamentos, allClassificacoes);
             });
 
-            setupLancamentosModal(userId);
-            setupClassificacaoModal(userId, ativosClassificadosCollection);
+            setupLancamentosModal(userID);
+            setupClassificacaoModal(userID, ativosClassificadosCollection);
         }
 
         // --- LÓGICA DA ABA DE LANÇAMENTOS ---
@@ -1089,7 +1089,7 @@
 
         historicoListaDiv.addEventListener("click", async (e) => {
             const button = e.target.closest("button.btn-crud");
-            if (!button || !currentUserId) return;
+            if (!button || !currentuserID) return;
             const docId = button.dataset.id;
             
             if (button.classList.contains("btn-excluir")) {
@@ -1106,7 +1106,7 @@
         
         searchInput.addEventListener("input", () => {
             // A re-renderização agora é tratada pelo listener do onSnapshot, mas podemos forçar se necessário.
-            const q = query(collection(db, "lancamentos"), where("userID", "==", currentUserId), orderBy("timestamp", "desc"));
+            const q = query(collection(db, "lancamentos"), where("userID", "==", currentuserID), orderBy("timestamp", "desc"));
             getDocs(q).then(snapshot => {
                 const allLancamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderHistorico(allLancamentos);
@@ -1153,7 +1153,7 @@
 
         classificacaoListaDiv.addEventListener("click", async (e) => {
             const button = e.target.closest("button.btn-classificar");
-            if (!button || !currentUserId) return;
+            if (!button || !currentuserID) return;
 
             const ticker = button.dataset.ticker;
             const tipo = button.dataset.tipo;
@@ -1169,7 +1169,7 @@
         // --- SETUP DOS MODAIS ---
 
         // MODAL DE LANÇAMENTO
-        function setupLancamentosModal(userId) {
+        function setupLancamentosModal(userID) {
             const modal = document.getElementById("lancamento-modal");
             const form = document.getElementById("form-novo-ativo");
             const hoje = new Date().toISOString().split("T")[0];
@@ -1220,7 +1220,7 @@
                 e.preventDefault();
                 const docId = form["doc-id"].value;
                 const lancamentoData = {
-                    userID: userId,
+                    userID: userID,
                     tipoOperacao: form["operacao-tipo"].value,
                     tipoAtivo: form["tipo-ativo"].value,
                     ativo: form.ativo.value.toUpperCase(),
@@ -1273,7 +1273,7 @@
         }
 
         // MODAL DE CLASSIFICAÇÃO
-        function setupClassificacaoModal(userId, collectionRef) {
+        function setupClassificacaoModal(userID, collectionRef) {
             const modal = document.getElementById("classificacao-modal");
             const form = document.getElementById("form-classificacao");
             const fieldsContainer = document.getElementById("classificacao-fields-container");
@@ -1336,7 +1336,7 @@
                 try {
                     const docRef = doc(db, "ativosClassificados", ticker);
                     await setDoc(docRef, {
-                        userID: userId,
+                        userID: userID,
                         ativo: ticker,
                         tipoAtivo: tipo,
                         classificacoes: classificacoes
