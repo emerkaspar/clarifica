@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CLARIFICA - O seu farol de investimentos</title>
     <link
@@ -296,7 +296,7 @@
         display: none;
       }
 
-      /* --- MODAL DE LANÇAMENTO --- */
+      /* --- MODAL (USADO PARA LANÇAMENTO E CLASSIFICAÇÃO) --- */
       .modal-overlay {
         position: fixed;
         z-index: 1000;
@@ -509,7 +509,7 @@
         color: #e0e0e0;
         background-color: #2a2c30;
       }
-      .btn-adicionar {
+      .btn-adicionar, .btn-salvar {
         background-color: #00d9c3;
         color: #1f2937;
         font-weight: 600;
@@ -523,17 +523,17 @@
         gap: 8px;
         transition: background-color 0.2s ease-in-out;
       }
-      .btn-adicionar:hover {
+      .btn-adicionar:hover, .btn-salvar:hover {
         background-color: #00c2af;
       }
 
-      /* --- HISTÓRICO --- */
-      .historico-container {
+      /* --- ESTILOS TAB LANÇAMENTOS E CLASSIFICAÇÃO --- */
+      .content-container {
         max-width: 900px;
         margin: 0 auto;
         padding-top: 30px;
       }
-      .historico-header {
+      .content-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -541,7 +541,7 @@
         flex-wrap: wrap;
         gap: 15px;
       }
-      .historico-header h3 {
+      .content-header h3 {
         color: #e0e0e0;
         margin: 0;
       }
@@ -557,16 +557,14 @@
         font-size: 0.9rem;
         padding: 8px 15px;
       }
-      .historico-lista-wrapper {
+      .lista-wrapper {
         overflow-x: auto;
       }
-      .historico-lista-header {
+      .lista-header {
         display: grid;
-        grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto;
         gap: 15px;
         padding: 0 20px;
         margin-bottom: 5px;
-        min-width: 700px;
       }
       .header-col {
         color: #a0a7b3;
@@ -574,9 +572,8 @@
         font-weight: 600;
         text-transform: uppercase;
       }
-      .historico-item {
+      .lista-item {
         display: grid;
-        grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto;
         gap: 15px;
         align-items: center;
         background-color: #1a1b1e;
@@ -585,9 +582,8 @@
         margin-bottom: 8px;
         border: 1px solid #2a2c30;
         font-size: 0.9rem;
-        min-width: 700px;
       }
-      .historico-item-valor {
+      .lista-item-valor {
         font-weight: 500;
       }
       .tipo-ativo-badge {
@@ -597,6 +593,7 @@
         border-radius: 4px;
         font-size: 0.8rem;
         font-weight: 600;
+        display: inline-block;
       }
       .operacao-compra {
         color: #22c55e;
@@ -604,9 +601,10 @@
       .operacao-venda {
         color: #ef4444;
       }
-      .historico-acoes {
+      .lista-acoes {
         display: flex;
         gap: 10px;
+        justify-content: flex-end;
       }
       .btn-crud {
         background: none;
@@ -619,10 +617,10 @@
         height: 18px;
         transition: fill 0.2s ease-in-out;
       }
-      .btn-editar svg {
+      .btn-editar svg, .btn-classificar svg {
         fill: #a0a7b3;
       }
-      .btn-editar:hover svg {
+      .btn-editar:hover svg, .btn-classificar:hover svg {
         fill: #00d9c3;
       }
       .btn-excluir svg {
@@ -631,11 +629,18 @@
       .btn-excluir:hover svg {
         fill: #ef4444;
       }
-      #historico-lista p {
+      #historico-lista p, #classificacao-lista p {
         text-align: center;
         color: #a0a7b3;
         padding: 20px;
       }
+      .status-classificacao {
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .status-classificado { color: #22c55e; }
+      .status-nao-classificado { color: #ef4444; }
+
 
       /* --- MEDIA QUERIES PARA RESPONSIVIDADE --- */
       @media (max-width: 768px) {
@@ -793,213 +798,19 @@
             </ul>
           </div>
           <div class="tab-content" id="myTabContent">
-            <div class="tab-pane active" id="patrimonio">
-              <h2>Visão Geral do Patrimônio</h2>
-              <p>
-                Aqui você verá a consolidação total da sua carteira, gráficos de
-                evolução e alocação por tipo de ativo.
-              </p>
-            </div>
-            <div class="tab-pane" id="rentabilidade">
-              <h2>Análise de Rentabilidade</h2>
-              <p>
-                Acompanhe a rentabilidade da sua carteira, comparativos com
-                benchmarks e desempenho de cada ativo.
-              </p>
-            </div>
-            <div class="tab-pane" id="proventos">
-              <h2>Acompanhamento de Proventos</h2>
-              <p>
-                Visualize os dividendos, juros sobre capital próprio e outros
-                proventos recebidos de seus ativos.
-              </p>
-            </div>
-            <div class="tab-pane" id="acoes">
-              <h2>Carteira de Ações</h2>
-              <p>
-                Detalhes sobre suas posições em ações, dividendos recebidos,
-                preço médio e resultados.
-              </p>
-            </div>
-            <div class="tab-pane" id="fiis">
-              <h2>Carteira de FIIs</h2>
-              <p>
-                Detalhes sobre seus Fundos Imobiliários, rendimentos mensais,
-                valor patrimonial e indicadores.
-              </p>
-            </div>
-            <div class="tab-pane" id="etf-cripto">
-              <h2>ETFs e Criptomoedas</h2>
-              <p>Consolidação de seus investimentos em ETFs e criptoativos.</p>
-            </div>
-            <div class="tab-pane" id="renda-fixa">
-              <h2>Renda Fixa</h2>
-              <p>
-                Seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros
-                ativos de renda fixa.
-              </p>
-            </div>
-            <div class="tab-pane" id="calculos">
-              <h2>Cálculos e Projeções</h2>
-              <p>
-                Ferramentas para cálculos de preço médio, projeção de
-                aposentadoria e outras simulações.
-              </p>
-            </div>
-            <div class="tab-pane" id="analises">
-              <h2>Análises Detalhadas</h2>
-              <p>
-                Aqui você encontrará análises detalhadas de seus investimentos.
-              </p>
-            </div>
+            <div class="tab-pane active" id="patrimonio"> <h2>Visão Geral do Patrimônio</h2> <p> Em breve: consolidação total da sua carteira, gráficos de evolução e alocação por tipo de ativo. </p> </div>
+            <div class="tab-pane" id="rentabilidade"> <h2>Análise de Rentabilidade</h2> <p> Em breve: acompanhe a rentabilidade da sua carteira, comparativos com benchmarks e desempenho de cada ativo. </p> </div>
+            <div class="tab-pane" id="proventos"> <h2>Acompanhamento de Proventos</h2> <p> Em breve: visualize os dividendos, juros sobre capital próprio e outros proventos recebidos. </p> </div>
+            <div class="tab-pane" id="acoes"> <h2>Carteira de Ações</h2> <p> Em breve: detalhes sobre suas posições em ações, dividendos recebidos, preço médio e resultados. </p> </div>
+            <div class="tab-pane" id="fiis"> <h2>Carteira de FIIs</h2> <p> Em breve: detalhes sobre seus Fundos Imobiliários, rendimentos mensais, valor patrimonial e indicadores. </p> </div>
+            <div class="tab-pane" id="etf-cripto"> <h2>ETFs e Criptomoedas</h2> <p> Em breve: consolidação de seus investimentos em ETFs e criptoativos. </p> </div>
+            <div class="tab-pane" id="renda-fixa"> <h2>Renda Fixa</h2> <p> Em breve: seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs e outros. </p> </div>
+            <div class="tab-pane" id="calculos"> <h2>Cálculos e Projeções</h2> <p> Em breve: ferramentas para cálculos de preço médio, projeção de aposentadoria e outras simulações. </p> </div>
+            <div class="tab-pane" id="analises"> <h2>Análises Detalhadas</h2> <p> Em breve: análises detalhadas de seus investimentos. </p> </div>
+            
             <div class="tab-pane" id="lancamentos">
-              <div id="lancamento-modal" class="modal-overlay">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h2>Adicionar Ativo</h2>
-                    <button class="modal-close-btn">&times;</button>
-                  </div>
-                  <div class="modal-body">
-                    <form id="form-novo-ativo">
-                      <input type="hidden" id="doc-id" name="doc-id" />
-                      <div class="tipo-operacao-modal">
-                        <button
-                          type="button"
-                          class="btn-compra active"
-                          data-op="compra"
-                        >
-                          <i class="fas fa-arrow-down"></i> Compra
-                        </button>
-                        <button type="button" class="btn-venda" data-op="venda">
-                          <i class="fas fa-arrow-up"></i> Venda
-                        </button>
-                      </div>
-                      <input
-                        type="hidden"
-                        id="operacao-tipo"
-                        name="operacao-tipo"
-                        value="compra"
-                      />
-                      <div class="form-grid">
-                        <div>
-                          <label for="tipo-ativo" class="form-label"
-                            >Tipo de ativo</label
-                          >
-                          <select
-                            id="tipo-ativo"
-                            name="tipo-ativo"
-                            class="form-select"
-                            required
-                          >
-                            <option value="Ações">Ações</option>
-                            <option value="FIIs">FIIs</option>
-                            <option value="ETF">ETF</option>
-                            <option value="Cripto">Criptomoedas</option>
-                            <option value="Renda Fixa">Renda Fixa</option>
-                            <option value="Tesouro Direto">
-                              Tesouro Direto
-                            </option>
-                          </select>
-                        </div>
-                        <div class="input-wrapper">
-                          <label for="ativo" class="form-label">Ativo</label>
-                          <input
-                            type="text"
-                            id="ativo"
-                            name="ativo"
-                            placeholder="Ex: PETR4"
-                            class="form-input"
-                            required
-                            autocomplete="off"
-                          />
-                          <div
-                            id="ativo-sugestoes"
-                            class="sugestoes-lista"
-                          ></div>
-                        </div>
-                        <div class="input-icon-wrapper">
-                          <label for="data-operacao" class="form-label"
-                            >Data da compra</label
-                          >
-                          <i class="fas fa-calendar-alt"></i>
-                          <input
-                            type="date"
-                            id="data-operacao"
-                            name="data-operacao"
-                            class="form-input"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label for="quantidade" class="form-label"
-                            >Quantidade</label
-                          >
-                          <input
-                            type="number"
-                            id="quantidade"
-                            name="quantidade"
-                            value="1"
-                            step="any"
-                            class="form-input"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label for="preco" class="form-label"
-                            >Preço em R$</label
-                          >
-                          <input
-                            type="number"
-                            id="preco"
-                            name="preco"
-                            placeholder="0,00"
-                            step="0.01"
-                            class="form-input"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label
-                            for="outros-custos"
-                            class="form-label"
-                            style="
-                              display: flex;
-                              justify-content: space-between;
-                              width: 100%;
-                            "
-                            ><span>Outros custos</span
-                            ><span style="color: #888">(Opcional)</span></label
-                          >
-                          <input
-                            type="number"
-                            id="outros-custos"
-                            name="outros-custos"
-                            placeholder="0,00"
-                            step="0.01"
-                            class="form-input"
-                          />
-                        </div>
-                      </div>
-                      <div class="modal-valor-total">
-                        <span class="label">Valor total</span>
-                        <span class="value" id="valor-total-calculado"
-                          >R$ 0,00</span
-                        >
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn-cancelar">
-                          Cancelar
-                        </button>
-                        <button type="submit" class="btn-adicionar">
-                          <i class="fas fa-plus"></i> Adicionar Ativo
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              <div class="historico-container">
-                <div class="historico-header">
+              <div class="content-container">
+                <div class="content-header">
                   <h3>Histórico de Lançamentos</h3>
                   <div style="display: flex; align-items: center; gap: 15px">
                     <input
@@ -1012,54 +823,138 @@
                     </button>
                   </div>
                 </div>
-                <div class="historico-lista-wrapper">
-                  <div class="historico-lista-header">
+                <div class="lista-wrapper">
+                  <div class="lista-header" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
                     <div class="header-col">Ativo</div>
                     <div class="header-col">Tipo</div>
                     <div class="header-col">Ordem</div>
                     <div class="header-col">Quantidade</div>
                     <div class="header-col">Preço Unitário</div>
                     <div class="header-col">Total</div>
-                    <div class="header-col">Ações</div>
+                    <div class="header-col" style="text-align: right;">Ações</div>
                   </div>
                   <div id="historico-lista"></div>
                 </div>
               </div>
             </div>
+
             <div class="tab-pane" id="classificacao">
-              <h2>Classificação de Ativos</h2>
-              <p>
-                Aqui você poderá classificar e organizar seus ativos em
-                diferentes categorias.
-              </p>
+              <div class="content-container">
+                <div class="content-header">
+                  <h3>Classificação de Ativos</h3>
+                   <p style="color: #a0a7b3; margin: 0; font-size: 0.9rem;">Classifique um ativo uma única vez. A categoria será aplicada a todos os seus lançamentos.</p>
+                </div>
+                <div class="lista-wrapper">
+                  <div class="lista-header" style="grid-template-columns: 2fr 1.5fr 1.5fr auto; min-width: 500px;">
+                    <div class="header-col">Ativo</div>
+                    <div class="header-col">Tipo</div>
+                    <div class="header-col">Status</div>
+                    <div class="header-col" style="text-align: right;">Ações</div>
+                  </div>
+                  <div id="classificacao-lista"></div>
+                </div>
+              </div>
             </div>
+
           </div>
         </div>
       </div>
     </div>
 
+    <div id="lancamento-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="lancamento-modal-title">Adicionar Lançamento</h2>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="form-novo-ativo">
+            <input type="hidden" id="doc-id" name="doc-id" />
+            <div class="tipo-operacao-modal">
+              <button type="button" class="btn-compra active" data-op="compra"> <i class="fas fa-arrow-down"></i> Compra </button>
+              <button type="button" class="btn-venda" data-op="venda"> <i class="fas fa-arrow-up"></i> Venda </button>
+            </div>
+            <input type="hidden" id="operacao-tipo" name="operacao-tipo" value="compra"/>
+            <div class="form-grid">
+              <div>
+                <label for="tipo-ativo" class="form-label">Tipo de ativo</label>
+                <select id="tipo-ativo" name="tipo-ativo" class="form-select" required>
+                  <option value="Ações">Ações</option>
+                  <option value="FIIs">FIIs</option>
+                  <option value="ETF">ETF</option>
+                  <option value="Cripto">Criptomoedas</option>
+                  <option value="Renda Fixa">Renda Fixa</option>
+                  <option value="Tesouro Direto">Tesouro Direto</option>
+                </select>
+              </div>
+              <div class="input-wrapper">
+                <label for="ativo" class="form-label">Ativo</label>
+                <input type="text" id="ativo" name="ativo" placeholder="Ex: PETR4" class="form-input" required autocomplete="off"/>
+                <div id="ativo-sugestoes" class="sugestoes-lista"></div>
+              </div>
+              <div class="input-icon-wrapper">
+                <label for="data-operacao" class="form-label">Data da Operação</label>
+                <i class="fas fa-calendar-alt"></i>
+                <input type="date" id="data-operacao" name="data-operacao" class="form-input" required/>
+              </div>
+              <div>
+                <label for="quantidade" class="form-label">Quantidade</label>
+                <input type="number" id="quantidade" name="quantidade" value="1" step="any" class="form-input" required/>
+              </div>
+              <div>
+                <label for="preco" class="form-label">Preço em R$</label>
+                <input type="number" id="preco" name="preco" placeholder="0,00" step="0.01" class="form-input" required/>
+              </div>
+              <div>
+                <label for="outros-custos" class="form-label" style="display: flex; justify-content: space-between; width: 100%;">
+                  <span>Outros custos</span><span style="color: #888">(Opcional)</span>
+                </label>
+                <input type="number" id="outros-custos" name="outros-custos" placeholder="0,00" step="0.01" class="form-input"/>
+              </div>
+            </div>
+            <div class="modal-valor-total">
+              <span class="label">Valor total</span>
+              <span class="value" id="valor-total-calculado">R$ 0,00</span>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn-cancelar"> Cancelar </button>
+              <button type="submit" class="btn-adicionar"> <i class="fas fa-plus"></i> Adicionar </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="classificacao-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="classificacao-modal-title">Classificar Ativo</h2>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-classificacao">
+                    <input type="hidden" id="classificacao-ativo-ticker">
+                    <input type="hidden" id="classificacao-ativo-tipo">
+                    <p style="color: #a0a7b3; margin-top: 0;">Ativo: <strong id="classificacao-ativo-nome" style="color: #e0e0e0;"></strong></p>
+                    <div id="classificacao-fields-container" class="form-grid" style="margin-bottom: 0;">
+                        </div>
+                    <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
+                        <button type="button" class="btn-cancelar">Cancelar</button>
+                        <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
       import {
-        getFirestore,
-        collection,
-        addDoc,
-        onSnapshot,
-        deleteDoc,
-        doc,
-        query,
-        where,
-        orderBy,
-        getDoc,
-        updateDoc,
-        serverTimestamp,
+        getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, orderBy, getDoc, updateDoc, serverTimestamp, setDoc, getDocs
       } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
       import {
-        getAuth,
-        GoogleAuthProvider,
-        signInWithPopup,
-        signOut,
-        onAuthStateChanged,
+        getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
       } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
       document.addEventListener("DOMContentLoaded", function () {
@@ -1077,371 +972,395 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-        const lancamentosCollection = collection(db, "lancamentos");
 
-        // Elementos da UI
-        const btnHeaderLoginGoogle = document.getElementById(
-          "btn-header-login-google"
-        );
+        let currentUserId = null;
+
+        // --- LÓGICA DE AUTENTICAÇÃO E UI GERAL ---
+        const btnHeaderLoginGoogle = document.getElementById("btn-header-login-google");
         const userInfoDiv = document.getElementById("user-info");
-        const userPhoto = document.getElementById("user-photo");
-        const userName = document.getElementById("user-name");
         const appContent = document.getElementById("app-content");
         const welcomeSection = document.getElementById("welcome-section");
-        const userDropdown = document.getElementById("user-dropdown");
-        const btnLogout = document.getElementById("btn-logout");
-        const dropdownUserName = document.getElementById("dropdown-user-name");
-        const dropdownUserEmail = document.getElementById(
-          "dropdown-user-email"
-        );
-        const headerNav = document.querySelector(".header-nav");
 
-        // --- LÓGICA DE AUTENTICAÇÃO E UI PRINCIPAL ---
         onAuthStateChanged(auth, (user) => {
           if (user) {
+            currentUserId = user.uid;
             updateUIForLoggedInUser(user);
-            setupLancamentosListeners(user.uid);
+            initializeAppData(user.uid);
           } else {
+            currentUserId = null;
             updateUIForLoggedOutUser();
           }
         });
 
-        btnHeaderLoginGoogle.addEventListener("click", () =>
-          signInWithPopup(auth, provider).catch((e) => console.error(e))
-        );
-        btnLogout.addEventListener("click", (e) => {
-          e.preventDefault();
-          signOut(auth).catch((e) => console.error(e));
-        });
-        userInfoDiv.addEventListener("click", () =>
-          userDropdown.classList.toggle("show")
-        );
-        document.addEventListener("click", (e) => {
-          if (userInfoDiv && !userInfoDiv.contains(e.target))
-            userDropdown.classList.remove("show");
-        });
-
-        function updateUIForLoggedInUser(user) {
+        const updateUIForLoggedInUser = (user) => {
           welcomeSection.style.display = "none";
           appContent.style.display = "block";
           userInfoDiv.style.display = "flex";
           btnHeaderLoginGoogle.style.display = "none";
-          headerNav.style.display = "none";
-          userName.textContent = user.displayName;
-          userPhoto.src = user.photoURL;
-          dropdownUserName.textContent = user.displayName;
-          dropdownUserEmail.textContent = user.email;
-        }
-
-        function updateUIForLoggedOutUser() {
+          document.getElementById("user-photo").src = user.photoURL;
+          document.getElementById("user-name").textContent = user.displayName;
+          document.getElementById("dropdown-user-name").textContent = user.displayName;
+          document.getElementById("dropdown-user-email").textContent = user.email;
+        };
+        
+        const updateUIForLoggedOutUser = () => {
           welcomeSection.style.display = "flex";
           appContent.style.display = "none";
           userInfoDiv.style.display = "none";
           btnHeaderLoginGoogle.style.display = "flex";
-          headerNav.style.display = "flex";
-          userDropdown.classList.remove("show");
-        }
+        };
 
-        const tabs = document.querySelectorAll(".nav-tabs .nav-link");
-        const tabPanes = document.querySelectorAll(".tab-pane");
-        tabs.forEach((tab) => {
-          tab.addEventListener("click", function (e) {
-            e.preventDefault();
-            tabs.forEach((t) => t.classList.remove("active"));
-            tabPanes.forEach((p) => p.classList.remove("active"));
-            this.classList.add("active");
-            const activeTab = document.getElementById(
-              this.getAttribute("data-tab")
-            );
-            if (activeTab) activeTab.classList.add("active");
-          });
+        btnHeaderLoginGoogle.addEventListener("click", () => signInWithPopup(auth, provider).catch(console.error));
+        document.getElementById("btn-logout").addEventListener("click", (e) => { e.preventDefault(); signOut(auth).catch(console.error); });
+        userInfoDiv.addEventListener("click", () => document.getElementById("user-dropdown").classList.toggle("show"));
+        document.addEventListener("click", (e) => {
+          if (userInfoDiv && !userInfoDiv.contains(e.target)) document.getElementById("user-dropdown").classList.remove("show");
         });
 
-        // --- LÓGICA DA ABA LANÇAMENTOS (COM MODAL) ---
-        function setupLancamentosListeners(userId) {
-          const lancamentoModal = document.getElementById("lancamento-modal");
-          const modalCloseBtn = document.querySelector(".modal-close-btn");
-          const btnMostrarForm = document.getElementById("btn-mostrar-form");
-          const form = document.getElementById("form-novo-ativo");
-          const docIdInput = document.getElementById("doc-id");
-          const operacaoTipoInput = document.getElementById("operacao-tipo");
-          const dataOperacaoInput = document.getElementById("data-operacao");
-          const quantidadeInput = document.getElementById("quantidade");
-          const precoInput = document.getElementById("preco");
-          const outrosCustosInput = document.getElementById("outros-custos");
-          const valorTotalDisplay = document.getElementById(
-            "valor-total-calculado"
-          );
-          const btnCompra = form.querySelector(".btn-compra");
-          const btnVenda = form.querySelector(".btn-venda");
-          const btnAdicionar = form.querySelector(".btn-adicionar");
-          const btnCancelar = form.querySelector(".btn-cancelar");
-          const historicoListaDiv = document.getElementById("historico-lista");
-          const searchInput = document.getElementById("search-ativo");
-          let allLancamentos = [];
-
-          const hoje = new Date().toISOString().split("T")[0];
-
-          // --- LÓGICA DE AUTOCOMPLETE ---
-          const ativoInput = document.getElementById("ativo");
-          const sugestoesDiv = document.getElementById("ativo-sugestoes");
-          let timeoutBusca;
-
-          ativoInput.addEventListener("input", () => {
-            clearTimeout(timeoutBusca);
-            const termo = ativoInput.value.trim().toUpperCase();
-
-            if (termo.length < 2) {
-              sugestoesDiv.style.display = "none";
-              sugestoesDiv.innerHTML = "";
-              return;
-            }
-
-            timeoutBusca = setTimeout(async () => {
-              try {
-                const resp = await fetch(
-                  `https://brapi.dev/api/available?search=${termo}`
-                );
-                const data = await resp.json();
-
-                sugestoesDiv.innerHTML = "";
-                if (data && data.stocks && data.stocks.length > 0) {
-                  sugestoesDiv.style.display = "block";
-                  data.stocks.slice(0, 10).forEach((stock) => {
-                    const div = document.createElement("div");
-                    div.classList.add("sugestao-item");
-                    div.textContent = stock;
-                    div.addEventListener("click", () => {
-                      ativoInput.value = stock;
-                      sugestoesDiv.style.display = "none";
-                    });
-                    sugestoesDiv.appendChild(div);
-                  });
-                } else {
-                  sugestoesDiv.style.display = "none";
-                }
-              } catch (e) {
-                console.error("Erro ao buscar ativos:", e);
-                sugestoesDiv.style.display = "none";
-              }
-            }, 400); // Debounce
-          });
-
-          document.addEventListener("click", (e) => {
-            if (
-              !ativoInput.contains(e.target) &&
-              !sugestoesDiv.contains(e.target)
-            ) {
-              sugestoesDiv.style.display = "none";
-            }
-          });
-
-          // --- LÓGICA DO MODAL ---
-          const showModal = () => {
-            lancamentoModal.classList.add("show");
-          };
-          const hideModal = () => {
-            lancamentoModal.classList.remove("show");
-          };
-          const resetForm = () => {
-            form.reset();
-            docIdInput.value = "";
-            dataOperacaoInput.value = hoje;
-            btnAdicionar.innerHTML =
-              '<i class="fas fa-plus"></i> Adicionar Ativo';
-            btnCompra.classList.add("active");
-            btnVenda.classList.remove("active");
-            operacaoTipoInput.value = "compra";
-            calcularTotal();
-          };
-          const calcularTotal = () => {
-            const qtd = parseFloat(quantidadeInput.value) || 0;
-            const prc = parseFloat(precoInput.value) || 0;
-            const cst = parseFloat(outrosCustosInput.value) || 0;
-            const total = qtd * prc + cst;
-            valorTotalDisplay.textContent = total.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
+        // --- NAVEGAÇÃO POR ABAS ---
+        const tabs = document.querySelectorAll(".nav-tabs .nav-link");
+        const tabPanes = document.querySelectorAll(".tab-pane");
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function(e) {
+                e.preventDefault();
+                tabs.forEach(t => t.classList.remove("active"));
+                tabPanes.forEach(p => p.classList.remove("active"));
+                this.classList.add("active");
+                document.getElementById(this.getAttribute("data-tab")).classList.add("active");
             });
-          };
+        });
 
-          // --- EVENT LISTENERS ---
-          btnMostrarForm.addEventListener("click", () => {
-            resetForm();
-            showModal();
-          });
-          modalCloseBtn.addEventListener("click", hideModal);
-          btnCancelar.addEventListener("click", hideModal);
-          lancamentoModal.addEventListener("click", (e) => {
-            if (e.target === lancamentoModal) {
-              hideModal();
-            }
-          });
-          [quantidadeInput, precoInput, outrosCustosInput].forEach((el) =>
-            el.addEventListener("input", calcularTotal)
-          );
-          btnCompra.addEventListener("click", () => {
-            btnCompra.classList.add("active");
-            btnVenda.classList.remove("active");
-            operacaoTipoInput.value = "compra";
-          });
-          btnVenda.addEventListener("click", () => {
-            btnVenda.classList.add("active");
-            btnCompra.classList.remove("active");
-            operacaoTipoInput.value = "venda";
-          });
-          form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const docId = docIdInput.value;
-            const lancamento = {
-              userID: userId,
-              tipoOperacao: operacaoTipoInput.value,
-              tipoAtivo: form["tipo-ativo"].value,
-              ativo: form.ativo.value.toUpperCase(),
-              data: dataOperacaoInput.value,
-              quantidade: parseFloat(quantidadeInput.value),
-              preco: parseFloat(precoInput.value),
-              custos: parseFloat(outrosCustosInput.value) || 0,
-              valorTotal:
-                parseFloat(quantidadeInput.value) *
-                  parseFloat(precoInput.value) +
-                (parseFloat(outrosCustosInput.value) || 0),
-              timestamp: serverTimestamp(),
-            };
-            try {
-              if (docId) {
-                delete lancamento.timestamp;
-                await updateDoc(doc(db, "lancamentos", docId), lancamento);
-                alert("Ativo atualizado com sucesso!");
-              } else {
-                await addDoc(lancamentosCollection, lancamento);
-                alert("Ativo adicionado com sucesso!");
-              }
-              hideModal();
-            } catch (error) {
-              console.error("Erro ao salvar:", error);
-              alert("Ocorreu um erro ao salvar: " + error.message);
-            }
-          });
+        // --- LÓGICA PRINCIPAL DA APLICAÇÃO ---
+        function initializeAppData(userId) {
+            const lancamentosCollection = collection(db, "lancamentos");
+            const ativosClassificadosCollection = collection(db, "ativosClassificados");
+            const qLancamentos = query(lancamentosCollection, where("userID", "==", userId), orderBy("timestamp", "desc"));
 
-          // --- LÓGICA DO HISTÓRICO ---
-          const renderHistorico = (lancamentos) => {
-            if (lancamentos.length === 0) {
-              historicoListaDiv.innerHTML =
-                '<p>Você ainda não possui lançamentos. Clique em "+ Novo Lançamento" para adicionar sua primeira operação e começar a acompanhar seus investimentos.</p>';
-              return;
-            }
-            historicoListaDiv.innerHTML = lancamentos
-              .map((l) => {
-                return `
-                  <div class="historico-item">
-                      <div class="historico-item-valor">${l.ativo}</div>
-                      <div><span class="tipo-ativo-badge">${
-                        l.tipoAtivo
-                      }</span></div>
-                      <div class="historico-item-valor ${
-                        l.tipoOperacao === "compra"
-                          ? "operacao-compra"
-                          : "operacao-venda"
-                      }">${
-                  l.tipoOperacao.charAt(0).toUpperCase() +
-                  l.tipoOperacao.slice(1)
-                }</div>
-                      <div class="historico-item-valor">${l.quantidade.toLocaleString(
-                        "pt-BR"
-                      )}</div>
-                      <div class="historico-item-valor">${l.preco.toLocaleString(
-                        "pt-BR",
-                        { style: "currency", currency: "BRL" }
-                      )}</div>
-                      <div class="historico-item-valor">${l.valorTotal.toLocaleString(
-                        "pt-BR",
-                        { style: "currency", currency: "BRL" }
-                      )}</div>
-                      <div class="historico-acoes">
-                          <button class="btn-crud btn-editar" data-id="${
-                            l.id
-                          }"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                          <button class="btn-crud btn-excluir" data-id="${
-                            l.id
-                          }"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
-                      </div>
-                  </div>
-              `;
-              })
-              .join("");
-          };
+            let allLancamentos = [];
+            let allClassificacoes = {};
 
-          searchInput.addEventListener("input", (e) => {
-            const searchTerm = e.target.value.toUpperCase();
-            const lancamentosFiltrados = allLancamentos.filter((l) =>
-              l.ativo.toUpperCase().includes(searchTerm)
-            );
-            renderHistorico(lancamentosFiltrados);
-          });
+            // Listener para classificações
+            const qClassificacoes = query(ativosClassificadosCollection, where("userID", "==", userId));
+            onSnapshot(qClassificacoes, (snapshot) => {
+                snapshot.docs.forEach(doc => {
+                    allClassificacoes[doc.id] = doc.data();
+                });
+                renderClassificacao(allLancamentos, allClassificacoes); 
+            });
 
-          const q = query(
-            lancamentosCollection,
-            where("userID", "==", userId),
-            orderBy("timestamp", "desc")
-          );
+            // Listener para lançamentos
+            onSnapshot(qLancamentos, (snapshot) => {
+                allLancamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderHistorico(allLancamentos);
+                renderClassificacao(allLancamentos, allClassificacoes);
+            });
 
-          onSnapshot(q, (snapshot) => {
-            allLancamentos = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
+            setupLancamentosModal(userId);
+            setupClassificacaoModal(userId, ativosClassificadosCollection);
+        }
+
+        // --- LÓGICA DA ABA DE LANÇAMENTOS ---
+        const historicoListaDiv = document.getElementById("historico-lista");
+        const searchInput = document.getElementById("search-ativo");
+
+        const renderHistorico = (lancamentos) => {
             const searchTerm = searchInput.value.toUpperCase();
-            const lancamentosFiltrados = searchTerm
-              ? allLancamentos.filter((l) =>
-                  l.ativo.toUpperCase().includes(searchTerm)
-                )
-              : allLancamentos;
-            renderHistorico(lancamentosFiltrados);
-          });
+            const lancamentosFiltrados = lancamentos.filter(l => l.ativo.toUpperCase().includes(searchTerm));
 
-          historicoListaDiv.addEventListener("click", async (e) => {
-            const button = e.target.closest("button.btn-crud");
-            if (!button) return;
-
-            const docId = button.dataset.id;
-            if (!docId) return;
-
-            if (button.classList.contains("btn-excluir")) {
-              if (confirm("Tem certeza que deseja excluir este lançamento?")) {
-                try {
-                  await deleteDoc(doc(db, "lancamentos", docId));
-                } catch (err) {
-                  console.error("Erro ao excluir o documento:", err);
-                  alert("Não foi possível excluir o lançamento.");
-                }
-              }
-            } else if (button.classList.contains("btn-editar")) {
-              const docSnap = await getDoc(doc(db, "lancamentos", docId));
-              if (docSnap.exists()) {
-                const data = docSnap.data();
-                docIdInput.value = docId;
-                form["operacao-tipo"].value = data.tipoOperacao;
-                if (data.tipoOperacao === "compra") {
-                  btnCompra.classList.add("active");
-                  btnVenda.classList.remove("active");
-                } else {
-                  btnVenda.classList.add("active");
-                  btnCompra.classList.remove("active");
-                }
-                form["tipo-ativo"].value = data.tipoAtivo;
-                form.ativo.value = data.ativo;
-                form["data-operacao"].value = data.data;
-                form.quantidade.value = data.quantidade;
-                form.preco.value = data.preco;
-                form["outros-custos"].value = data.custos;
-                btnAdicionar.innerHTML =
-                  '<i class="fas fa-edit"></i> Atualizar Ativo';
-                calcularTotal();
-                showModal();
-              }
+            if (lancamentosFiltrados.length === 0) {
+                historicoListaDiv.innerHTML = `<p>Nenhum lançamento encontrado.</p>`;
+                return;
             }
-          });
+            historicoListaDiv.innerHTML = lancamentosFiltrados.map(l => `
+                <div class="lista-item" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
+                    <div class="lista-item-valor">${l.ativo}</div>
+                    <div><span class="tipo-ativo-badge">${l.tipoAtivo}</span></div>
+                    <div class="lista-item-valor ${l.tipoOperacao === 'compra' ? 'operacao-compra' : 'operacao-venda'}">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)}</div>
+                    <div class="lista-item-valor">${l.quantidade.toLocaleString("pt-BR")}</div>
+                    <div class="lista-item-valor">${l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                    <div class="lista-item-valor">${l.valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                    <div class="lista-acoes">
+                        <button class="btn-crud btn-editar" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                        <button class="btn-crud btn-excluir" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                    </div>
+                </div>
+            `).join("");
+        };
+
+        historicoListaDiv.addEventListener("click", async (e) => {
+            const button = e.target.closest("button.btn-crud");
+            if (!button || !currentUserId) return;
+            const docId = button.dataset.id;
+            
+            if (button.classList.contains("btn-excluir")) {
+                if (confirm("Tem certeza que deseja excluir este lançamento?")) {
+                    await deleteDoc(doc(db, "lancamentos", docId)).catch(err => alert("Erro ao excluir: " + err.message));
+                }
+            } else if (button.classList.contains("btn-editar")) {
+                const docSnap = await getDoc(doc(db, "lancamentos", docId));
+                if (docSnap.exists()) {
+                    openLancamentoModal(docSnap.data(), docId);
+                }
+            }
+        });
+        
+        searchInput.addEventListener("input", () => {
+            // A re-renderização agora é tratada pelo listener do onSnapshot, mas podemos forçar se necessário.
+            const q = query(collection(db, "lancamentos"), where("userID", "==", currentUserId), orderBy("timestamp", "desc"));
+            getDocs(q).then(snapshot => {
+                const allLancamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderHistorico(allLancamentos);
+            })
+        });
+
+        // --- LÓGICA DA ABA DE CLASSIFICAÇÃO ---
+        const classificacaoListaDiv = document.getElementById("classificacao-lista");
+
+        const renderClassificacao = (lancamentos, classificacoes) => {
+            const ativosUnicos = {};
+            lancamentos.forEach(l => {
+                if (!ativosUnicos[l.ativo]) {
+                    ativosUnicos[l.ativo] = l.tipoAtivo;
+                }
+            });
+
+            if (Object.keys(ativosUnicos).length === 0) {
+                classificacaoListaDiv.innerHTML = `<p>Adicione um lançamento para começar a classificar seus ativos.</p>`;
+                return;
+            }
+
+            classificacaoListaDiv.innerHTML = Object.entries(ativosUnicos).map(([ticker, tipo]) => {
+                const isClassificado = classificacoes[ticker];
+                return `
+                    <div class="lista-item" style="grid-template-columns: 2fr 1.5fr 1.5fr auto; min-width: 500px;">
+                        <div class="lista-item-valor">${ticker}</div>
+                        <div><span class="tipo-ativo-badge">${tipo}</span></div>
+                        <div>
+                            <span class="status-classificacao ${isClassificado ? 'status-classificado' : 'status-nao-classificado'}">
+                                ${isClassificado ? 'Classificado' : 'Não Classificado'}
+                            </span>
+                        </div>
+                        <div class="lista-acoes">
+                           <button class="btn-crud btn-classificar" data-ticker="${ticker}" data-tipo="${tipo}">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                                ${isClassificado ? 'Editar' : 'Classificar'}
+                           </button>
+                        </div>
+                    </div>
+                `
+            }).join("");
+        };
+
+        classificacaoListaDiv.addEventListener("click", async (e) => {
+            const button = e.target.closest("button.btn-classificar");
+            if (!button || !currentUserId) return;
+
+            const ticker = button.dataset.ticker;
+            const tipo = button.dataset.tipo;
+
+            const docRef = doc(db, "ativosClassificados", ticker);
+            const docSnap = await getDoc(docRef);
+            const existingData = docSnap.exists() ? docSnap.data().classificacoes : {};
+
+            openClassificacaoModal(ticker, tipo, existingData);
+        });
+
+
+        // --- SETUP DOS MODAIS ---
+
+        // MODAL DE LANÇAMENTO
+        function setupLancamentosModal(userId) {
+            const modal = document.getElementById("lancamento-modal");
+            const form = document.getElementById("form-novo-ativo");
+            const hoje = new Date().toISOString().split("T")[0];
+            
+            // Auto complete
+            const ativoInput = form.querySelector("#ativo");
+            const sugestoesDiv = form.querySelector("#ativo-sugestoes");
+            let timeoutBusca;
+            ativoInput.addEventListener("input", () => {
+                clearTimeout(timeoutBusca);
+                const termo = ativoInput.value.trim().toUpperCase();
+                if (termo.length < 2) { sugestoesDiv.style.display = "none"; return; }
+                timeoutBusca = setTimeout(async () => {
+                    try {
+                        const resp = await fetch(`https://brapi.dev/api/available?search=${termo}`);
+                        const data = await resp.json();
+                        sugestoesDiv.innerHTML = "";
+                        if (data && data.stocks && data.stocks.length > 0) {
+                            sugestoesDiv.style.display = "block";
+                            data.stocks.slice(0, 10).forEach(stock => {
+                                const div = document.createElement("div");
+                                div.className = "sugestao-item";
+                                div.textContent = stock;
+                                div.onclick = () => {
+                                    ativoInput.value = stock;
+                                    sugestoesDiv.style.display = "none";
+                                };
+                                sugestoesDiv.appendChild(div);
+                            });
+                        } else { sugestoesDiv.style.display = "none"; }
+                    } catch (e) { console.error("Erro ao buscar ativos:", e); sugestoesDiv.style.display = "none";}
+                }, 400);
+            });
+
+            // Lógica do formulário
+            const calcularTotal = () => {
+                const qtd = parseFloat(form.quantidade.value) || 0;
+                const prc = parseFloat(form.preco.value) || 0;
+                const cst = parseFloat(form["outros-custos"].value) || 0;
+                form.querySelector("#valor-total-calculado").textContent = (qtd * prc + cst).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            };
+            
+            form.querySelectorAll("input[type='number']").forEach(el => el.addEventListener("input", calcularTotal));
+            form.querySelector(".btn-compra").addEventListener("click", () => { form.querySelector("#operacao-tipo").value = "compra"; form.querySelector(".btn-compra").classList.add('active'); form.querySelector(".btn-venda").classList.remove('active'); });
+            form.querySelector(".btn-venda").addEventListener("click", () => { form.querySelector("#operacao-tipo").value = "venda"; form.querySelector(".btn-venda").classList.add('active'); form.querySelector(".btn-compra").classList.remove('active'); });
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const docId = form["doc-id"].value;
+                const lancamentoData = {
+                    userID: userId,
+                    tipoOperacao: form["operacao-tipo"].value,
+                    tipoAtivo: form["tipo-ativo"].value,
+                    ativo: form.ativo.value.toUpperCase(),
+                    data: form["data-operacao"].value,
+                    quantidade: parseFloat(form.quantidade.value),
+                    preco: parseFloat(form.preco.value),
+                    custos: parseFloat(form["outros-custos"].value) || 0,
+                    valorTotal: (parseFloat(form.quantidade.value) * parseFloat(form.preco.value)) + (parseFloat(form["outros-custos"].value) || 0),
+                };
+
+                try {
+                    if (docId) {
+                        await updateDoc(doc(db, "lancamentos", docId), lancamentoData);
+                        alert("Lançamento atualizado!");
+                    } else {
+                        lancamentoData.timestamp = serverTimestamp();
+                        await addDoc(collection(db, "lancamentos"), lancamentoData);
+                        alert("Lançamento adicionado!");
+                    }
+                    modal.classList.remove("show");
+                } catch (error) {
+                    alert("Erro ao salvar: " + error.message);
+                }
+            });
+
+            // Abrir/Fechar
+            document.getElementById("btn-mostrar-form").addEventListener("click", () => openLancamentoModal());
+            modal.querySelector(".modal-close-btn").addEventListener("click", () => modal.classList.remove("show"));
+            modal.querySelector(".btn-cancelar").addEventListener("click", () => modal.classList.remove("show"));
+            modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("show"); });
+
+            window.openLancamentoModal = (data = {}, id = "") => {
+                form.reset();
+                form["doc-id"].value = id;
+                document.getElementById('lancamento-modal-title').textContent = id ? "Editar Lançamento" : "Adicionar Lançamento";
+                form.querySelector('.btn-adicionar').innerHTML = id ? '<i class="fas fa-edit"></i> Atualizar' : '<i class="fas fa-plus"></i> Adicionar';
+
+                form["tipo-ativo"].value = data.tipoAtivo || "Ações";
+                form.ativo.value = data.ativo || "";
+                form["data-operacao"].value = data.data || hoje;
+                form.quantidade.value = data.quantidade || 1;
+                form.preco.value = data.preco || "";
+                form["outros-custos"].value = data.custos || "";
+                form["operacao-tipo"].value = data.tipoOperacao || "compra";
+                if(data.tipoOperacao === 'venda') { form.querySelector('.btn-venda').click(); } else { form.querySelector('.btn-compra').click(); }
+                
+                calcularTotal();
+                modal.classList.add("show");
+            };
+        }
+
+        // MODAL DE CLASSIFICAÇÃO
+        function setupClassificacaoModal(userId, collectionRef) {
+            const modal = document.getElementById("classificacao-modal");
+            const form = document.getElementById("form-classificacao");
+            const fieldsContainer = document.getElementById("classificacao-fields-container");
+
+            const gerarCampos = (tipo, valores) => {
+                let html = "";
+                 if (tipo === "FIIs") {
+                    html = `
+                        <div>
+                            <label class="form-label">Tipo FII</label>
+                            <select name="Tipo FII" class="form-select">
+                                <option value="Tijolo" ${valores["Tipo FII"] === 'Tijolo' ? 'selected' : ''}>Tijolo</option>
+                                <option value="Papel" ${valores["Tipo FII"] === 'Papel' ? 'selected' : ''}>Papel</option>
+                                <option value="Híbrido" ${valores["Tipo FII"] === 'Híbrido' ? 'selected' : ''}>Híbrido</option>
+                                <option value="Fundo de Fundos" ${valores["Tipo FII"] === 'Fundo de Fundos' ? 'selected' : ''}>Fundo de Fundos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Risco FII</label>
+                            <select name="Risco FII" class="form-select">
+                                <option value="Arrojado" ${valores["Risco FII"] === 'Arrojado' ? 'selected' : ''}>Arrojado</option>
+                                <option value="Crescimento" ${valores["Risco FII"] === 'Crescimento' ? 'selected' : ''}>Crescimento</option>
+                                <option value="Ancoragem" ${valores["Risco FII"] === 'Ancoragem' ? 'selected' : ''}>Ancoragem</option>
+                            </select>
+                        </div>`;
+                } else if (tipo === "Ações") {
+                     html = `
+                        <div>
+                            <label class="form-label">Capitalização</label>
+                            <select name="Capitalização" class="form-select">
+                                <option value="Blue Chip" ${valores["Capitalização"] === 'Blue Chip' ? 'selected' : ''}>Blue Chip</option>
+                                <option value="Small Cap" ${valores["Capitalização"] === 'Small Cap' ? 'selected' : ''}>Small Cap</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Setor BESST</label>
+                            <select name="Setor BESST" class="form-select">
+                                <option value="Bancos" ${valores["Setor BESST"] === 'Bancos' ? 'selected' : ''}>Bancos</option>
+                                <option value="Energia" ${valores["Setor BESST"] === 'Energia' ? 'selected' : ''}>Energia</option>
+                                <option value="Saneamento" ${valores["Setor BESST"] === 'Saneamento' ? 'selected' : ''}>Saneamento</option>
+                                <option value="Seguros" ${valores["Setor BESST"] === 'Seguros' ? 'selected' : ''}>Seguros</option>
+                                <option value="Telecomunicações" ${valores["Setor BESST"] === 'Telecomunicações' ? 'selected' : ''}>Telecomunicações</option>
+                                <option value="Outro" ${valores["Setor BESST"] === 'Outro' ? 'selected' : ''}>Outro</option>
+                            </select>
+                        </div>`;
+                }
+                fieldsContainer.innerHTML = html;
+            };
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const ticker = form['classificacao-ativo-ticker'].value;
+                const tipo = form['classificacao-ativo-tipo'].value;
+
+                const classificacoes = {};
+                form.querySelectorAll("select").forEach(select => {
+                    classificacoes[select.name] = select.value;
+                });
+                
+                try {
+                    const docRef = doc(db, "ativosClassificados", ticker);
+                    await setDoc(docRef, {
+                        userID: userId,
+                        ativo: ticker,
+                        tipoAtivo: tipo,
+                        classificacoes: classificacoes
+                    });
+                    alert("Classificação salva com sucesso!");
+                    modal.classList.remove("show");
+                } catch (error) {
+                    alert("Erro ao salvar classificação: " + error.message);
+                }
+            });
+
+            // Abrir/Fechar
+            modal.querySelector(".modal-close-btn").addEventListener("click", () => modal.classList.remove("show"));
+            modal.querySelector(".btn-cancelar").addEventListener("click", () => modal.classList.remove("show"));
+            modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("show"); });
+
+            window.openClassificacaoModal = (ticker, tipo, valores = {}) => {
+                form.reset();
+                form['classificacao-ativo-ticker'].value = ticker;
+                form['classificacao-ativo-tipo'].value = tipo;
+                document.getElementById('classificacao-ativo-nome').textContent = ticker;
+                gerarCampos(tipo, valores);
+                modal.classList.add("show");
+            };
         }
       });
     </script>
