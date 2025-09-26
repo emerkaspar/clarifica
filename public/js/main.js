@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let currentuserID = null;
     let movimentacaoChart = null;
     let proventosPorAtivoChart, proventosPorTipoChart, proventosEvolucaoChart;
-    let performanceChart = null; // Gráfico do novo modal
+    let performanceChart = null;
     let currentProventosMeta = null;
     let allProventosData = [];
     let allLancamentos = [];
@@ -156,6 +156,7 @@ document.addEventListener("DOMContentLoaded", function () {
             renderClassificacao(allLancamentos, allClassificacoes);
             renderMovimentacaoChart(allLancamentos);
             renderFiisCarteira(allLancamentos, allProventosData);
+            renderAcoesCarteira(allLancamentos, allProventosData);
         });
 
         const metaDocRef = doc(db, "metas", userID);
@@ -173,6 +174,7 @@ document.addEventListener("DOMContentLoaded", function () {
             populateAssetFilter(allProventosData);
             updateProventosDashboard();
             renderFiisCarteira(allLancamentos, allProventosData);
+            renderAcoesCarteira(allLancamentos, allProventosData);
         });
 
         setupLancamentosModal(userID);
@@ -180,6 +182,125 @@ document.addEventListener("DOMContentLoaded", function () {
         setupProventoModal(userID);
         setupMetaProventosModal(userID);
     }
+    
+    // --- LÓGICA DA ABA DE AÇÕES ---
+    async function renderAcoesCarteira(lancamentos, proventos) {
+        const acoesListaDiv = document.getElementById("acoes-lista");
+        acoesListaDiv.innerHTML = `<p>Buscando cotações, isso pode levar alguns segundos...</p>`;
+
+        const acoesLancamentos = lancamentos.filter(l => l.tipoAtivo === 'Ações');
+
+        if (acoesLancamentos.length === 0) {
+            acoesListaDiv.innerHTML = `<p>Nenhuma Ação lançada ainda.</p>`;
+            return;
+        }
+
+        const carteira = {};
+
+        acoesLancamentos.forEach(l => {
+            if (!carteira[l.ativo]) {
+                carteira[l.ativo] = {
+                    ativo: l.ativo,
+                    quantidade: 0,
+                    quantidadeComprada: 0,
+                    valorTotalInvestido: 0,
+                    proventos: 0,
+                };
+            }
+            if (l.tipoOperacao === 'compra') {
+                carteira[l.ativo].quantidade += l.quantidade;
+                carteira[l.ativo].quantidadeComprada += l.quantidade;
+                carteira[l.ativo].valorTotalInvestido += l.valorTotal;
+            } else if (l.tipoOperacao === 'venda') {
+                carteira[l.ativo].quantidade -= l.quantidade;
+            }
+        });
+        
+        proventos.forEach(p => {
+            if (p.tipoAtivo === 'Ações' && carteira[p.ativo]) {
+                carteira[p.ativo].proventos += p.valor;
+            }
+        });
+
+        const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
+        if (tickers.length === 0) {
+            acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
+            return;
+        }
+
+        try {
+            const precosAtuais = {};
+
+            for (const ticker of tickers) {
+                const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`);
+                const data = await response.json();
+
+                if (response.ok && data && data.results && data.results.length > 0) {
+                    const result = data.results[0];
+                    precosAtuais[result.symbol] = result.regularMarketPrice;
+                } else {
+                    console.warn(`Não foi possível buscar o preço para o ticker: ${ticker}`);
+                    precosAtuais[ticker] = 0;
+                }
+            }
+
+            let html = '';
+            for (const ticker of tickers) {
+                const ativo = carteira[ticker];
+                const precoAtual = precosAtuais[ticker] || 0;
+                const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+
+                const valorPosicaoAtual = precoAtual * ativo.quantidade;
+                const valorInvestido = precoMedio * ativo.quantidade;
+                const resultado = valorPosicaoAtual - valorInvestido;
+                const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
+                
+                html += `
+                    <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações">
+                        <div class="fii-card-ticker">${ativo.ativo}</div>
+                        
+                        <div class="fii-card-metric-main">
+                            <div class="label">Valor Atual da Posição</div>
+                            <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                        </div>
+                        
+                        <div class="fii-card-result ${resultado >= 0 ? 'positive-change' : 'negative-change'}">
+                            ${resultado >= 0 ? '+' : ''}${resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacao.toFixed(2)}%)
+                        </div>
+    
+                        <div class="fii-card-details">
+                            <div class="detail-item">
+                                <span>Valor Investido</span>
+                                <span>${valorInvestido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                             <div class="detail-item">
+                                <span>Quantidade</span>
+                                <span>${ativo.quantidade.toLocaleString('pt-BR')}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>Preço Médio</span>
+                                <span>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>Preço Atual</span>
+                                <span>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                             <div class="detail-item">
+                                <span>Total Proventos</span>
+                                <span>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            acoesListaDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error("Erro ao buscar cotações ou renderizar carteira de Ações:", error);
+            acoesListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
+        }
+    }
+
 
     // --- LÓGICA DA ABA DE FIIS ---
     async function renderFiisCarteira(lancamentos, proventos) {
@@ -260,12 +381,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 const valorInvestido = precoMedio * ativo.quantidade;
                 const resultado = valorPosicaoAtual - valorInvestido;
                 const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
-                const rentabilidade = valorInvestido > 0 ? ((valorPosicaoAtual + ativo.proventos) / valorInvestido - 1) * 100 : 0;
-                const dividendYield = valorPosicaoAtual > 0 ? (ativo.proventos12m / valorPosicaoAtual) * 100 : 0;
-                const yieldOnCost = valorInvestido > 0 ? (ativo.proventos12m / valorInvestido) * 100 : 0;
-
+                
                 html += `
-                    <div class="fii-card" data-ticker="${ativo.ativo}">
+                    <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="FIIs">
                         <div class="fii-card-ticker">${ativo.ativo}</div>
                         
                         <div class="fii-card-metric-main">
@@ -1031,7 +1149,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     await addDoc(collection(db, "lancamentos"), lancamentoData);
                     alert("Lançamento adicionado!");
                 }
-                // closeModal("lancamento-modal"); // LINHA REMOVIDA
+                closeModal("lancamento-modal");
             } catch (error) {
                 alert("Erro ao salvar: " + error.message);
             }
@@ -1044,6 +1162,10 @@ document.addEventListener("DOMContentLoaded", function () {
         document
             .getElementById("btn-novo-lancamento-fii")
             .addEventListener("click", () => openLancamentoModal({}, "", "FIIs"));
+
+        document
+            .getElementById("btn-novo-lancamento-acao")
+            .addEventListener("click", () => openLancamentoModal({}, "", "Ações"));
 
         modal.addEventListener("click", (e) => {
             if (e.target === modal) closeModal("lancamento-modal");
@@ -1165,7 +1287,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 await addDoc(collection(db, "proventos"), proventoData);
                 alert("Provento lançado com sucesso!");
                 form.reset();
-                // closeModal("provento-modal"); // LINHA REMOVIDA
+                closeModal("provento-modal");
             } catch (error) {
                 alert("Erro ao lançar provento: " + error.message);
             }
@@ -1406,34 +1528,41 @@ document.addEventListener("DOMContentLoaded", function () {
         modal.classList.add("show");
     };
 }
-    // --- LÓGICA DO MODAL DE DETALHES DO FII ---
-    const fiiDetalhesModal = document.getElementById("fii-detalhes-modal");
+    // --- LÓGICA DO MODAL DE DETALHES DO ATIVO ---
+    const ativoDetalhesModal = document.getElementById("ativo-detalhes-modal");
 
     document.getElementById("fiis-lista").addEventListener("click", (e) => {
         const card = e.target.closest(".fii-card");
         if (card && card.dataset.ticker) {
-            openFiiDetalhesModal(card.dataset.ticker);
+            openAtivoDetalhesModal(card.dataset.ticker, card.dataset.tipoAtivo);
         }
     });
 
-    fiiDetalhesModal.addEventListener("click", (e) => {
-        if (e.target === fiiDetalhesModal || e.target.closest('.modal-close-btn')) {
-            fiiDetalhesModal.classList.remove("show");
+    document.getElementById("acoes-lista").addEventListener("click", (e) => {
+        const card = e.target.closest(".fii-card");
+        if (card && card.dataset.ticker) {
+            openAtivoDetalhesModal(card.dataset.ticker, card.dataset.tipoAtivo);
         }
     });
 
-    fiiDetalhesModal.querySelector(".fii-detalhes-tabs").addEventListener("click", (e) => {
+    ativoDetalhesModal.addEventListener("click", (e) => {
+        if (e.target === ativoDetalhesModal || e.target.closest('.modal-close-btn')) {
+            ativoDetalhesModal.classList.remove("show");
+        }
+    });
+
+    ativoDetalhesModal.querySelector(".fii-detalhes-tabs").addEventListener("click", (e) => {
         if (e.target.matches('.fii-detalhes-tab-link')) {
             const tabId = e.target.dataset.tab;
-            fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
-            fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
+            ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
+            ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
             e.target.classList.add('active');
-            document.getElementById(`fii-detalhes-${tabId}`).classList.add('active');
+            document.getElementById(`ativo-detalhes-${tabId}`).classList.add('active');
         }
     });
 
-    function openFiiDetalhesModal(ticker) {
-        document.getElementById("fii-detalhes-modal-title").textContent = `Detalhes de ${ticker}`;
+    function openAtivoDetalhesModal(ticker, tipoAtivo) {
+        document.getElementById("ativo-detalhes-modal-title").textContent = `Detalhes de ${ticker}`;
 
         const lancamentosDoAtivo = allLancamentos.filter(l => l.ativo === ticker).sort((a, b) => new Date(a.data) - new Date(b.data));
         const proventosDoAtivo = allProventosData.filter(p => p.ativo === ticker);
@@ -1445,22 +1574,21 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 100);
 
         // Reset para a primeira aba sempre que abrir
-        fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
-        fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
-        fiiDetalhesModal.querySelector('[data-tab="performance"]').classList.add('active');
-        document.getElementById('fii-detalhes-performance').classList.add('active');
+        ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
+        ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
+        ativoDetalhesModal.querySelector('[data-tab="performance"]').classList.add('active');
+        document.getElementById('ativo-detalhes-performance').classList.add('active');
 
-        fiiDetalhesModal.classList.add("show");
+        ativoDetalhesModal.classList.add("show");
     }
 
     function renderDetalhesLancamentos(lancamentos) {
-    const container = document.getElementById("fii-detalhes-lancamentos");
+    const container = document.getElementById("ativo-detalhes-lancamentos");
     if (lancamentos.length === 0) {
         container.innerHTML = "<p>Nenhum lançamento para este ativo.</p>";
         return;
     }
 
-    // --- CÁLCULO DOS TOTAIS DE LANÇAMENTOS ---
     let totalCompras = 0;
     let totalVendas = 0;
 
@@ -1475,7 +1603,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const netTotal = totalCompras - totalVendas;
     const netClass = netTotal >= 0 ? 'positive-change' : 'negative-change';
 
-    // --- HTML DE RESUMO ---
     let resumoHtml = `
         <div class="detalhes-resumo-lancamentos" style="display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;">
             <div class="resumo-item">
@@ -1493,7 +1620,6 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
     `;
 
-    // --- HTML DA LISTA DE LANÇAMENTOS ---
     let listaHtml = `
         <div class="detalhes-lista-header">
             <div class="header-col">Data</div>
@@ -1514,18 +1640,15 @@ document.addEventListener("DOMContentLoaded", function () {
     container.innerHTML = resumoHtml + listaHtml;
 }
 
-
     function renderDetalhesProventos(proventos) {
-    const container = document.getElementById("fii-detalhes-proventos");
+    const container = document.getElementById("ativo-detalhes-proventos");
     if (proventos.length === 0) {
         container.innerHTML = "<p>Nenhum provento para este ativo.</p>";
         return;
     }
 
-    // --- CÁLCULO DO TOTAL DE PROVENTOS ---
     const totalProventos = proventos.reduce((acc, p) => acc + p.valor, 0);
 
-    // --- HTML DE RESUMO E LISTA ---
     let html = `
         <div class="detalhes-resumo-proventos" style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;">
             <span style="color: #a0a7b3; font-size: 0.85rem; display: block;">Total de Proventos Recebidos</span>
@@ -1549,10 +1672,8 @@ document.addEventListener("DOMContentLoaded", function () {
     container.innerHTML = html;
 }
 
-    // public/js/main.js (Substituir TODA a função renderPerformanceChart)
-
 async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
-    const container = document.getElementById('fii-detalhes-performance');
+    const container = document.getElementById('ativo-detalhes-performance');
     
     if (performanceChart) {
         performanceChart.destroy();
@@ -1578,13 +1699,10 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
         return;
     }
 
-    // -------------------------------------------------------------------
-    // NOVOS DADOS: IBOV e IVVB11
-    // -------------------------------------------------------------------
     let dadosAtivo;
     let dadosCDI;
     let dadosIBOV;
-    let dadosIVVB11; // Variável renomeada para IVVB11
+    let dadosIVVB11;
 
     try {
         const lancamentosOrdenados = [...lancamentosDoAtivo].sort((a, b) => new Date(a.data) - new Date(b.data));
@@ -1595,17 +1713,12 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
 
         const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm"; 
         const RANGE = '3mo'; 
-
         
         const [ativoResponse, cdiResponse, ibovResponse, ivvb11Response] = await Promise.all([
-            // 1. Ativo
             fetch(`https://brapi.dev/api/quote/${ticker}?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
-            // 2. CDI
             fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${hoje.split('-').reverse().join('/')}`),
-            // 3. IBOV (^BVSP)
             fetch(`https://brapi.dev/api/quote/^BVSP?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
-            // 4. IVVB11 (Novo ETF)
-            fetch(`https://brapi.dev/api/quote/IVVB11?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`) // Ticker alterado para IVVB11
+            fetch(`https://brapi.dev/api/quote/IVVB11?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`)
         ]);
         
         if (!ativoResponse.ok) throw new Error(`Falha ao buscar ${ticker}`);
@@ -1619,12 +1732,10 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
         dadosIBOV = await ibovResponse.json();
 
         if (!ivvb11Response.ok) throw new Error(`Falha ao buscar IVVB11`);
-        dadosIVVB11 = await ivvb11Response.json(); // Variável renomeada
+        dadosIVVB11 = await ivvb11Response.json();
 
-        // VALIDAÇÃO DE DADOS DE ÍNDICE
         if (dadosIBOV.error || !dadosIBOV.results || dadosIBOV.results.length === 0) console.warn("Dados do IBOV indisponíveis.");
-        if (dadosIVVB11.error || !dadosIVVB11.results || dadosIVVB11.results.length === 0) console.warn("Dados do IVVB11 indisponíveis."); // Variável renomeada
-
+        if (dadosIVVB11.error || !dadosIVVB11.results || dadosIVVB11.results.length === 0) console.warn("Dados do IVVB11 indisponíveis.");
         
         const historicoPrecos = dadosAtivo.results[0].historicalDataPrice.reduce((acc, item) => {
             const data = new Date(item.date * 1000).toISOString().split('T')[0];
@@ -1632,13 +1743,9 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
             return acc;
         }, {});
 
-
-        // --- LÓGICA DE NORMALIZAÇÃO ---
-
         const dataInicialLancamento = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
         const dataInicioStr = dataInicialLancamento.toISOString().split('T')[0];
 
-        // 1. CDI
         let cdiAcumulado = 1;
         const historicoCDIIndex = {};
         let cdiIndexStartFactor = 1; 
@@ -1653,7 +1760,6 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
             }
         });
 
-        // 2. IBOV e IVVB11
         const normalizarIndice = (dadosIndice) => {
             const precosHistoricos = dadosIndice.results[0].historicalDataPrice;
             if (!precosHistoricos || precosHistoricos.length === 0) return {};
@@ -1669,18 +1775,13 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
         };
 
         const historicoIBOV = (dadosIBOV && dadosIBOV.results && dadosIBOV.results.length > 0) ? normalizarIndice(dadosIBOV) : {};
-        const historicoIVVB11 = (dadosIVVB11 && dadosIVVB11.results && dadosIVVB11.results.length > 0) ? normalizarIndice(dadosIVVB11) : {}; // Variável renomeada
+        const historicoIVVB11 = (dadosIVVB11 && dadosIVVB11.results && dadosIVVB11.results.length > 0) ? normalizarIndice(dadosIVVB11) : {};
         
-        
-        // -------------------------------------------------------------------
-        // PLOTAGEM DIÁRIA 
-        // -------------------------------------------------------------------
-
         const labels = [];
         const dataCarteira = [];
         const dataCDI = [];
         const dataIBOV = [];
-        const dataIVVB11 = []; // Variável renomeada
+        const dataIVVB11 = [];
         const costBasisArray = []; 
 
         let quantidade = 0;
@@ -1704,7 +1805,6 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                 });
             }
             
-            // 1. Valor da Posição Diário
             const precoDoDia = historicoPrecos[dataAtualStr];
             if(precoDoDia && quantidade > 0) {
                 dataCarteira.push(quantidade * precoDoDia);
@@ -1714,10 +1814,8 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                 dataCarteira.push(0);
             }
             
-            // 2. Custo Acumulado (P0) do dia
             costBasisArray.push(valorInvestidoAcumulado); 
 
-            // 3. Performance dos Benchmarks
             const cdiIndex = historicoCDIIndex[dataAtualStr];
             if (cdiIndex) {
                  const cdiGain = ((cdiIndex / cdiIndexStartFactor) - 1) * 100;
@@ -1728,7 +1826,6 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                  dataCDI.push(0); 
             }
 
-            // IBOV
             const ibovGain = historicoIBOV[dataAtualStr];
             if (typeof ibovGain === 'number') {
                 dataIBOV.push(ibovGain);
@@ -1738,18 +1835,16 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                 dataIBOV.push(0);
             }
 
-            // IVVB11
-            const ivvb11Gain = historicoIVVB11[dataAtualStr]; // Variável renomeada
+            const ivvb11Gain = historicoIVVB11[dataAtualStr];
             if (typeof ivvb11Gain === 'number') {
-                dataIVVB11.push(ivvb11Gain); // Variável renomeada
-            } else if (dataIVVB11.length > 0) { // Variável renomeada
-                dataIVVB11.push(dataIVVB11[dataIVVB11.length - 1]); // Variável renomeada
+                dataIVVB11.push(ivvb11Gain);
+            } else if (dataIVVB11.length > 0) {
+                dataIVVB11.push(dataIVVB11[dataIVVB11.length - 1]);
             } else {
-                dataIVVB11.push(0); // Variável renomeada
+                dataIVVB11.push(0);
             }
         }
         
-        // Normalização Final da Carteira
         const baseCustoInicial = lancamentosOrdenados[0].valorTotal;
         const baseValor = baseCustoInicial > 0 ? baseCustoInicial : 1; 
 
@@ -1760,7 +1855,6 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
              }
              return 0;
         });
-
         
         performanceChart = new Chart(ctx, {
             type: 'line',
@@ -1792,14 +1886,13 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                     tension: 0.2,
                     pointRadius: 0,
                 }, {
-                    label: 'IVVB11', // Rótulo alterado
-                    data: dataIVVB11, // Variável de dados alterada
+                    label: 'IVVB11',
+                    data: dataIVVB11,
                     borderColor: '#5A67D8',
                     backgroundColor: 'transparent',
                     fill: false,
                     tension: 0.2,
                     pointRadius: 0,
-                    // Sem a propriedade hidden, o IVVB11 sempre aparecerá
                 }]
             },
             options: {
@@ -1829,7 +1922,6 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                                     label += ': ';
                                 }
                                 if (context.parsed.y !== null) {
-                                    // Formata o valor com duas casas decimais e adiciona %
                                     label += context.parsed.y.toFixed(2) + '%';
                                 }
                                 return label;

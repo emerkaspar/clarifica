@@ -1064,3 +1064,99 @@ torico-lista p,
   color: #ef4444; 
 }
 
+/* --- ESTILOS PARA A NOVA VISÃO DE CARTEIRA EM CARDS (AÇÕES) --- */
+/* (Cópia da lógica FIIs, garantindo que o visual seja o mesmo) */
+
+.acoes-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.acao-card {
+    background-color: #1a1b1e;
+    border: 1px solid #2a2c30;
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease-out, border-color 0.3s ease-out;
+}
+
+.acao-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    border: 1px solid #00d9c3;
+    clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%);
+    transition: clip-path 0.1s ease-out;
+    pointer-events: none;
+}
+
+.acao-card:hover {
+    transform: translateY(-5px);
+    border-color: #1a1b1e;
+}
+
+.acao-card:hover::after {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.acao-card-ticker {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #00d9c3;
+    background-color: rgba(0, 217, 195, 0.1);
+    padding: 5px 12px;
+    border-radius: 20px;
+    margin-bottom: 5px;
+}
+
+.acao-card-metric-main .label {
+    font-size: 0.85rem;
+    color: #a0a7b3;
+}
+
+.acao-card-metric-main .value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin-top: 5px;
+}
+
+.acao-card-result {
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+}
+
+.acao-card-details {
+    width: 100%;
+    margin-top: 10px;
+    border-top: 1px solid #2a2c30;
+    padding-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.acao-detail-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #a0a7b3;
+}
+
+.acao-detail-item span:last-child {
+    font-weight: 500;
+    color: #e0e0e0;
+}

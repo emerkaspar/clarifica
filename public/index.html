@@ -290,11 +290,17 @@
             </div>
 
             <div class="tab-pane" id="acoes">
-              <h2>Carteira de Ações</h2>
-              <p>
-                Em breve: detalhes sobre suas posições em ações, dividendos
-                recebidos, preço médio e resultados.
-              </p>
+                <div class="content-container" style="max-width: none">
+                    <div class="content-header">
+                        <h3>Carteira de Ações</h3>
+                        <button id="btn-novo-lancamento-acao" class="btn-adicionar">
+                            <i class="fas fa-plus"></i> Novo Lançamento
+                        </button>
+                    </div>
+                    <div id="acoes-lista" class="fiis-grid-container">
+                        <p>Calculando sua carteira de Ações...</p>
+                    </div>
+                </div>
             </div>
             <div class="tab-pane" id="fiis">
                 <div class="content-container" style="max-width: none">
@@ -765,13 +771,12 @@
         </div>
       </div>
     </div>
-
-    <script src="js/main.js" type="module"></script>
-    <div id="fii-detalhes-modal" class="modal-overlay">
+    
+    <div id="ativo-detalhes-modal" class="modal-overlay">
       <div class="modal-content" style="max-width: 800px;">
         <div class="modal-header">
-          <h2 id="fii-detalhes-modal-title">Detalhes do Ativo</h2>
-          <button class="modal-close-btn" data-modal="fii-detalhes-modal">
+          <h2 id="ativo-detalhes-modal-title">Detalhes do Ativo</h2>
+          <button class="modal-close-btn" data-modal="ativo-detalhes-modal">
             &times;
           </button>
         </div>
@@ -781,21 +786,19 @@
             <button class="fii-detalhes-tab-link" data-tab="lancamentos">Lançamentos</button>
             <button class="fii-detalhes-tab-link" data-tab="proventos">Proventos</button>
           </div>
-          <div class="fii-detalhes-tab-content active" id="fii-detalhes-performance">
+          <div class="fii-detalhes-tab-content active" id="ativo-detalhes-performance">
             <div class="performance-chart-container">
                 <canvas id="performance-chart"></canvas>
             </div>
           </div>
-          <div class="fii-detalhes-tab-content" id="fii-detalhes-lancamentos">
+          <div class="fii-detalhes-tab-content" id="ativo-detalhes-lancamentos">
             </div>
-          <div class="fii-detalhes-tab-content" id="fii-detalhes-proventos">
+          <div class="fii-detalhes-tab-content" id="ativo-detalhes-proventos">
             </div>
         </div>
       </div>
     </div>
 
     <script src="js/main.js" type="module"></script>
-  </body>
-</html>
   </body>
 </html>
