@@ -1384,7 +1384,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         renderDetalhesLancamentos(lancamentosDoAtivo);
         renderDetalhesProventos(proventosDoAtivo);
+        setTimeout(() => {
         renderPerformanceChart(ticker, lancamentosDoAtivo);
+        }, 100);
 
         // Reset para a primeira aba sempre que abrir
         fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
@@ -1401,6 +1403,7 @@ document.addEventListener("DOMContentLoaded", function () {
             container.innerHTML = "<p>Nenhum lançamento para este ativo.</p>";
             return;
         }
+        
 
         let html = `
             <div class="detalhes-lista-header">
@@ -1446,156 +1449,229 @@ document.addEventListener("DOMContentLoaded", function () {
         container.innerHTML = html;
     }
 
-    async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
-        const container = document.getElementById('fii-detalhes-performance');
-        const canvas = document.getElementById('performance-chart');
-        const ctx = canvas.getContext('2d');
-        
-        if (performanceChart) {
-            performanceChart.destroy();
-        }
+    // public/js/main.js (Substituir TODA a função renderPerformanceChart)
 
-        // Limpa o container e mostra o canvas
-        container.innerHTML = '';
-        container.appendChild(canvas);
-
-        if (lancamentosDoAtivo.length === 0) {
-            container.innerHTML = '<p style="color: #a0a7b3; text-align: center;">Sem lançamentos para gerar gráfico de performance.</p>';
-            return;
-        }
-
-        try {
-            const dataInicio = lancamentosDoAtivo[0].data;
-            const hoje = new Date().toISOString().split('T')[0];
-
-            const [ativoResponse, cdiResponse] = await Promise.all([
-                fetch(`https://brapi.dev/api/quote/${ticker}?range=5y&interval=1d&token=${BRAAPI_TOKEN}`),
-                fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${hoje.split('-').reverse().join('/')}`)
-            ]);
-            
-            // --- INÍCIO DA CORREÇÃO ---
-            // Verificação de segurança para a resposta da API do ativo
-            if (!ativoResponse.ok) {
-                throw new Error(`Erro ao buscar dados do ativo: ${ativoResponse.statusText}`);
-            }
-            const dadosAtivo = await ativoResponse.json();
-            if (dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) {
-                throw new Error(dadosAtivo.message || `Ticker ${ticker} não encontrado ou sem dados históricos.`);
-            }
-
-            // Verificação de segurança para a resposta da API do CDI
-            if (!cdiResponse.ok) {
-                throw new Error(`Erro ao buscar dados do CDI: ${cdiResponse.statusText}`);
-            }
-            const dadosCDI = await cdiResponse.json();
-            // --- FIM DA CORREÇÃO ---
-
-
-            const historicoPrecos = dadosAtivo.results[0].historicalDataPrice.reduce((acc, item) => {
-                const data = new Date(item.date * 1000).toISOString().split('T')[0];
-                acc[data] = item.close;
-                return acc;
-            }, {});
-
-            let cdiAcumulado = 1;
-            const historicoCDI = dadosCDI.reduce((acc, item) => {
-                const data = item.data.split('/').reverse().join('-');
-                cdiAcumulado *= (1 + (parseFloat(item.valor) / 100));
-                acc[data] = cdiAcumulado;
-                return acc;
-            }, {});
-
-            const labels = [];
-            const dataCarteira = [];
-            const dataCDI = [];
-
-            let quantidade = 0;
-            let valorInvestido = 0;
-            let cdiBaseValue = 0;
-
-            const dataInicialLancamento = new Date(lancamentosDoAtivo[0].data + 'T00:00:00');
-            const hojeDate = new Date();
-
-            let ultimoCDI = 1;
-            for (let d = new Date(dataInicialLancamento); d <= hojeDate; d.setDate(d.getDate() + 1)) {
-                const dataAtualStr = d.toISOString().split('T')[0];
-                labels.push(dataAtualStr);
-
-                const lancamentosDoDia = lancamentosDoAtivo.filter(l => l.data === dataAtualStr);
-                if (lancamentosDoDia.length > 0) {
-                    lancamentosDoDia.forEach(l => {
-                         if (l.tipoOperacao === 'compra') {
-                            valorInvestido += l.valorTotal;
-                            quantidade += l.quantidade;
-                        } else {
-                            const proporcaoVenda = l.quantidade / quantidade;
-                            valorInvestido *= (1 - proporcaoVenda);
-                            quantidade -= l.quantidade;
-                        }
-                    });
-                     // Ajusta o valor base do CDI a cada novo aporte
-                    cdiBaseValue = valorInvestido / ultimoCDI;
-                }
-                
-                ultimoCDI = historicoCDI[dataAtualStr] || ultimoCDI;
-                const precoDoDia = historicoPrecos[dataAtualStr];
-
-                if(precoDoDia && quantidade > 0) {
-                     dataCarteira.push(quantidade * precoDoDia);
-                } else if(dataCarteira.length > 0) {
-                    dataCarteira.push(dataCarteira[dataCarteira.length - 1]);
-                } else {
-                    dataCarteira.push(0);
-                }
-                dataCDI.push(cdiBaseValue * ultimoCDI);
-            }
-            
-            const primeiroValorCarteira = dataCarteira.find(v => v > 0) || 1;
-            const primeiroValorCDI = dataCDI.find(v => v > 0) || 1;
-
-            const dataCarteiraNormalizada = dataCarteira.map(v => (v / primeiroValorCarteira) * 100);
-            const dataCDINormalizada = dataCDI.map(v => (v / primeiroValorCDI) * 100);
-            
-            performanceChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: `Performance ${ticker}`,
-                        data: dataCarteiraNormalizada,
-                        borderColor: '#00d9c3',
-                        backgroundColor: 'rgba(0, 217, 195, 0.1)',
-                        fill: true,
-                        tension: 0.2,
-                        pointRadius: 0,
-                    }, {
-                        label: 'CDI',
-                        data: dataCDINormalizada,
-                        borderColor: '#a0a7b3',
-                        borderDash: [5, 5],
-                        backgroundColor: 'transparent',
-                        fill: false,
-                        tension: 0.2,
-                        pointRadius: 0,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { ticks: { color: '#a0a7b3' }, grid: { color: '#2a2c30' } },
-                        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#a0a7b3' }, grid: { display: false } }
-                    },
-                    plugins: {
-                        tooltip: { mode: 'index', intersect: false },
-                        legend: { labels: { color: '#a0a7b3' } }
-                    }
-                }
-            });
-
-        } catch (error) {
-            console.error("Erro ao buscar dados para o gráfico de performance:", error);
-            container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Não foi possível carregar os dados de performance.<br><small>${error.message}</small></p>`;
-        }
+async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
+    const container = document.getElementById('fii-detalhes-performance');
+    
+    if (performanceChart) {
+        performanceChart.destroy();
+        performanceChart = null;
     }
+
+    container.innerHTML = ''; 
+
+    const newCanvas = document.createElement('canvas');
+    newCanvas.id = 'performance-chart';
+    container.appendChild(newCanvas);
+
+    const canvas = document.getElementById('performance-chart');
+    
+    if (!canvas) {
+        container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Erro interno: Não foi possível criar o elemento do gráfico.</p>`;
+        return;
+    }
+    const ctx = canvas.getContext('2d');
+
+    if (lancamentosDoAtivo.length === 0) {
+        container.innerHTML = '<p style="color: #a0a7b3; text-align: center;">Sem lançamentos para gerar gráfico de performance.</p>';
+        return;
+    }
+
+    // -------------------------------------------------------------------
+    // CORREÇÃO: Declarar variáveis fora do bloco try
+    // -------------------------------------------------------------------
+    let dadosAtivo;
+    let dadosCDI;
+
+    try {
+        const lancamentosOrdenados = [...lancamentosDoAtivo].sort((a, b) => new Date(a.data) - new Date(b.data));
+        const dataInicio = lancamentosOrdenados[0].data;
+        
+        const hoje = new Date().toISOString().split('T')[0];
+        const hojeDate = new Date(); 
+
+        const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm"; 
+        
+        const [ativoResponse, cdiResponse] = await Promise.all([
+            fetch(`https://brapi.dev/api/quote/${ticker}?range=3mo&interval=1d&token=${BRAAPI_TOKEN}`),
+            fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${hoje.split('-').reverse().join('/')}`)
+        ]);
+        
+        if (!ativoResponse.ok) {
+            throw new Error(`Falha na requisição (Status: ${ativoResponse.status}). O ativo pode não ter dados para o período ou o token expirou.`);
+        }
+        
+        // Atribuição de valor
+        dadosAtivo = await ativoResponse.json();
+        if (dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) {
+            throw new Error(dadosAtivo.message || `Ticker ${ticker} não encontrado ou sem dados históricos.`);
+        }
+
+        if (!cdiResponse.ok) {
+            throw new Error(`Erro ao buscar dados do CDI: ${cdiResponse.statusText}`);
+        }
+        // Atribuição de valor
+        dadosCDI = await cdiResponse.json();
+        // -------------------------------------------------------------------
+        
+
+        const historicoPrecos = dadosAtivo.results[0].historicalDataPrice.reduce((acc, item) => {
+            const data = new Date(item.date * 1000).toISOString().split('T')[0];
+            acc[data] = item.close;
+            return acc;
+        }, {});
+
+
+        // CÁLCULO CDI (Índice de Performance Puro)
+        let cdiAcumulado = 1;
+        const historicoCDIIndex = {};
+        let cdiIndexStartFactor = 1; 
+        const dataInicialLancamento = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
+        const dataInicioStr = dataInicialLancamento.toISOString().split('T')[0];
+
+        dadosCDI.forEach(item => {
+            const data = item.data.split('/').reverse().join('-');
+            cdiAcumulado *= (1 + (parseFloat(item.valor) / 100));
+            historicoCDIIndex[data] = cdiAcumulado;
+
+            if (data === dataInicioStr) {
+                cdiIndexStartFactor = cdiAcumulado; 
+            }
+        });
+
+        // -------------------------------------------------------------------
+        // PLOTAGEM DIÁRIA (Cálculo de Carteira, Custo Médio Diário e CDI)
+        // -------------------------------------------------------------------
+
+        const labels = [];
+        const dataCarteira = [];
+        const dataCDI = [];
+        const costBasisArray = []; 
+
+        let quantidade = 0;
+        let valorInvestidoAcumulado = 0; 
+
+        for (let d = new Date(dataInicialLancamento); d <= hojeDate; d.setDate(d.getDate() + 1)) {
+            const dataAtualStr = d.toISOString().split('T')[0];
+            labels.push(dataAtualStr);
+
+            const lancamentosDoDia = lancamentosOrdenados.filter(l => l.data === dataAtualStr);
+            if (lancamentosDoDia.length > 0) {
+                lancamentosDoDia.forEach(l => {
+                    if (l.tipoOperacao === 'compra') {
+                        valorInvestidoAcumulado += l.valorTotal; 
+                        quantidade += l.quantidade;
+                    } else {
+                        const precoMedio = valorInvestidoAcumulado / quantidade;
+                        valorInvestidoAcumulado -= l.quantidade * precoMedio;
+                        quantidade -= l.quantidade;
+                    }
+                });
+            }
+            
+            // 1. Calculando Valor da Posição Diário (Pt)
+            const precoDoDia = historicoPrecos[dataAtualStr];
+            if(precoDoDia && quantidade > 0) {
+                dataCarteira.push(quantidade * precoDoDia);
+            } else if(dataCarteira.length > 0) {
+                dataCarteira.push(dataCarteira[dataCarteira.length - 1]);
+            } else {
+                dataCarteira.push(0);
+            }
+            
+            // 2. Rastreando o Custo Acumulado (P0) do dia
+            costBasisArray.push(valorInvestidoAcumulado); 
+
+            // Calculando Performance do CDI em %
+            const cdiIndex = historicoCDIIndex[dataAtualStr];
+            if (cdiIndex) {
+                 const cdiGain = ((cdiIndex / cdiIndexStartFactor) - 1) * 100;
+                 dataCDI.push(cdiGain);
+            } else if (dataCDI.length > 0) {
+                 dataCDI.push(dataCDI[dataCDI.length - 1]);
+            } else {
+                 dataCDI.push(0); 
+            }
+        }
+        
+        // AJUSTE CRUCIAL: Normalização de TWR para CMA Time-Series
+        const dataCarteiraNormalizada = dataCarteira.map((v, i) => {
+             const cost = costBasisArray[i];
+             if (cost > 0) {
+                 return ((v / cost) - 1) * 100;
+             }
+             return 0;
+        });
+
+        const dataCDINormalizada = dataCDI; 
+
+        
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Performance ${ticker}`,
+                    data: dataCarteiraNormalizada,
+                    borderColor: '#00d9c3',
+                    backgroundColor: 'rgba(0, 217, 195, 0.1)',
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 0,
+                }, {
+                    label: 'CDI',
+                    data: dataCDINormalizada,
+                    borderColor: '#a0a7b3',
+                    borderDash: [5, 5],
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        ticks: { 
+                            color: '#a0a7b3',
+                            callback: function (value) {
+                                return value.toFixed(1) + '%'; 
+                            }
+                        }, 
+                        grid: { color: '#2a2c30' } 
+                    },
+                    x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#a0a7b3' }, grid: { display: false } }
+                },
+                plugins: {
+                    tooltip: { 
+                        mode: 'index', 
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    // Formata o valor com duas casas decimais e adiciona %
+                                    label += context.parsed.y.toFixed(2) + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    legend: { labels: { color: '#a0a7b3' } }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Erro ao buscar dados para o gráfico de performance:", error);
+        container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Não foi possível carregar os dados de performance.<br><small>${error.message}</small></p>`;
+    }
+}
 });
