@@ -1237,118 +1237,173 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function setupClassificacaoModal(userID, collectionRef) {
-        const modal = document.getElementById("classificacao-modal");
-        const form = document.getElementById("form-classificacao");
-        const fieldsContainer = document.getElementById(
-            "classificacao-fields-container"
-        );
+    const modal = document.getElementById("classificacao-modal");
+    const form = document.getElementById("form-classificacao");
+    const fieldsContainer = document.getElementById(
+        "classificacao-fields-container"
+    );
 
-        const gerarCampos = (tipo, valores) => {
-            let html = "";
-            if (tipo === "FIIs") {
-                html = `
-              <div>
-                  <label class="form-label">Tipo FII</label>
-                  <select name="Tipo FII" class="form-select">
-                      <option value="Tijolo" ${valores["Tipo FII"] === "Tijolo" ? "selected" : ""
-                    }>Tijolo</option>
-                      <option value="Papel" ${valores["Tipo FII"] === "Papel" ? "selected" : ""
-                    }>Papel</option>
-                      <option value="Híbrido" ${valores["Tipo FII"] === "Híbrido" ? "selected" : ""
-                    }>Híbrido</option>
-                      <option value="Fundo de Fundos" ${valores["Tipo FII"] === "Fundo de Fundos"
-                        ? "selected"
-                        : ""
-                    }>Fundo de Fundos</option>
-                  </select>
-              </div>
-              <div>
-                  <label class="form-label">Risco FII</label>
-                  <select name="Risco FII" class="form-select">
-                      <option value="Arrojado" ${valores["Risco FII"] === "Arrojado" ? "selected" : ""
-                    }>Arrojado</option>
-                      <option value="Crescimento" ${valores["Risco FII"] === "Crescimento" ? "selected" : ""
-                    }>Crescimento</option>
-                      <option value="Ancoragem" ${valores["Risco FII"] === "Ancoragem" ? "selected" : ""
-                    }>Ancoragem</option>
-                  </select>
-              </div>`;
-            } else if (tipo === "Ações") {
-                html = `
-              <div>
-                  <label class="form-label">Capitalização</label>
-                  <select name="Capitalização" class="form-select">
-                      <option value="Blue Chip" ${valores["Capitalização"] === "Blue Chip"
-                        ? "selected"
-                        : ""
-                    }>Blue Chip</option>
-                      <option value="Small Cap" ${valores["Capitalização"] === "Small Cap"
-                        ? "selected"
-                        : ""
-                    }>Small Cap</option>
-                  </select>
-              </div>
-              <div>
-                  <label class="form-label">Setor BESST</label>
-                  <select name="Setor BESST" class="form-select">
-                      <option value="Bancos" ${valores["Setor BESST"] === "Bancos" ? "selected" : ""
-                    }>Bancos</option>
-                      <option value="Energia" ${valores["Setor BESST"] === "Energia" ? "selected" : ""
-                    }>Energia</option>
-                      <option value="Saneamento" ${valores["Setor BESST"] === "Saneamento" ? "selected" : ""
-                    }>Saneamento</option>
-                      <option value="Seguros" ${valores["Setor BESST"] === "Seguros" ? "selected" : ""
-                    }>Seguros</option>
-                      <option value="Telecomunicações" ${valores["Setor BESST"] === "Telecomunicações"
-                        ? "selected"
-                        : ""
-                    }>Telecomunicações</option>
-                      <option value="Outro" ${valores["Setor BESST"] === "Outro" ? "selected" : ""
-                    }>Outro</option>
-                  </select>
-              </div>`;
-            }
+    // --- OPÇÕES DE CLASSIFICAÇÃO PARA FIIs ---
+    const tipoFiiOpcoes = [
+        "Tijolo",
+        "Papel",
+        "Híbrido",
+        "Fundo de Fundos",
+    ];
+
+    const especieOpcoes = {
+        Tijolo: [
+            "Lajes corporativas / Escritórios",
+            "Shoppings e centros comerciais",
+            "Logística e galpões industriais",
+            "Residencial",
+            "Hospitais, clínicas e lajes de saúde",
+            "Hotéis",
+            "Agro",
+        ],
+        Papel: [
+            "Atrelado ao CDI",
+            "Atrelado ao IPCA"
+        ],
+        Híbrido: ["N/A"],
+        "Fundo de Fundos": ["N/A"],
+    };
+    // ----------------------------------------
+
+
+    const updateEspecieOptions = (selectedTipo, currentValue = null) => {
+        const selectEspecie = document.getElementById('select-especie');
+        // Define as opções, usando N/A se o tipo não tiver opções dinâmicas
+        const options = especieOpcoes[selectedTipo] || ["N/A"];
+        selectEspecie.innerHTML = '';
+        
+        options.forEach(opt => {
+            // Verifica se o valor atual deve ser selecionado (útil ao editar)
+            // Se currentValue for null, seleciona N/A por padrão se for o caso
+            const isSelected = currentValue === opt || (currentValue === null && opt === "N/A");
+            selectEspecie.innerHTML += `<option value="${opt}" ${isSelected ? "selected" : ""}>${opt}</option>`;
+        });
+    };
+
+    const gerarCampos = (tipo, valores) => {
+        let html = "";
+        fieldsContainer.innerHTML = ''; // Limpa antes de gerar
+
+        if (tipo === "FIIs") {
+            const tipoFiiAtual = valores["Tipo FII"] || "Tijolo"; // Define Tijolo como padrão se não houver valor
+            
+            // 1. Campo Tipo FII
+            let tipoFiiHtml = `
+                <div>
+                    <label class="form-label">Tipo FII</label>
+                    <select name="Tipo FII" id="select-tipo-fii" class="form-select">
+            `;
+            tipoFiiOpcoes.forEach(opt => {
+                tipoFiiHtml += `<option value="${opt}" ${tipoFiiAtual === opt ? "selected" : ""}>${opt}</option>`;
+            });
+            tipoFiiHtml += `
+                    </select>
+                </div>
+            `;
+            
+            // 2. Campo Risco FII
+            const riscoFiiHtml = `
+                <div>
+                    <label class="form-label">Risco FII</label>
+                    <select name="Risco FII" class="form-select">
+                        <option value="Arrojado" ${valores["Risco FII"] === "Arrojado" ? "selected" : ""}>Arrojado</option>
+                        <option value="Crescimento" ${valores["Risco FII"] === "Crescimento" ? "selected" : ""}>Crescimento</option>
+                        <option value="Ancoragem" ${valores["Risco FII"] === "Ancoragem" ? "selected" : ""}>Ancoragem</option>
+                    </select>
+                </div>
+            `;
+
+            // 3. Campo Espécie (o conteúdo será preenchido após a injeção do HTML)
+            const especieHtml = `
+                <div>
+                    <label class="form-label">Espécie</label>
+                    <select name="Espécie" id="select-especie" class="form-select"></select>
+                </div>
+            `;
+
+            html += tipoFiiHtml + riscoFiiHtml + especieHtml;
             fieldsContainer.innerHTML = html;
-        };
 
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const ticker = form["classificacao-ativo-ticker"].value;
-            const tipo = form["classificacao-ativo-tipo"].value;
-            const classificacoes = {};
-            form
-                .querySelectorAll("select")
-                .forEach((select) => {
-                    classificacoes[select.name] = select.value;
-                });
-            try {
-                const docRef = doc(db, "ativosClassificados", ticker);
-                await setDoc(docRef, {
-                    userID: userID,
-                    ativo: ticker,
-                    tipoAtivo: tipo,
-                    classificacoes: classificacoes,
-                });
-                alert("Classificação salva com sucesso!");
-                closeModal("classificacao-modal");
-            } catch (error) {
-                alert("Erro ao salvar classificação: " + error.message);
-            }
-        });
+            // --- Lógica Dinâmica para Espécie ---
+            const selectTipoFii = document.getElementById('select-tipo-fii');
+            
+            // Inicializa as opções de Espécie
+            updateEspecieOptions(selectTipoFii.value, valores["Espécie"]);
 
-        modal.addEventListener("click", (e) => {
-            if (e.target === modal) closeModal("classificacao-modal");
-        });
+            // Adiciona listener para atualizar as opções de Espécie ao mudar o Tipo FII
+            selectTipoFii.addEventListener('change', (e) => {
+                const novoTipo = e.target.value;
+                // Passa null para currentValue para que selecione a primeira opção do novo tipo (ou N/A)
+                updateEspecieOptions(novoTipo, null); 
+            });
 
-        window.openClassificacaoModal = (ticker, tipo, valores = {}) => {
-            form.reset();
-            form["classificacao-ativo-ticker"].value = ticker;
-            form["classificacao-ativo-tipo"].value = tipo;
-            document.getElementById("classificacao-ativo-nome").textContent = ticker;
-            gerarCampos(tipo, valores);
-            modal.classList.add("show");
-        };
-    }
+        } else if (tipo === "Ações") {
+            html = `
+                <div>
+                    <label class="form-label">Capitalização</label>
+                    <select name="Capitalização" class="form-select">
+                        <option value="Blue Chip" ${valores["Capitalização"] === "Blue Chip" ? "selected" : ""}>Blue Chip</option>
+                        <option value="Small Cap" ${valores["Capitalização"] === "Small Cap" ? "selected" : ""}>Small Cap</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Setor BESST</label>
+                    <select name="Setor BESST" class="form-select">
+                        <option value="Bancos" ${valores["Setor BESST"] === "Bancos" ? "selected" : ""}>Bancos</option>
+                        <option value="Energia" ${valores["Setor BESST"] === "Energia" ? "selected" : ""}>Energia</option>
+                        <option value="Saneamento" ${valores["Setor BESST"] === "Saneamento" ? "selected" : ""}>Saneamento</option>
+                        <option value="Seguros" ${valores["Setor BESST"] === "Seguros" ? "selected" : ""}>Seguros</option>
+                        <option value="Telecomunicações" ${valores["Setor BESST"] === "Telecomunicações" ? "selected" : ""}>Telecomunicações</option>
+                        <option value="Outro" ${valores["Setor BESST"] === "Outro" ? "selected" : ""}>Outro</option>
+                    </select>
+                </div>`;
+            fieldsContainer.innerHTML = html;
+        }
+    };
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const ticker = form["classificacao-ativo-ticker"].value;
+        const tipo = form["classificacao-ativo-tipo"].value;
+        const classificacoes = {};
+        form
+            .querySelectorAll("select")
+            .forEach((select) => {
+                classificacoes[select.name] = select.value;
+            });
+        try {
+            const docRef = doc(db, "ativosClassificados", ticker);
+            await setDoc(docRef, {
+                userID: userID,
+                ativo: ticker,
+                tipoAtivo: tipo,
+                classificacoes: classificacoes,
+            });
+            alert("Classificação salva com sucesso!");
+            closeModal("classificacao-modal");
+        } catch (error) {
+            alert("Erro ao salvar classificação: " + error.message);
+        }
+    });
+
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal("classificacao-modal");
+    });
+
+    window.openClassificacaoModal = (ticker, tipo, valores = {}) => {
+        form.reset();
+        form["classificacao-ativo-ticker"].value = ticker;
+        form["classificacao-ativo-tipo"].value = tipo;
+        document.getElementById("classificacao-ativo-nome").textContent = ticker;
+        gerarCampos(tipo, valores);
+        modal.classList.add("show");
+    };
+}
 
     // --- LÓGICA DO MODAL DE DETALHES DO FII ---
     const fiiDetalhesModal = document.getElementById("fii-detalhes-modal");
