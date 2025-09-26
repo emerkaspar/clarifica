@@ -578,7 +578,7 @@ body {
   display: inline-block;
 }
 .operacao-compra {
-  color: #22c55e;
+  color: #00d9c3;
 }
 .operacao-venda {
   color: #ef4444;
@@ -590,6 +590,16 @@ body {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+  
+}
+
+.detalhes-resumo-lancamentos strong,
+.detalhes-resumo-proventos strong {
+    /* Garante que os valores de soma herdem a cor e fiquem em destaque */
+    font-weight: 700;
+}
+.detalhes-resumo-lancamentos .resumo-item strong:first-child {
+    color: #00d9c3; /* Total Compras em Turquesa */
 }
 /* =============================================================== */
 /* ===== INÍCIO: Bloco de Estilos para Botões de Ação (CRUD) ===== */
@@ -661,7 +671,7 @@ torico-lista p,
   font-weight: 600;
 }
 .status-classificado {
-  color: #22c55e;
+  color: #00d9c3;
 }
 .status-nao-classificado {
   color: #ef4444;
@@ -1002,7 +1012,7 @@ torico-lista p,
     background-color: rgba(0, 217, 195, 0.1);
     padding: 5px 12px;
     border-radius: 20px;
-    margin-bottom: 5px;
+    margin-bottom: 5px;#00d9c3
 }
 
 .fii-card-metric-main .label {
@@ -1047,7 +1057,7 @@ torico-lista p,
 
 /* Cores para valores positivos e negativos */
 .positive-change {
-  color: #22c55e; 
+  color: #00d9c3; 
 }
 
 .negative-change {

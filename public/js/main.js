@@ -1398,56 +1398,100 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function renderDetalhesLancamentos(lancamentos) {
-        const container = document.getElementById("fii-detalhes-lancamentos");
-        if (lancamentos.length === 0) {
-            container.innerHTML = "<p>Nenhum lançamento para este ativo.</p>";
-            return;
-        }
-        
+    const container = document.getElementById("fii-detalhes-lancamentos");
+    if (lancamentos.length === 0) {
+        container.innerHTML = "<p>Nenhum lançamento para este ativo.</p>";
+        return;
+    }
 
-        let html = `
-            <div class="detalhes-lista-header">
-                <div class="header-col">Data</div>
-                <div class="header-col">Operação</div>
-                <div class="header-col">Valor Total</div>
+    // --- CÁLCULO DOS TOTAIS DE LANÇAMENTOS ---
+    let totalCompras = 0;
+    let totalVendas = 0;
+
+    lancamentos.forEach(l => {
+        if (l.tipoOperacao === 'compra') {
+            totalCompras += l.valorTotal;
+        } else if (l.tipoOperacao === 'venda') {
+            totalVendas += l.valorTotal;
+        }
+    });
+
+    const netTotal = totalCompras - totalVendas;
+    const netClass = netTotal >= 0 ? 'positive-change' : 'negative-change';
+
+    // --- HTML DE RESUMO ---
+    let resumoHtml = `
+        <div class="detalhes-resumo-lancamentos" style="display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;">
+            <div class="resumo-item">
+                <span style="color: #a0a7b3; font-size: 0.85rem;">Total Compras</span>
+                <strong style="color: #22c55e;">${totalCompras.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+            </div>
+            <div class="resumo-item">
+                <span style="color: #a0a7b3; font-size: 0.85rem;">Total Vendas</span>
+                <strong style="color: #ef4444;">${totalVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+            </div>
+            <div class="resumo-item">
+                <span style="color: #a0a7b3; font-size: 0.85rem;">Total Líquido</span>
+                <strong class="${netClass}">${netTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+            </div>
+        </div>
+    `;
+
+    // --- HTML DA LISTA DE LANÇAMENTOS ---
+    let listaHtml = `
+        <div class="detalhes-lista-header">
+            <div class="header-col">Data</div>
+            <div class="header-col">Operação</div>
+            <div class="header-col">Valor Total</div>
+        </div>
+    `;
+    lancamentos.forEach(l => {
+        listaHtml += `
+            <div class="detalhes-lista-item">
+                <div>${new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+                <div class="${l.tipoOperacao === 'compra' ? 'operacao-compra' : 'operacao-venda'}">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)} (${l.quantidade} x ${l.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})</div>
+                <div>${l.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
             </div>
         `;
-        lancamentos.forEach(l => {
-            html += `
-                <div class="detalhes-lista-item">
-                    <div>${new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-                    <div class="${l.tipoOperacao === 'compra' ? 'operacao-compra' : 'operacao-venda'}">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)} (${l.quantidade} x ${l.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})</div>
-                    <div>${l.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    }
+    });
+
+    container.innerHTML = resumoHtml + listaHtml;
+}
+
 
     function renderDetalhesProventos(proventos) {
-        const container = document.getElementById("fii-detalhes-proventos");
-        if (proventos.length === 0) {
-            container.innerHTML = "<p>Nenhum provento para este ativo.</p>";
-            return;
-        }
-        let html = `
-            <div class="detalhes-lista-header">
-                <div class="header-col">Data Pag.</div>
-                <div class="header-col">Tipo</div>
-                <div class="header-col">Valor Recebido</div>
+    const container = document.getElementById("fii-detalhes-proventos");
+    if (proventos.length === 0) {
+        container.innerHTML = "<p>Nenhum provento para este ativo.</p>";
+        return;
+    }
+
+    // --- CÁLCULO DO TOTAL DE PROVENTOS ---
+    const totalProventos = proventos.reduce((acc, p) => acc + p.valor, 0);
+
+    // --- HTML DE RESUMO E LISTA ---
+    let html = `
+        <div class="detalhes-resumo-proventos" style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;">
+            <span style="color: #a0a7b3; font-size: 0.85rem; display: block;">Total de Proventos Recebidos</span>
+            <strong style="color: #00d9c3; font-size: 1.5rem;">${totalProventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+        </div>
+        <div class="detalhes-lista-header">
+            <div class="header-col">Data Pag.</div>
+            <div class="header-col">Tipo</div>
+            <div class="header-col">Valor Recebido</div>
+        </div>
+    `;
+    proventos.forEach(p => {
+        html += `
+            <div class="detalhes-lista-item">
+                <div>${new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+                <div>${p.tipoProvento}</div>
+                <div style="color: #00d9c3;">${p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
             </div>
         `;
-        proventos.forEach(p => {
-            html += `
-                <div class="detalhes-lista-item">
-                    <div>${new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-                    <div>${p.tipoProvento}</div>
-                    <div>${p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    }
+    });
+    container.innerHTML = html;
+}
 
     // public/js/main.js (Substituir TODA a função renderPerformanceChart)
 
