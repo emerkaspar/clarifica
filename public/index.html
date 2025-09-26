@@ -292,46 +292,17 @@
               </p>
             </div>
             <div class="tab-pane" id="fiis">
-              <div class="content-container" style="max-width: none">
-                <div class="content-header">
-                  <h3>Carteira de Fundos Imobiliários (FIIs)</h3>
-                  <button id="btn-novo-lancamento-fii" class="btn-adicionar">
-                    <i class="fas fa-plus"></i> Novo Lançamento
-                  </button>
+                <div class="content-container" style="max-width: none">
+                    <div class="content-header">
+                        <h3>Carteira de Fundos Imobiliários (FIIs)</h3>
+                        <button id="btn-novo-lancamento-fii" class="btn-adicionar">
+                            <i class="fas fa-plus"></i> Novo Lançamento
+                        </button>
+                    </div>
+                    <div id="fiis-lista" class="fiis-grid-container">
+                        <p>Calculando sua carteira de FIIs...</p>
+                    </div>
                 </div>
-                <div class="lista-wrapper">
-                  <div class="lista-header" id="fiis-header">
-                    <div class="header-col">Ativo</div>
-                    <div class="header-col" style="text-align: right">
-                      Quantidade
-                    </div>
-                    <div class="header-col" style="text-align: right">
-                      Preço Médio
-                    </div>
-                    <div class="header-col" style="text-align: right">
-                      Preço Atual
-                    </div>
-                    <div class="header-col" style="text-align: right">
-                      Variação
-                    </div>
-                    <div class="header-col" style="text-align: right">
-                      Proventos
-                    </div>
-                    <div class="header-col" style="text-align: right">
-                      Rentabilidade
-                    </div>
-                    <div class="header-col" style="text-align: right">
-                      Div. Yield
-                    </div>
-                    <div class="header-col" style="text-align: right">
-                      Yield on Cost
-                    </div>
-                  </div>
-                  <div id="fiis-lista">
-                    <p>Calculando sua carteira de FIIs...</p>
-                  </div>
-                </div>
-              </div>
             </div>
             <div class="tab-pane" id="etf-cripto">
               <h2>ETFs e Criptomoedas</h2>
@@ -791,5 +762,35 @@
     </div>
 
     <script src="js/main.js" type="module"></script>
+    <div id="fii-detalhes-modal" class="modal-overlay">
+      <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+          <h2 id="fii-detalhes-modal-title">Detalhes do Ativo</h2>
+          <button class="modal-close-btn" data-modal="fii-detalhes-modal">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body" style="padding: 0;">
+          <div class="fii-detalhes-tabs">
+            <button class="fii-detalhes-tab-link active" data-tab="performance">Performance</button>
+            <button class="fii-detalhes-tab-link" data-tab="lancamentos">Lançamentos</button>
+            <button class="fii-detalhes-tab-link" data-tab="proventos">Proventos</button>
+          </div>
+          <div class="fii-detalhes-tab-content active" id="fii-detalhes-performance">
+            <div class="performance-chart-container">
+                <canvas id="performance-chart"></canvas>
+            </div>
+          </div>
+          <div class="fii-detalhes-tab-content" id="fii-detalhes-lancamentos">
+            </div>
+          <div class="fii-detalhes-tab-content" id="fii-detalhes-proventos">
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/main.js" type="module"></script>
+  </body>
+</html>
   </body>
 </html>

@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let currentuserID = null;
     let movimentacaoChart = null;
     let proventosPorAtivoChart, proventosPorTipoChart, proventosEvolucaoChart;
+    let performanceChart = null; // Gráfico do novo modal
     let currentProventosMeta = null;
     let allProventosData = [];
     let allLancamentos = [];
@@ -181,115 +182,133 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // --- LÓGICA DA ABA DE FIIS ---
-
     async function renderFiisCarteira(lancamentos, proventos) {
-    const fiisListaDiv = document.getElementById("fiis-lista");
-    fiisListaDiv.innerHTML = `<p>Buscando cotações, isso pode levar alguns segundos...</p>`;
+        const fiisListaDiv = document.getElementById("fiis-lista");
+        fiisListaDiv.innerHTML = `<p>Buscando cotações, isso pode levar alguns segundos...</p>`;
 
-    const fiisLancamentos = lancamentos.filter(l => l.tipoAtivo === 'FIIs');
+        const fiisLancamentos = lancamentos.filter(l => l.tipoAtivo === 'FIIs');
 
-    if (fiisLancamentos.length === 0) {
-        fiisListaDiv.innerHTML = `<p>Nenhum FII lançado ainda.</p>`;
-        return;
-    }
-
-    const carteira = {};
-
-    fiisLancamentos.forEach(l => {
-        if (!carteira[l.ativo]) {
-            carteira[l.ativo] = {
-                ativo: l.ativo,
-                quantidade: 0,
-                quantidadeComprada: 0,
-                valorTotalInvestido: 0,
-                proventos: 0,
-                proventos12m: 0,
-            };
+        if (fiisLancamentos.length === 0) {
+            fiisListaDiv.innerHTML = `<p>Nenhum FII lançado ainda.</p>`;
+            return;
         }
-        if (l.tipoOperacao === 'compra') {
-            carteira[l.ativo].quantidade += l.quantidade;
-            carteira[l.ativo].quantidadeComprada += l.quantidade;
-            carteira[l.ativo].valorTotalInvestido += l.valorTotal;
-        } else if (l.tipoOperacao === 'venda') {
-            carteira[l.ativo].quantidade -= l.quantidade;
-        }
-    });
 
-    const hoje = new Date();
-    const dozeMesesAtras = new Date(hoje.getFullYear() - 1, hoje.getMonth(), hoje.getDate());
+        const carteira = {};
 
-    proventos.forEach(p => {
-        if (p.tipoAtivo === 'FIIs' && carteira[p.ativo]) {
-            carteira[p.ativo].proventos += p.valor;
-            const dataPagamento = new Date(p.dataPagamento + "T00:00:00");
-            if (dataPagamento >= dozeMesesAtras) {
-                carteira[p.ativo].proventos12m += p.valor;
+        fiisLancamentos.forEach(l => {
+            if (!carteira[l.ativo]) {
+                carteira[l.ativo] = {
+                    ativo: l.ativo,
+                    quantidade: 0,
+                    quantidadeComprada: 0,
+                    valorTotalInvestido: 0,
+                    proventos: 0,
+                    proventos12m: 0,
+                };
             }
-        }
-    });
-
-    const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
-    if (tickers.length === 0) {
-        fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
-        return;
-    }
-
-    try {
-        const precosAtuais = {};
-
-        // --- INÍCIO DA MUDANÇA PRINCIPAL ---
-        // Faz um loop em cada ticker e busca o preço individualmente.
-        for (const ticker of tickers) {
-            const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`);
-            const data = await response.json();
-
-            // Valida a resposta para o ticker individual
-            if (response.ok && data && data.results && data.results.length > 0) {
-                const result = data.results[0];
-                precosAtuais[result.symbol] = result.regularMarketPrice;
-            } else {
-                console.warn(`Não foi possível buscar o preço para o ticker: ${ticker}`);
-                precosAtuais[ticker] = 0; // Define o preço como 0 se a busca falhar
+            if (l.tipoOperacao === 'compra') {
+                carteira[l.ativo].quantidade += l.quantidade;
+                carteira[l.ativo].quantidadeComprada += l.quantidade;
+                carteira[l.ativo].valorTotalInvestido += l.valorTotal;
+            } else if (l.tipoOperacao === 'venda') {
+                carteira[l.ativo].quantidade -= l.quantidade;
             }
+        });
+
+        const hoje = new Date();
+        const dozeMesesAtras = new Date(hoje.getFullYear() - 1, hoje.getMonth(), hoje.getDate());
+
+        proventos.forEach(p => {
+            if (p.tipoAtivo === 'FIIs' && carteira[p.ativo]) {
+                carteira[p.ativo].proventos += p.valor;
+                const dataPagamento = new Date(p.dataPagamento + "T00:00:00");
+                if (dataPagamento >= dozeMesesAtras) {
+                    carteira[p.ativo].proventos12m += p.valor;
+                }
+            }
+        });
+
+        const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
+        if (tickers.length === 0) {
+            fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
+            return;
         }
-        // --- FIM DA MUDANÇA PRINCIPAL ---
 
-        let html = '';
-        for (const ticker of tickers) {
-            const ativo = carteira[ticker];
-            const precoAtual = precosAtuais[ticker] || 0;
-            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+        try {
+            const precosAtuais = {};
 
-            const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
-            const custoPosicaoAtual = precoMedio * ativo.quantidade;
-            const valorPosicaoAtual = precoAtual * ativo.quantidade;
-            const rentabilidade = custoPosicaoAtual > 0 ? ((valorPosicaoAtual + ativo.proventos) / custoPosicaoAtual - 1) * 100 : 0;
+            for (const ticker of tickers) {
+                const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`);
+                const data = await response.json();
 
-            const dividendYield = precoAtual && ativo.quantidade > 0 ? (ativo.proventos12m / valorPosicaoAtual) * 100 : 0;
-            const yieldOnCost = custoPosicaoAtual > 0 ? (ativo.proventos12m / custoPosicaoAtual) * 100 : 0;
+                if (response.ok && data && data.results && data.results.length > 0) {
+                    const result = data.results[0];
+                    precosAtuais[result.symbol] = result.regularMarketPrice;
+                } else {
+                    console.warn(`Não foi possível buscar o preço para o ticker: ${ticker}`);
+                    precosAtuais[ticker] = 0;
+                }
+            }
 
-            html += `
-            <div class="fiis-item">
-                <div>${ativo.ativo}</div>
-                <div>${ativo.quantidade.toLocaleString('pt-BR')}</div>
-                <div>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                <div>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                <div class="${variacao >= 0 ? 'positive-change' : 'negative-change'}">${variacao.toFixed(2)}%</div>
-                <div>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                <div class="${rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${rentabilidade.toFixed(2)}%</div>
-                <div>${dividendYield.toFixed(2)}%</div>
-                <div>${yieldOnCost.toFixed(2)}%</div>
-            </div>
-        `;
+            let html = '';
+            for (const ticker of tickers) {
+                const ativo = carteira[ticker];
+                const precoAtual = precosAtuais[ticker] || 0;
+                const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+
+                const valorPosicaoAtual = precoAtual * ativo.quantidade;
+                const valorInvestido = precoMedio * ativo.quantidade;
+                const resultado = valorPosicaoAtual - valorInvestido;
+                const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
+                const rentabilidade = valorInvestido > 0 ? ((valorPosicaoAtual + ativo.proventos) / valorInvestido - 1) * 100 : 0;
+                const dividendYield = valorPosicaoAtual > 0 ? (ativo.proventos12m / valorPosicaoAtual) * 100 : 0;
+                const yieldOnCost = valorInvestido > 0 ? (ativo.proventos12m / valorInvestido) * 100 : 0;
+
+                html += `
+                    <div class="fii-card" data-ticker="${ativo.ativo}">
+                        <div class="fii-card-ticker">${ativo.ativo}</div>
+                        
+                        <div class="fii-card-metric-main">
+                            <div class="label">Valor Atual da Posição</div>
+                            <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                        </div>
+                        
+                        <div class="fii-card-result ${resultado >= 0 ? 'positive-change' : 'negative-change'}">
+                            ${resultado >= 0 ? '+' : ''}${resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacao.toFixed(2)}%)
+                        </div>
+    
+                        <div class="fii-card-details">
+                            <div class="detail-item">
+                                <span>Valor Investido</span>
+                                <span>${valorInvestido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                             <div class="detail-item">
+                                <span>Quantidade</span>
+                                <span>${ativo.quantidade.toLocaleString('pt-BR')}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>Preço Médio</span>
+                                <span>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>Preço Atual</span>
+                                <span>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                             <div class="detail-item">
+                                <span>Total Proventos</span>
+                                <span>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            fiisListaDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error("Erro ao buscar cotações ou renderizar carteira de FIIs:", error);
+            fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
         }
-        fiisListaDiv.innerHTML = html;
-
-    } catch (error) {
-        console.error("Erro ao buscar cotações ou renderizar carteira de FIIs:", error);
-        fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
     }
-}
-
 
     // --- LÓGICA DA ABA DE PROVENTOS ---
     const proventosListaDiv = document.getElementById("proventos-lista");
@@ -839,18 +858,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     searchInput.addEventListener("input", () => {
-        const q = query(
-            collection(db, "lancamentos"),
-            where("userID", "==", currentuserID),
-            orderBy("timestamp", "desc")
-        );
-        getDocs(q).then((snapshot) => {
-            const allLancamentos = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-            renderHistorico(allLancamentos);
-        });
+        renderHistorico(allLancamentos);
     });
 
     // --- LÓGICA DA ABA DE CLASSIFICAÇÃO ---
@@ -1032,7 +1040,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document
             .getElementById("btn-mostrar-form")
             .addEventListener("click", () => openLancamentoModal());
-        
+
         document
             .getElementById("btn-novo-lancamento-fii")
             .addEventListener("click", () => openLancamentoModal({}, "", "FIIs"));
@@ -1054,7 +1062,7 @@ document.addEventListener("DOMContentLoaded", function () {
             form.querySelector(".btn-adicionar").innerHTML = id
                 ? '<i class="fas fa-edit"></i> Atualizar'
                 : '<i class="fas fa-plus"></i> Adicionar';
-            
+
             if (tipoAtivo) {
                 tipoAtivoSelect.value = tipoAtivo;
                 tipoAtivoSelect.disabled = true;
@@ -1340,5 +1348,254 @@ document.addEventListener("DOMContentLoaded", function () {
             gerarCampos(tipo, valores);
             modal.classList.add("show");
         };
+    }
+
+    // --- LÓGICA DO MODAL DE DETALHES DO FII ---
+    const fiiDetalhesModal = document.getElementById("fii-detalhes-modal");
+
+    document.getElementById("fiis-lista").addEventListener("click", (e) => {
+        const card = e.target.closest(".fii-card");
+        if (card && card.dataset.ticker) {
+            openFiiDetalhesModal(card.dataset.ticker);
+        }
+    });
+
+    fiiDetalhesModal.addEventListener("click", (e) => {
+        if (e.target === fiiDetalhesModal || e.target.closest('.modal-close-btn')) {
+            fiiDetalhesModal.classList.remove("show");
+        }
+    });
+
+    fiiDetalhesModal.querySelector(".fii-detalhes-tabs").addEventListener("click", (e) => {
+        if (e.target.matches('.fii-detalhes-tab-link')) {
+            const tabId = e.target.dataset.tab;
+            fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
+            fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
+            e.target.classList.add('active');
+            document.getElementById(`fii-detalhes-${tabId}`).classList.add('active');
+        }
+    });
+
+    function openFiiDetalhesModal(ticker) {
+        document.getElementById("fii-detalhes-modal-title").textContent = `Detalhes de ${ticker}`;
+
+        const lancamentosDoAtivo = allLancamentos.filter(l => l.ativo === ticker).sort((a, b) => new Date(a.data) - new Date(b.data));
+        const proventosDoAtivo = allProventosData.filter(p => p.ativo === ticker);
+
+        renderDetalhesLancamentos(lancamentosDoAtivo);
+        renderDetalhesProventos(proventosDoAtivo);
+        renderPerformanceChart(ticker, lancamentosDoAtivo);
+
+        // Reset para a primeira aba sempre que abrir
+        fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
+        fiiDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
+        fiiDetalhesModal.querySelector('[data-tab="performance"]').classList.add('active');
+        document.getElementById('fii-detalhes-performance').classList.add('active');
+
+        fiiDetalhesModal.classList.add("show");
+    }
+
+    function renderDetalhesLancamentos(lancamentos) {
+        const container = document.getElementById("fii-detalhes-lancamentos");
+        if (lancamentos.length === 0) {
+            container.innerHTML = "<p>Nenhum lançamento para este ativo.</p>";
+            return;
+        }
+
+        let html = `
+            <div class="detalhes-lista-header">
+                <div class="header-col">Data</div>
+                <div class="header-col">Operação</div>
+                <div class="header-col">Valor Total</div>
+            </div>
+        `;
+        lancamentos.forEach(l => {
+            html += `
+                <div class="detalhes-lista-item">
+                    <div>${new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+                    <div class="${l.tipoOperacao === 'compra' ? 'operacao-compra' : 'operacao-venda'}">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)} (${l.quantidade} x ${l.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})</div>
+                    <div>${l.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderDetalhesProventos(proventos) {
+        const container = document.getElementById("fii-detalhes-proventos");
+        if (proventos.length === 0) {
+            container.innerHTML = "<p>Nenhum provento para este ativo.</p>";
+            return;
+        }
+        let html = `
+            <div class="detalhes-lista-header">
+                <div class="header-col">Data Pag.</div>
+                <div class="header-col">Tipo</div>
+                <div class="header-col">Valor Recebido</div>
+            </div>
+        `;
+        proventos.forEach(p => {
+            html += `
+                <div class="detalhes-lista-item">
+                    <div>${new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+                    <div>${p.tipoProvento}</div>
+                    <div>${p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
+        const container = document.getElementById('fii-detalhes-performance');
+        const canvas = document.getElementById('performance-chart');
+        const ctx = canvas.getContext('2d');
+        
+        if (performanceChart) {
+            performanceChart.destroy();
+        }
+
+        // Limpa o container e mostra o canvas
+        container.innerHTML = '';
+        container.appendChild(canvas);
+
+        if (lancamentosDoAtivo.length === 0) {
+            container.innerHTML = '<p style="color: #a0a7b3; text-align: center;">Sem lançamentos para gerar gráfico de performance.</p>';
+            return;
+        }
+
+        try {
+            const dataInicio = lancamentosDoAtivo[0].data;
+            const hoje = new Date().toISOString().split('T')[0];
+
+            const [ativoResponse, cdiResponse] = await Promise.all([
+                fetch(`https://brapi.dev/api/quote/${ticker}?range=5y&interval=1d&token=${BRAAPI_TOKEN}`),
+                fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${hoje.split('-').reverse().join('/')}`)
+            ]);
+            
+            // --- INÍCIO DA CORREÇÃO ---
+            // Verificação de segurança para a resposta da API do ativo
+            if (!ativoResponse.ok) {
+                throw new Error(`Erro ao buscar dados do ativo: ${ativoResponse.statusText}`);
+            }
+            const dadosAtivo = await ativoResponse.json();
+            if (dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) {
+                throw new Error(dadosAtivo.message || `Ticker ${ticker} não encontrado ou sem dados históricos.`);
+            }
+
+            // Verificação de segurança para a resposta da API do CDI
+            if (!cdiResponse.ok) {
+                throw new Error(`Erro ao buscar dados do CDI: ${cdiResponse.statusText}`);
+            }
+            const dadosCDI = await cdiResponse.json();
+            // --- FIM DA CORREÇÃO ---
+
+
+            const historicoPrecos = dadosAtivo.results[0].historicalDataPrice.reduce((acc, item) => {
+                const data = new Date(item.date * 1000).toISOString().split('T')[0];
+                acc[data] = item.close;
+                return acc;
+            }, {});
+
+            let cdiAcumulado = 1;
+            const historicoCDI = dadosCDI.reduce((acc, item) => {
+                const data = item.data.split('/').reverse().join('-');
+                cdiAcumulado *= (1 + (parseFloat(item.valor) / 100));
+                acc[data] = cdiAcumulado;
+                return acc;
+            }, {});
+
+            const labels = [];
+            const dataCarteira = [];
+            const dataCDI = [];
+
+            let quantidade = 0;
+            let valorInvestido = 0;
+            let cdiBaseValue = 0;
+
+            const dataInicialLancamento = new Date(lancamentosDoAtivo[0].data + 'T00:00:00');
+            const hojeDate = new Date();
+
+            let ultimoCDI = 1;
+            for (let d = new Date(dataInicialLancamento); d <= hojeDate; d.setDate(d.getDate() + 1)) {
+                const dataAtualStr = d.toISOString().split('T')[0];
+                labels.push(dataAtualStr);
+
+                const lancamentosDoDia = lancamentosDoAtivo.filter(l => l.data === dataAtualStr);
+                if (lancamentosDoDia.length > 0) {
+                    lancamentosDoDia.forEach(l => {
+                         if (l.tipoOperacao === 'compra') {
+                            valorInvestido += l.valorTotal;
+                            quantidade += l.quantidade;
+                        } else {
+                            const proporcaoVenda = l.quantidade / quantidade;
+                            valorInvestido *= (1 - proporcaoVenda);
+                            quantidade -= l.quantidade;
+                        }
+                    });
+                     // Ajusta o valor base do CDI a cada novo aporte
+                    cdiBaseValue = valorInvestido / ultimoCDI;
+                }
+                
+                ultimoCDI = historicoCDI[dataAtualStr] || ultimoCDI;
+                const precoDoDia = historicoPrecos[dataAtualStr];
+
+                if(precoDoDia && quantidade > 0) {
+                     dataCarteira.push(quantidade * precoDoDia);
+                } else if(dataCarteira.length > 0) {
+                    dataCarteira.push(dataCarteira[dataCarteira.length - 1]);
+                } else {
+                    dataCarteira.push(0);
+                }
+                dataCDI.push(cdiBaseValue * ultimoCDI);
+            }
+            
+            const primeiroValorCarteira = dataCarteira.find(v => v > 0) || 1;
+            const primeiroValorCDI = dataCDI.find(v => v > 0) || 1;
+
+            const dataCarteiraNormalizada = dataCarteira.map(v => (v / primeiroValorCarteira) * 100);
+            const dataCDINormalizada = dataCDI.map(v => (v / primeiroValorCDI) * 100);
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Performance ${ticker}`,
+                        data: dataCarteiraNormalizada,
+                        borderColor: '#00d9c3',
+                        backgroundColor: 'rgba(0, 217, 195, 0.1)',
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                    }, {
+                        label: 'CDI',
+                        data: dataCDINormalizada,
+                        borderColor: '#a0a7b3',
+                        borderDash: [5, 5],
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        tension: 0.2,
+                        pointRadius: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { ticks: { color: '#a0a7b3' }, grid: { color: '#2a2c30' } },
+                        x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#a0a7b3' }, grid: { display: false } }
+                    },
+                    plugins: {
+                        tooltip: { mode: 'index', intersect: false },
+                        legend: { labels: { color: '#a0a7b3' } }
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error("Erro ao buscar dados para o gráfico de performance:", error);
+            container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Não foi possível carregar os dados de performance.<br><small>${error.message}</small></p>`;
+        }
     }
 });

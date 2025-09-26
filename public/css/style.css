@@ -840,6 +840,70 @@ torico-lista p,
   margin-top: 20px;
   height: 280px;
 }
+/* --- ESTILOS PARA O MODAL DE DETALHES DO FII --- */
+
+.fii-detalhes-tabs {
+    display: flex;
+    border-bottom: 1px solid #2a2c30;
+    padding: 0 25px;
+}
+
+.fii-detalhes-tab-link {
+    background: none;
+    border: none;
+    color: #a0a7b3;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.fii-detalhes-tab-link.active,
+.fii-detalhes-tab-link:hover {
+    color: #00d9c3;
+    border-bottom-color: #00d9c3;
+}
+
+.fii-detalhes-tab-content {
+    display: none;
+    padding: 25px;
+}
+
+.fii-detalhes-tab-content.active {
+    display: block;
+}
+
+.performance-chart-container {
+    height: 350px;
+}
+
+/* Estilo para as listas de Lançamentos/Proventos no Modal */
+.detalhes-lista-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #2a2c30;
+}
+
+.detalhes-lista-header .header-col {
+    color: #a0a7b3;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.detalhes-lista-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    padding: 8px 0;
+    font-size: 0.9rem;
+    color: #e0e0e0;
+}
 @media (max-width: 992px) {
   .proventos-dashboard {
     grid-template-columns: 1fr;
@@ -881,41 +945,112 @@ torico-lista p,
 }
 /* Adicione este bloco ao final do seu arquivo style.css */
 
-/* --- ESTILOS PARA TABELA DE CARTEIRA (FIIS/AÇÕES) --- */
-#fiis-header,
-.fiis-item {
-  display: grid;
-  grid-template-columns: 1.5fr repeat(8, 1fr); /* 1 coluna para o nome, 8 para os dados */
-  gap: 15px;
-  align-items: center;
-  min-width: 900px; /* Garante que a tabela não quebre em telas menores */
+/* --- ESTILOS PARA A NOVA VISÃO DE CARTEIRA EM CARDS (FIIS/AÇÕES) --- */
+
+.fiis-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
 }
 
-/* Herda o estilo dos outros itens de lista */
-.fiis-item {
-  background-color: #1a1b1e;
-  padding: 12px 20px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  border: 1px solid #2a2c30;
-  font-size: 0.9rem;
+.fii-card {
+    background-color: #1a1b1e;
+    border: 1px solid #2a2c30;
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    overflow: hidden; /* Para o efeito da borda */
+    transition: transform 0.3s ease-out, border-color 0.3s ease-out;
 }
 
-.fiis-item > div {
-  text-align: right; /* Alinha todos os dados à direita */
+/* Efeito de borda animada no hover */
+/* Efeito de borda animada no hover */
+.fii-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    border: 1px solid #00d9c3; /* <-- Borda ajustada para 1px */
+    clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%);
+    transition: clip-path 0.1s ease-out; /* <-- Transição ajustada para 0.2s */
+    pointer-events: none;
 }
 
-.fiis-item > div:first-child {
-  text-align: left; /* Exceto o primeiro (nome do ativo) */
-  font-weight: 500;
-  color: #e0e0e0;
+.fii-card:hover {
+    transform: translateY(-5px);
+    border-color: #1a1b1e; /* Esconde a borda base para a animada aparecer */
+}
+
+.fii-card:hover::after {
+    /* Anima a borda "abrindo" do centro para as pontas */
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+
+.fii-card-ticker {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #00d9c3;
+    background-color: rgba(0, 217, 195, 0.1);
+    padding: 5px 12px;
+    border-radius: 20px;
+    margin-bottom: 5px;
+}
+
+.fii-card-metric-main .label {
+    font-size: 0.85rem;
+    color: #a0a7b3;
+}
+
+.fii-card-metric-main .value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin-top: 5px;
+}
+
+.fii-card-result {
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+}
+
+.fii-card-details {
+    width: 100%;
+    margin-top: 10px;
+    border-top: 1px solid #2a2c30;
+    padding-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #a0a7b3;
+}
+
+.detail-item span:last-child {
+    font-weight: 500;
+    color: #e0e0e0;
 }
 
 /* Cores para valores positivos e negativos */
 .positive-change {
-  color: #22c55e; /* Verde */
+  color: #22c55e; 
 }
 
 .negative-change {
-  color: #ef4444; /* Vermelho */
+  color: #ef4444; 
 }
+
