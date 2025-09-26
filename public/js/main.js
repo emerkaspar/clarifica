@@ -537,6 +537,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // --- GRÁFICO DE MOVIMENTAÇÃO ---
+    // Localize e substitua esta função inteira em seu main.js
+
     const renderMovimentacaoChart = (lancamentos) => {
         const chartCanvas = document.getElementById("movimentacao-chart");
         if (!chartCanvas || typeof Chart === "undefined") return;
@@ -570,15 +572,9 @@ document.addEventListener("DOMContentLoaded", function () {
             ).padStart(2, "0")}`;
             if (monthYearKey >= minDateKey) {
                 const valor = l.valorTotal || 0;
-                if (
-                    l.tipoOperacao === "compra" &&
-                    last6MonthsData[monthYearKey]
-                ) {
+                if (l.tipoOperacao === "compra" && last6MonthsData[monthYearKey]) {
                     last6MonthsData[monthYearKey].compra += valor;
-                } else if (
-                    l.tipoOperacao === "venda" &&
-                    last6MonthsData[monthYearKey]
-                ) {
+                } else if (l.tipoOperacao === "venda" && last6MonthsData[monthYearKey]) {
                     last6MonthsData[monthYearKey].venda += valor;
                 }
             }
@@ -592,18 +588,18 @@ document.addEventListener("DOMContentLoaded", function () {
                 {
                     label: "Compras (R$)",
                     data: compras,
-                    backgroundColor: "rgba(34, 197, 94, 0.7)",
-                    borderColor: "rgb(34, 197, 94)",
+                    backgroundColor: "rgba(0, 217, 195, 0.7)", // Cor principal do site
+                    borderColor: "#00d9c3",
                     borderWidth: 1,
-                    borderRadius: 4,
+                    borderRadius: 6, // Barras arredondadas
                 },
                 {
                     label: "Vendas (R$)",
                     data: vendas,
-                    backgroundColor: "rgba(239, 68, 68, 0.7)",
-                    borderColor: "rgb(239, 68, 68)",
+                    backgroundColor: "rgba(245, 101, 101, 0.7)", // Vermelho mais suave
+                    borderColor: "#F56565",
                     borderWidth: 1,
-                    borderRadius: 4,
+                    borderRadius: 6, // Barras arredondadas
                 },
             ],
         };
@@ -614,39 +610,64 @@ document.addEventListener("DOMContentLoaded", function () {
             data: data,
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false, // Importante para o CSS controlar a altura
                 scales: {
-                    x: { stacked: false, grid: { color: "#2a2c30" }, ticks: { color: "#e0e0e0" } },
-                    y: {
-                        stacked: false,
-                        beginAtZero: true,
-                        grid: { color: "#2a2c30" },
+                    x: {
+                        grid: {
+                            display: false, // Remove as linhas de grade verticais
+                        },
                         ticks: {
-                            color: "#e0e0e0",
+                            color: "#a0a7b3", // Cor mais suave para os textos
+                        },
+                    },
+                    y: {
+                        grid: {
+                            color: "#2a2c30", // Linhas de grade horizontais mais sutis
+                        },
+                        ticks: {
+                            color: "#a0a7b3",
+                            // Formata os números do eixo Y para R$
                             callback: function (value) {
-                                return (
-                                    "R$ " +
-                                    value.toLocaleString("pt-BR", {
-                                        minimumFractionDigits: 0,
-                                        maximumFractionDigits: 0,
-                                    })
-                                );
+                                if (value >= 1000) {
+                                    return "R$ " + value / 1000 + "k"; // Ex: R$ 50k
+                                }
+                                return "R$ " + value;
                             },
                         },
                     },
                 },
                 plugins: {
-                    legend: { labels: { color: "#e0e0e0" } },
+                    legend: {
+                        position: "top", // Posição da legenda
+                        align: "end", // Alinhamento à direita
+                        labels: {
+                            color: "#a0a7b3",
+                            usePointStyle: true, // Usa círculos em vez de quadrados
+                            boxWidth: 8,
+                        },
+                    },
                     tooltip: {
+                        // Estilo do tooltip para combinar com os outros gráficos
+                        backgroundColor: "#1A202C",
+                        titleColor: "#E2E8F0",
+                        bodyColor: "#E2E8F0",
+                        padding: 12,
+                        cornerRadius: 6,
+                        borderColor: "rgba(255, 255, 255, 0.1)",
+                        borderWidth: 1,
                         callbacks: {
                             label: function (context) {
                                 let label = context.dataset.label || "";
-                                if (label) label += ": ";
-                                if (context.parsed.y !== null)
-                                    label += context.parsed.y.toLocaleString("pt-BR", {
+                                if (label) {
+                                    label += ": ";
+                                }
+                                const value = context.parsed.y;
+                                if (value !== null) {
+                                    label += value.toLocaleString("pt-BR", {
                                         style: "currency",
                                         currency: "BRL",
                                     });
+                                }
                                 return label;
                             },
                         },

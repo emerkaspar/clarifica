@@ -274,6 +274,7 @@ body {
   border-radius: 8px;
   padding: 20px;
   border: 1px solid #2a2c30;
+  height: 350px; /* <-- Adicione esta linha */
 }
 .modal-overlay {
   position: fixed;
