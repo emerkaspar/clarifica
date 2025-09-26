@@ -1479,10 +1479,12 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
     }
 
     // -------------------------------------------------------------------
-    // CORREÇÃO: Declarar variáveis fora do bloco try
+    // NOVOS DADOS: IBOV e IVVB11
     // -------------------------------------------------------------------
     let dadosAtivo;
     let dadosCDI;
+    let dadosIBOV;
+    let dadosIVVB11; // Variável renomeada para IVVB11
 
     try {
         const lancamentosOrdenados = [...lancamentosDoAtivo].sort((a, b) => new Date(a.data) - new Date(b.data));
@@ -1492,30 +1494,38 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
         const hojeDate = new Date(); 
 
         const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm"; 
+        const RANGE = '3mo'; 
+
         
-        const [ativoResponse, cdiResponse] = await Promise.all([
-            fetch(`https://brapi.dev/api/quote/${ticker}?range=3mo&interval=1d&token=${BRAAPI_TOKEN}`),
-            fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${hoje.split('-').reverse().join('/')}`)
+        const [ativoResponse, cdiResponse, ibovResponse, ivvb11Response] = await Promise.all([
+            // 1. Ativo
+            fetch(`https://brapi.dev/api/quote/${ticker}?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
+            // 2. CDI
+            fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${hoje.split('-').reverse().join('/')}`),
+            // 3. IBOV (^BVSP)
+            fetch(`https://brapi.dev/api/quote/^BVSP?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
+            // 4. IVVB11 (Novo ETF)
+            fetch(`https://brapi.dev/api/quote/IVVB11?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`) // Ticker alterado para IVVB11
         ]);
         
-        if (!ativoResponse.ok) {
-            throw new Error(`Falha na requisição (Status: ${ativoResponse.status}). O ativo pode não ter dados para o período ou o token expirou.`);
-        }
-        
-        // Atribuição de valor
+        if (!ativoResponse.ok) throw new Error(`Falha ao buscar ${ticker}`);
         dadosAtivo = await ativoResponse.json();
-        if (dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) {
-            throw new Error(dadosAtivo.message || `Ticker ${ticker} não encontrado ou sem dados históricos.`);
-        }
+        if (dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) throw new Error(`Dados indisponíveis para ${ticker}`);
 
-        if (!cdiResponse.ok) {
-            throw new Error(`Erro ao buscar dados do CDI: ${cdiResponse.statusText}`);
-        }
-        // Atribuição de valor
+        if (!cdiResponse.ok) throw new Error(`Erro ao buscar dados do CDI`);
         dadosCDI = await cdiResponse.json();
-        // -------------------------------------------------------------------
-        
 
+        if (!ibovResponse.ok) throw new Error(`Falha ao buscar IBOV`);
+        dadosIBOV = await ibovResponse.json();
+
+        if (!ivvb11Response.ok) throw new Error(`Falha ao buscar IVVB11`);
+        dadosIVVB11 = await ivvb11Response.json(); // Variável renomeada
+
+        // VALIDAÇÃO DE DADOS DE ÍNDICE
+        if (dadosIBOV.error || !dadosIBOV.results || dadosIBOV.results.length === 0) console.warn("Dados do IBOV indisponíveis.");
+        if (dadosIVVB11.error || !dadosIVVB11.results || dadosIVVB11.results.length === 0) console.warn("Dados do IVVB11 indisponíveis."); // Variável renomeada
+
+        
         const historicoPrecos = dadosAtivo.results[0].historicalDataPrice.reduce((acc, item) => {
             const data = new Date(item.date * 1000).toISOString().split('T')[0];
             acc[data] = item.close;
@@ -1523,12 +1533,15 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
         }, {});
 
 
-        // CÁLCULO CDI (Índice de Performance Puro)
+        // --- LÓGICA DE NORMALIZAÇÃO ---
+
+        const dataInicialLancamento = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
+        const dataInicioStr = dataInicialLancamento.toISOString().split('T')[0];
+
+        // 1. CDI
         let cdiAcumulado = 1;
         const historicoCDIIndex = {};
         let cdiIndexStartFactor = 1; 
-        const dataInicialLancamento = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
-        const dataInicioStr = dataInicialLancamento.toISOString().split('T')[0];
 
         dadosCDI.forEach(item => {
             const data = item.data.split('/').reverse().join('-');
@@ -1540,13 +1553,34 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
             }
         });
 
+        // 2. IBOV e IVVB11
+        const normalizarIndice = (dadosIndice) => {
+            const precosHistoricos = dadosIndice.results[0].historicalDataPrice;
+            if (!precosHistoricos || precosHistoricos.length === 0) return {};
+            
+            const indiceNoPrimeiroDia = precosHistoricos.find(item => new Date(item.date * 1000).toISOString().split('T')[0] === dataInicioStr)?.close;
+            if (!indiceNoPrimeiroDia) return {};
+
+            return precosHistoricos.reduce((acc, item) => {
+                const data = new Date(item.date * 1000).toISOString().split('T')[0];
+                acc[data] = ((item.close / indiceNoPrimeiroDia) - 1) * 100;
+                return acc;
+            }, {});
+        };
+
+        const historicoIBOV = (dadosIBOV && dadosIBOV.results && dadosIBOV.results.length > 0) ? normalizarIndice(dadosIBOV) : {};
+        const historicoIVVB11 = (dadosIVVB11 && dadosIVVB11.results && dadosIVVB11.results.length > 0) ? normalizarIndice(dadosIVVB11) : {}; // Variável renomeada
+        
+        
         // -------------------------------------------------------------------
-        // PLOTAGEM DIÁRIA (Cálculo de Carteira, Custo Médio Diário e CDI)
+        // PLOTAGEM DIÁRIA 
         // -------------------------------------------------------------------
 
         const labels = [];
         const dataCarteira = [];
         const dataCDI = [];
+        const dataIBOV = [];
+        const dataIVVB11 = []; // Variável renomeada
         const costBasisArray = []; 
 
         let quantidade = 0;
@@ -1570,7 +1604,7 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                 });
             }
             
-            // 1. Calculando Valor da Posição Diário (Pt)
+            // 1. Valor da Posição Diário
             const precoDoDia = historicoPrecos[dataAtualStr];
             if(precoDoDia && quantidade > 0) {
                 dataCarteira.push(quantidade * precoDoDia);
@@ -1580,10 +1614,10 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                 dataCarteira.push(0);
             }
             
-            // 2. Rastreando o Custo Acumulado (P0) do dia
+            // 2. Custo Acumulado (P0) do dia
             costBasisArray.push(valorInvestidoAcumulado); 
 
-            // Calculando Performance do CDI em %
+            // 3. Performance dos Benchmarks
             const cdiIndex = historicoCDIIndex[dataAtualStr];
             if (cdiIndex) {
                  const cdiGain = ((cdiIndex / cdiIndexStartFactor) - 1) * 100;
@@ -1593,9 +1627,32 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
             } else {
                  dataCDI.push(0); 
             }
+
+            // IBOV
+            const ibovGain = historicoIBOV[dataAtualStr];
+            if (typeof ibovGain === 'number') {
+                dataIBOV.push(ibovGain);
+            } else if (dataIBOV.length > 0) {
+                dataIBOV.push(dataIBOV[dataIBOV.length - 1]);
+            } else {
+                dataIBOV.push(0);
+            }
+
+            // IVVB11
+            const ivvb11Gain = historicoIVVB11[dataAtualStr]; // Variável renomeada
+            if (typeof ivvb11Gain === 'number') {
+                dataIVVB11.push(ivvb11Gain); // Variável renomeada
+            } else if (dataIVVB11.length > 0) { // Variável renomeada
+                dataIVVB11.push(dataIVVB11[dataIVVB11.length - 1]); // Variável renomeada
+            } else {
+                dataIVVB11.push(0); // Variável renomeada
+            }
         }
         
-        // AJUSTE CRUCIAL: Normalização de TWR para CMA Time-Series
+        // Normalização Final da Carteira
+        const baseCustoInicial = lancamentosOrdenados[0].valorTotal;
+        const baseValor = baseCustoInicial > 0 ? baseCustoInicial : 1; 
+
         const dataCarteiraNormalizada = dataCarteira.map((v, i) => {
              const cost = costBasisArray[i];
              if (cost > 0) {
@@ -1603,8 +1660,6 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
              }
              return 0;
         });
-
-        const dataCDINormalizada = dataCDI; 
 
         
         performanceChart = new Chart(ctx, {
@@ -1621,13 +1676,30 @@ async function renderPerformanceChart(ticker, lancamentosDoAtivo) {
                     pointRadius: 0,
                 }, {
                     label: 'CDI',
-                    data: dataCDINormalizada,
+                    data: dataCDI,
                     borderColor: '#a0a7b3',
                     borderDash: [5, 5],
                     backgroundColor: 'transparent',
                     fill: false,
                     tension: 0.2,
                     pointRadius: 0,
+                }, {
+                    label: 'IBOV',
+                    data: dataIBOV,
+                    borderColor: '#ECC94B',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 0,
+                }, {
+                    label: 'IVVB11', // Rótulo alterado
+                    data: dataIVVB11, // Variável de dados alterada
+                    borderColor: '#5A67D8',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 0,
+                    // Sem a propriedade hidden, o IVVB11 sempre aparecerá
                 }]
             },
             options: {
