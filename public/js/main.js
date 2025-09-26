@@ -1032,20 +1032,36 @@ document.addEventListener("DOMContentLoaded", function () {
         document
             .getElementById("btn-mostrar-form")
             .addEventListener("click", () => openLancamentoModal());
+        
+        document
+            .getElementById("btn-novo-lancamento-fii")
+            .addEventListener("click", () => openLancamentoModal({}, "", "FIIs"));
+
         modal.addEventListener("click", (e) => {
             if (e.target === modal) closeModal("lancamento-modal");
         });
 
-        window.openLancamentoModal = (data = {}, id = "") => {
+        window.openLancamentoModal = (data = {}, id = "", tipoAtivo = null) => {
             form.reset();
             form["doc-id"].value = id;
+
+            const tipoAtivoSelect = form.querySelector("#tipo-ativo");
+            tipoAtivoSelect.disabled = false;
+
             document.getElementById("lancamento-modal-title").textContent = id
                 ? "Editar Lançamento"
                 : "Adicionar Lançamento";
             form.querySelector(".btn-adicionar").innerHTML = id
                 ? '<i class="fas fa-edit"></i> Atualizar'
                 : '<i class="fas fa-plus"></i> Adicionar';
-            form["tipo-ativo"].value = data.tipoAtivo || "Ações";
+            
+            if (tipoAtivo) {
+                tipoAtivoSelect.value = tipoAtivo;
+                tipoAtivoSelect.disabled = true;
+            } else {
+                tipoAtivoSelect.value = data.tipoAtivo || "Ações";
+            }
+
             form.ativo.value = data.ativo || "";
             form["data-operacao"].value = data.data || hoje;
             form.quantidade.value = data.quantidade || 1;
