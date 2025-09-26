@@ -4,3 +4,25 @@ Abra o terminal na pasta C:\Clarifica\clarifica
 git fetch origin
 git reset --hard origin/main
 git clean -fd
+
+
+
+=== B) NO FINAL do trabalho (depois de salvar suas alterações) ===
+
+OBJETIVO: Salvar seu progresso no GitHub e, se desejar, publicar a nova versão do site.
+
+1. Adicione todos os arquivos modificados.
+   COMANDO:
+   git add .
+
+2. Crie um "pacote" com suas alterações, incluindo uma mensagem descritiva.
+   COMANDO:
+   git commit -m "Descreva aqui o que você fez. Ex: 'alterei o texto do rodape'"
+
+3. Envie o "pacote" para o GitHub.
+   COMANDO:
+   git push origin main
+
+4. (OPCIONAL) Se você quiser que esta nova versão fique online para o público.
+   COMANDO:
+   firebase deploy
