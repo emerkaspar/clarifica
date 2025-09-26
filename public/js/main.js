@@ -38,12 +38,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const db = getFirestore(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
+    const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm";
 
     let currentuserID = null;
     let movimentacaoChart = null;
     let proventosPorAtivoChart, proventosPorTipoChart, proventosEvolucaoChart;
     let currentProventosMeta = null;
     let allProventosData = [];
+    let allLancamentos = [];
+    let allClassificacoes = {};
+
 
     // --- LÓGICA DE AUTENTICAÇÃO E UI GERAL ---
     const btnHeaderLoginGoogle = document.getElementById(
@@ -134,9 +138,6 @@ document.addEventListener("DOMContentLoaded", function () {
             orderBy("dataPagamento", "desc")
         );
 
-        let allLancamentos = [];
-        let allClassificacoes = {};
-
         onSnapshot(qClassificacoes, (snapshot) => {
             allClassificacoes = {};
             snapshot.docs.forEach((doc) => {
@@ -153,6 +154,7 @@ document.addEventListener("DOMContentLoaded", function () {
             renderHistorico(allLancamentos);
             renderClassificacao(allLancamentos, allClassificacoes);
             renderMovimentacaoChart(allLancamentos);
+            renderFiisCarteira(allLancamentos, allProventosData);
         });
 
         const metaDocRef = doc(db, "metas", userID);
@@ -162,14 +164,14 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         onSnapshot(qProventos, (snapshot) => {
-            const proventos = snapshot.docs.map((doc) => ({
+            allProventosData = snapshot.docs.map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
             }));
-            allProventosData = proventos;
-            renderProventos(proventos);
-            populateAssetFilter(proventos);
+            renderProventos(allProventosData);
+            populateAssetFilter(allProventosData);
             updateProventosDashboard();
+            renderFiisCarteira(allLancamentos, allProventosData);
         });
 
         setupLancamentosModal(userID);
@@ -177,6 +179,114 @@ document.addEventListener("DOMContentLoaded", function () {
         setupProventoModal(userID);
         setupMetaProventosModal(userID);
     }
+
+    // --- LÓGICA DA ABA DE FIIS ---
+
+    async function renderFiisCarteira(lancamentos, proventos) {
+        const fiisListaDiv = document.getElementById("fiis-lista");
+        fiisListaDiv.innerHTML = `<p>Calculando sua carteira de FIIs...</p>`;
+
+        const fiisLancamentos = lancamentos.filter(l => l.tipoAtivo === 'FIIs');
+
+        if (fiisLancamentos.length === 0) {
+            fiisListaDiv.innerHTML = `<p>Nenhum FII lançado ainda.</p>`;
+            return;
+        }
+
+        const carteira = {};
+
+        fiisLancamentos.forEach(l => {
+            if (!carteira[l.ativo]) {
+                carteira[l.ativo] = {
+                    ativo: l.ativo,
+                    quantidade: 0,
+                    quantidadeComprada: 0,
+                    valorTotalInvestido: 0,
+                    proventos: 0,
+                    proventos12m: 0,
+                };
+            }
+            if (l.tipoOperacao === 'compra') {
+                carteira[l.ativo].quantidade += l.quantidade;
+                carteira[l.ativo].quantidadeComprada += l.quantidade;
+                carteira[l.ativo].valorTotalInvestido += l.valorTotal;
+            } else if (l.tipoOperacao === 'venda') {
+                carteira[l.ativo].quantidade -= l.quantidade;
+            }
+        });
+
+        const hoje = new Date();
+        const dozeMesesAtras = new Date(hoje.getFullYear() - 1, hoje.getMonth(), hoje.getDate());
+
+        proventos.forEach(p => {
+            if (p.tipoAtivo === 'FIIs' && carteira[p.ativo]) {
+                carteira[p.ativo].proventos += p.valor;
+                const dataPagamento = new Date(p.dataPagamento + "T00:00:00");
+                if (dataPagamento >= dozeMesesAtras) {
+                    carteira[p.ativo].proventos12m += p.valor;
+                }
+            }
+        });
+
+        const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
+        if (tickers.length === 0) {
+            fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
+            return;
+        }
+
+        try {
+            // URL ATUALIZADA PARA API v2 COM TOKEN
+            const response = await fetch(`https://brapi.dev/api/v2/quote/${tickers.join(',')}?token=${BRAAPI_TOKEN}`);
+            const data = await response.json();
+
+            // Validação ATUALIZADA para API v2
+            if (!response.ok || !data || !data.quotes) {
+                console.error("Erro na resposta da API Brapi v2:", { status: response.status, responseData: data });
+                throw new Error(`Falha ao buscar dados da API v2. Status: ${response.status}`);
+            }
+
+            const precosAtuais = {};
+            // Estrutura de dados ATUALIZADA para data.quotes
+            data.quotes.forEach(result => {
+                precosAtuais[result.symbol] = result.regularMarketPrice;
+            });
+
+            let html = '';
+            for (const ticker of tickers) {
+                const ativo = carteira[ticker];
+                const precoAtual = precosAtuais[ticker] || 0;
+                const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+
+                const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
+                const custoPosicaoAtual = precoMedio * ativo.quantidade;
+                const valorPosicaoAtual = precoAtual * ativo.quantidade;
+                const rentabilidade = custoPosicaoAtual > 0 ? ((valorPosicaoAtual + ativo.proventos) / custoPosicaoAtual - 1) * 100 : 0;
+
+                const dividendYield = precoAtual && ativo.quantidade > 0 ? (ativo.proventos12m / valorPosicaoAtual) * 100 : 0;
+                const yieldOnCost = custoPosicaoAtual > 0 ? (ativo.proventos12m / custoPosicaoAtual) * 100 : 0;
+
+                html += `
+                <div class="fiis-item">
+                    <div>${ativo.ativo}</div>
+                    <div>${ativo.quantidade.toLocaleString('pt-BR')}</div>
+                    <div>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div class="${variacao >= 0 ? 'positive-change' : 'negative-change'}">${variacao.toFixed(2)}%</div>
+                    <div>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div class="${rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${rentabilidade.toFixed(2)}%</div>
+                    <div>${dividendYield.toFixed(2)}%</div>
+                    <div>${yieldOnCost.toFixed(2)}%</div>
+                </div>
+            `;
+            }
+            fiisListaDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error("Erro ao buscar cotações ou renderizar carteira de FIIs:", error);
+            fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
+        }
+    }
+
 
     // --- LÓGICA DA ABA DE PROVENTOS ---
     const proventosListaDiv = document.getElementById("proventos-lista");
@@ -294,11 +404,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("progress-bar-proventos").style.width = `${Math.min(percentualAtingido, 100)}%`;
     }
 
-    // Substitua a função inteira por esta em public/js/main.js
-    // Substitua a função inteira por esta em public/js/main.js
-
     function renderPieCharts(proventos) {
-        // Limpa instâncias de gráficos antigos para evitar vazamento de memória
         if (proventosPorAtivoChart) {
             proventosPorAtivoChart.destroy();
             proventosPorAtivoChart = null;
@@ -308,7 +414,6 @@ document.addEventListener("DOMContentLoaded", function () {
             proventosPorTipoChart = null;
         }
 
-        // --- Renderiza "Por Ativo" como GRÁFICO DE PIZZA ---
         const ctxAtivo = document.getElementById("proventos-por-ativo-chart");
         if (ctxAtivo) {
             const porAtivo = proventos.reduce((acc, p) => {
@@ -364,7 +469,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        // --- Renderiza "Por Tipo" como BARRAS ---
         const tipoContainer = document.getElementById("dist-por-tipo-container");
         if (tipoContainer) {
             const totalProventos = proventos.reduce((acc, p) => acc + p.valor, 0);
@@ -402,14 +506,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const ctx = document.getElementById("proventos-evolucao-chart");
         if (!ctx) return;
 
-        // 1. Ler valores dos filtros
         const intervalo = document.querySelector("#intervalo-filter-group .active")
             .dataset.intervalo;
         const periodo = document.getElementById("periodo-filter").value;
         const tipoAtivo = document.getElementById("tipo-ativo-filter").value;
         const ativo = document.getElementById("ativo-filter").value;
 
-        // 2. Filtrar proventos
         let proventosFiltrados = [...proventos];
         if (tipoAtivo !== "Todos") {
             proventosFiltrados = proventosFiltrados.filter(
@@ -433,7 +535,6 @@ document.addEventListener("DOMContentLoaded", function () {
             (p) => new Date(p.dataPagamento) >= dataInicio
         );
 
-        // 3. Agregar dados
         const aggregatedData = {};
         proventosFiltrados.forEach((p) => {
             const dataPag = new Date(p.dataPagamento + "T00:00:00");
@@ -443,7 +544,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     dataPag.getMonth() + 1
                 ).padStart(2, "0")}`;
             } else {
-                // Anual
                 key = dataPag.getFullYear().toString();
             }
             aggregatedData[key] = (aggregatedData[key] || 0) + p.valor;
@@ -462,7 +562,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const data = sortedKeys.map((key) => aggregatedData[key]);
 
-        // 4. Renderizar/Atualizar gráfico
         if (proventosEvolucaoChart) proventosEvolucaoChart.destroy();
         proventosEvolucaoChart = new Chart(ctx, {
             type: "bar",
@@ -483,7 +582,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        // Adicionado para formatar o tooltip
                         callbacks: {
                             label: function (context) {
                                 let label = context.dataset.label || "";
@@ -508,7 +606,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         grid: { color: "#2a2c30" },
                         ticks: {
                             color: "#a0a7b3",
-                            // Adicionado para formatar o eixo Y
                             callback: function (value) {
                                 return "R$ " + value.toLocaleString("pt-BR");
                             },
@@ -537,8 +634,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // --- GRÁFICO DE MOVIMENTAÇÃO ---
-    // Localize e substitua esta função inteira em seu main.js
-
     const renderMovimentacaoChart = (lancamentos) => {
         const chartCanvas = document.getElementById("movimentacao-chart");
         if (!chartCanvas || typeof Chart === "undefined") return;
@@ -588,18 +683,18 @@ document.addEventListener("DOMContentLoaded", function () {
                 {
                     label: "Compras (R$)",
                     data: compras,
-                    backgroundColor: "rgba(0, 217, 195, 0.7)", // Cor principal do site
+                    backgroundColor: "rgba(0, 217, 195, 0.7)",
                     borderColor: "#00d9c3",
                     borderWidth: 1,
-                    borderRadius: 6, // Barras arredondadas
+                    borderRadius: 6,
                 },
                 {
                     label: "Vendas (R$)",
                     data: vendas,
-                    backgroundColor: "rgba(245, 101, 101, 0.7)", // Vermelho mais suave
+                    backgroundColor: "rgba(245, 101, 101, 0.7)",
                     borderColor: "#F56565",
                     borderWidth: 1,
-                    borderRadius: 6, // Barras arredondadas
+                    borderRadius: 6,
                 },
             ],
         };
@@ -610,26 +705,25 @@ document.addEventListener("DOMContentLoaded", function () {
             data: data,
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // Importante para o CSS controlar a altura
+                maintainAspectRatio: false,
                 scales: {
                     x: {
                         grid: {
-                            display: false, // Remove as linhas de grade verticais
+                            display: false,
                         },
                         ticks: {
-                            color: "#a0a7b3", // Cor mais suave para os textos
+                            color: "#a0a7b3",
                         },
                     },
                     y: {
                         grid: {
-                            color: "#2a2c30", // Linhas de grade horizontais mais sutis
+                            color: "#2a2c30",
                         },
                         ticks: {
                             color: "#a0a7b3",
-                            // Formata os números do eixo Y para R$
                             callback: function (value) {
                                 if (value >= 1000) {
-                                    return "R$ " + value / 1000 + "k"; // Ex: R$ 50k
+                                    return "R$ " + value / 1000 + "k";
                                 }
                                 return "R$ " + value;
                             },
@@ -638,16 +732,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 plugins: {
                     legend: {
-                        position: "top", // Posição da legenda
-                        align: "end", // Alinhamento à direita
+                        position: "top",
+                        align: "end",
                         labels: {
                             color: "#a0a7b3",
-                            usePointStyle: true, // Usa círculos em vez de quadrados
+                            usePointStyle: true,
                             boxWidth: 8,
                         },
                     },
                     tooltip: {
-                        // Estilo do tooltip para combinar com os outros gráficos
                         backgroundColor: "#1A202C",
                         titleColor: "#E2E8F0",
                         bodyColor: "#E2E8F0",
