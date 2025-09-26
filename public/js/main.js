@@ -157,6 +157,7 @@ document.addEventListener("DOMContentLoaded", function () {
             renderMovimentacaoChart(allLancamentos);
             renderFiisCarteira(allLancamentos, allProventosData);
             renderAcoesCarteira(allLancamentos, allProventosData);
+            renderRendaFixaCarteira(allLancamentos);
         });
 
         const metaDocRef = doc(db, "metas", userID);
@@ -178,6 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         setupLancamentosModal(userID);
+        setupRendaFixaModal(userID);
         setupClassificacaoModal(userID, ativosClassificadosCollection);
         setupProventoModal(userID);
         setupMetaProventosModal(userID);
@@ -427,6 +429,170 @@ document.addEventListener("DOMContentLoaded", function () {
             fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
         }
     }
+
+    // --- LÓGICA DA ABA DE RENDA FIXA ---
+    async function renderRendaFixaCarteira(lancamentos) {
+        const rendaFixaListaDiv = document.getElementById("rendafixa-lista");
+        rendaFixaListaDiv.innerHTML = `<p>Calculando rentabilidade da Renda Fixa...</p>`;
+
+        const rfLancamentos = lancamentos.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
+
+        if (rfLancamentos.length === 0) {
+            rendaFixaListaDiv.innerHTML = `<p>Nenhum ativo de Renda Fixa lançado ainda.</p>`;
+            return;
+        }
+
+        try {
+            const carteiraRF = {};
+            rfLancamentos.forEach(l => {
+                carteiraRF[l.id] = l;
+            });
+
+            // --- FUNÇÃO CORRIGIDA ---
+            const formatDateForBCB = (dateInput) => {
+                const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput + 'T00:00:00');
+                if (isNaN(d.getTime())) return null;
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}/${month}/${year}`;
+            };
+
+            const hoje = new Date();
+            const dataMaisAntiga = rfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, rfLancamentos[0].data);
+            const dataInicialBCB = formatDateForBCB(dataMaisAntiga);
+            const dataFinalBCB = formatDateForBCB(hoje);
+
+            // Códigos SGS: 12 para CDI (Selic), 433 para IPCA
+            const [cdiResponse, ipcaResponse] = await Promise.all([
+                fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicialBCB}&dataFinal=${dataFinalBCB}`),
+                fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial=${dataInicialBCB}&dataFinal=${dataFinalBCB}`)
+            ]);
+
+            if (!cdiResponse.ok || !ipcaResponse.ok) {
+                throw new Error('Falha ao buscar dados de indexadores do Banco Central.');
+            }
+
+            const historicoCDI = await cdiResponse.json();
+            const historicoIPCA = await ipcaResponse.json();
+
+            let html = '';
+
+            for (const id in carteiraRF) {
+                const ativo = carteiraRF[id];
+                const dataAplicacao = new Date(ativo.data + 'T00:00:00');
+
+                let valorBruto = ativo.valorAplicado;
+                const diasCorridos = Math.floor((hoje - dataAplicacao) / (1000 * 60 * 60 * 24));
+
+                if (ativo.tipoRentabilidade === 'Pós-Fixado') {
+                    let acumuladorCDI = 1;
+                    const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
+
+                    historicoCDI
+                        .filter(item => {
+                            const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
+                            return itemDate >= dataAplicacao && itemDate <= hoje;
+                        })
+                        .forEach(item => {
+                            acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI);
+                        });
+                    valorBruto = ativo.valorAplicado * acumuladorCDI;
+
+                } else if (ativo.tipoRentabilidade === 'Prefixado') {
+                    const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
+                    const diasUteis = diasCorridos * (252 / 365.25);
+                    valorBruto = ativo.valorAplicado * Math.pow(1 + taxaAnual, diasUteis / 252);
+
+                } else if (ativo.tipoRentabilidade === 'Híbrido') {
+                    let acumuladorIPCA = 1;
+                    const taxaPrefixadaAnual = parseFloat(ativo.taxaContratada.match(/(\d+(\.\d+)?)%/)[1]) / 100;
+
+                    historicoIPCA
+                        .filter(item => {
+                            const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
+                            const itemMonth = itemDate.getMonth();
+                            const itemYear = itemDate.getFullYear();
+                            const appMonth = dataAplicacao.getMonth();
+                            const appYear = dataAplicacao.getFullYear();
+                            return (itemYear > appYear) || (itemYear === appYear && itemMonth >= appMonth);
+                        })
+                        .forEach(item => {
+                            acumuladorIPCA *= (1 + parseFloat(item.valor) / 100);
+                        });
+
+                    const valorCorrigido = ativo.valorAplicado * acumuladorIPCA;
+                    const diasUteis = diasCorridos * (252 / 365.25);
+                    valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+                }
+
+                const lucro = valorBruto - ativo.valorAplicado;
+                let aliquotaIR = 0;
+                const isentoIR = ['LCI', 'LCA', 'CRI', 'CRA'].includes(ativo.tipoAtivo);
+                if (lucro > 0 && !isentoIR) {
+                    if (diasCorridos <= 180) aliquotaIR = 0.225;
+                    else if (diasCorridos <= 360) aliquotaIR = 0.20;
+                    else if (diasCorridos <= 720) aliquotaIR = 0.175;
+                    else aliquotaIR = 0.15;
+                }
+                const impostoDevido = lucro * aliquotaIR;
+                const valorLiquido = valorBruto - impostoDevido;
+                const rentabilidadeLiquida = valorLiquido - ativo.valorAplicado;
+                const rentabilidadePercentual = (rentabilidadeLiquida / ativo.valorAplicado) * 100;
+
+                html += `
+                    <div class="fii-card">
+                         <div class="fii-card-actions">
+                            <button class="btn-crud btn-editar-rf" data-id="${id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                            <button class="btn-crud btn-excluir-rf" data-id="${id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                        </div>
+                        <div class="fii-card-ticker" style="background-color: rgba(90, 103, 216, 0.1); color: #818cf8;">
+                            ${ativo.ativo}
+                        </div>
+                        <span class="tipo-ativo-badge">${ativo.tipoAtivo}</span>
+
+                        <div class="fii-card-metric-main">
+                            <div class="label">Valor Líquido Atual</div>
+                            <div class="value">${valorLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                        </div>
+                        
+                        <div class="fii-card-result ${rentabilidadeLiquida >= 0 ? 'positive-change' : 'negative-change'}">
+                           Rent. Líquida: ${rentabilidadeLiquida.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercentual.toFixed(2)}%)
+                        </div>
+    
+                        <div class="fii-card-details">
+                            <div class="detail-item">
+                                <span>Valor Aplicado</span>
+                                <span>${ativo.valorAplicado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                             <div class="detail-item">
+                                <span>Valor Bruto</span>
+                                <span>${valorBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>Taxa</span>
+                                <span>${ativo.taxaContratada}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>Vencimento</span>
+                                <span>${new Date(ativo.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                            </div>
+                             <div class="detail-item">
+                                <span>Imposto (IR)</span>
+                                <span class="${impostoDevido > 0 ? 'negative-change' : ''}">- ${impostoDevido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            rendaFixaListaDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error("Erro ao renderizar carteira de Renda Fixa:", error);
+            rendaFixaListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Verifique o console para mais detalhes.</p>`;
+        }
+    }
+
 
     // --- LÓGICA DA ABA DE PROVENTOS ---
     const proventosListaDiv = document.getElementById("proventos-lista");
@@ -925,52 +1091,52 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         historicoListaDiv.innerHTML = lancamentosFiltrados
             .map(
-                (l) => `
-          <div class="lista-item" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
-              <div class="lista-item-valor">${l.ativo}</div>
-              <div><span class="tipo-ativo-badge">${l.tipoAtivo}</span></div>
-              <div class="lista-item-valor ${l.tipoOperacao === "compra"
-                        ? "operacao-compra"
-                        : "operacao-venda"
-                    }">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)
-                    }</div>
-              <div class="lista-item-valor">${l.quantidade.toLocaleString(
-                        "pt-BR"
-                    )}</div>
-              <div class="lista-item-valor">${l.preco.toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                    })}</div>
-              <div class="lista-item-valor">${l.valorTotal.toLocaleString(
-                        "pt-BR",
-                        { style: "currency", currency: "BRL" }
-                    )}</div>
-              <div class="lista-acoes">
-                  <button class="btn-crud btn-editar" data-id="${l.id
-                    }"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                  <button class="btn-crud btn-excluir" data-id="${l.id
-                    }"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
-              </div>
-          </div>
-      `
+                (l) => {
+                    const isRendaFixa = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo);
+                    return `
+                      <div class="lista-item" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
+                          <div class="lista-item-valor">${l.ativo}</div>
+                          <div><span class="tipo-ativo-badge">${l.tipoAtivo}</span></div>
+                          <div class="lista-item-valor ${l.tipoOperacao === "compra" ? "operacao-compra" : "operacao-venda"}">
+                            ${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)}
+                          </div>
+                          <div class="lista-item-valor">${isRendaFixa ? (l.quantidade || '-').toLocaleString("pt-BR") : l.quantidade.toLocaleString("pt-BR")}</div>
+                          <div class="lista-item-valor">${isRendaFixa ? '-' : l.preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                          <div class="lista-item-valor">${(l.valorTotal || l.valorAplicado).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                          <div class="lista-acoes">
+                              <button class="btn-crud btn-editar" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                              <button class="btn-crud btn-excluir" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                          </div>
+                      </div>
+                  `;
+                }
             )
             .join("");
     };
+
 
     historicoListaDiv.addEventListener("click", async (e) => {
         const button = e.target.closest("button.btn-crud");
         if (!button || !currentuserID) return;
         const docId = button.dataset.id;
+        const docRef = doc(db, "lancamentos", docId);
+
         if (button.classList.contains("btn-excluir")) {
             if (confirm("Tem certeza que deseja excluir este lançamento?")) {
-                await deleteDoc(doc(db, "lancamentos", docId)).catch(
+                await deleteDoc(docRef).catch(
                     (err) => alert("Erro ao excluir: " + err.message)
                 );
             }
         } else if (button.classList.contains("btn-editar")) {
-            const docSnap = await getDoc(doc(db, "lancamentos", docId));
-            if (docSnap.exists()) {
-                openLancamentoModal(docSnap.data(), docId);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) return;
+            const lancamento = docSnap.data();
+            const isRendaFixa = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(lancamento.tipoAtivo);
+
+            if (isRendaFixa) {
+                openRendaFixaModal(lancamento, docId);
+            } else {
+                openLancamentoModal(lancamento, docId);
             }
         }
     });
@@ -1050,6 +1216,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const modal = document.getElementById("lancamento-modal");
         const form = document.getElementById("form-novo-ativo");
         const hoje = new Date().toISOString().split("T")[0];
+
         const ativoInput = form.querySelector("#ativo");
         const sugestoesDiv = form.querySelector("#ativo-sugestoes");
         let timeoutBusca;
@@ -1155,42 +1322,22 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        document
-            .getElementById("btn-mostrar-form")
-            .addEventListener("click", () => openLancamentoModal());
+        document.getElementById("btn-mostrar-form").addEventListener("click", () => openLancamentoModal());
+        document.getElementById("btn-novo-lancamento-fii").addEventListener("click", () => openLancamentoModal({}, "", "FIIs"));
+        document.getElementById("btn-novo-lancamento-acao").addEventListener("click", () => openLancamentoModal({}, "", "Ações"));
 
-        document
-            .getElementById("btn-novo-lancamento-fii")
-            .addEventListener("click", () => openLancamentoModal({}, "", "FIIs"));
-
-        document
-            .getElementById("btn-novo-lancamento-acao")
-            .addEventListener("click", () => openLancamentoModal({}, "", "Ações"));
 
         modal.addEventListener("click", (e) => {
             if (e.target === modal) closeModal("lancamento-modal");
         });
 
-        window.openLancamentoModal = (data = {}, id = "", tipoAtivo = null) => {
+        window.openLancamentoModal = (data = {}, id = "", tipoAtivo = "Ações") => {
             form.reset();
             form["doc-id"].value = id;
+            form.querySelector("#tipo-ativo").value = data.tipoAtivo || tipoAtivo;
 
-            const tipoAtivoSelect = form.querySelector("#tipo-ativo");
-            tipoAtivoSelect.disabled = false;
-
-            document.getElementById("lancamento-modal-title").textContent = id
-                ? "Editar Lançamento"
-                : "Adicionar Lançamento";
-            form.querySelector(".btn-adicionar").innerHTML = id
-                ? '<i class="fas fa-edit"></i> Atualizar'
-                : '<i class="fas fa-plus"></i> Adicionar';
-
-            if (tipoAtivo) {
-                tipoAtivoSelect.value = tipoAtivo;
-                tipoAtivoSelect.disabled = true;
-            } else {
-                tipoAtivoSelect.value = data.tipoAtivo || "Ações";
-            }
+            document.getElementById("lancamento-modal-title").textContent = id ? "Editar Lançamento" : "Adicionar Lançamento";
+            form.querySelector(".btn-adicionar").innerHTML = id ? '<i class="fas fa-edit"></i> Atualizar' : '<i class="fas fa-plus"></i> Adicionar';
 
             form.ativo.value = data.ativo || "";
             form["data-operacao"].value = data.data || hoje;
@@ -1198,6 +1345,7 @@ document.addEventListener("DOMContentLoaded", function () {
             form.preco.value = data.preco || "";
             form["outros-custos"].value = data.custos || "";
             form["operacao-tipo"].value = data.tipoOperacao || "compra";
+
             if (data.tipoOperacao === "venda") {
                 form.querySelector(".btn-venda").click();
             } else {
@@ -1206,6 +1354,91 @@ document.addEventListener("DOMContentLoaded", function () {
             calcularTotal();
             modal.classList.add("show");
         };
+    }
+
+    // --- NOVO MODAL DE RENDA FIXA ---
+    function setupRendaFixaModal(userID) {
+        const modal = document.getElementById("rendafixa-modal");
+        const form = document.getElementById("form-novo-rendafixa");
+        const hoje = new Date().toISOString().split("T")[0];
+
+        document.getElementById("btn-novo-lancamento-rendafixa").addEventListener("click", () => openRendaFixaModal());
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const docId = form["rendafixa-doc-id"].value;
+
+            const lancamentoData = {
+                userID: userID,
+                tipoOperacao: 'compra',
+                tipoAtivo: form["rendafixa-tipo-ativo"].value,
+                ativo: form["rendafixa-ativo"].value,
+                data: form["rendafixa-data-operacao"].value,
+                dataVencimento: form["rendafixa-data-vencimento"].value,
+                valorAplicado: parseFloat(form["rendafixa-valor-aplicado"].value),
+                quantidade: parseFloat(form["rendafixa-quantidade"].value) || 1,
+                tipoRentabilidade: form["rendafixa-tipo-rentabilidade"].value,
+                taxaContratada: form["rendafixa-taxa-contratada"].value,
+                valorTotal: parseFloat(form["rendafixa-valor-aplicado"].value),
+            };
+
+            try {
+                if (docId) {
+                    await updateDoc(doc(db, "lancamentos", docId), lancamentoData);
+                    alert("Lançamento de Renda Fixa atualizado!");
+                } else {
+                    lancamentoData.timestamp = serverTimestamp();
+                    await addDoc(collection(db, "lancamentos"), lancamentoData);
+                    alert("Ativo de Renda Fixa adicionado!");
+                }
+                closeModal("rendafixa-modal");
+            } catch (error) {
+                alert("Erro ao salvar: " + error.message);
+            }
+        });
+
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) closeModal("rendafixa-modal");
+        });
+
+        window.openRendaFixaModal = (data = {}, id = "") => {
+            form.reset();
+            form["rendafixa-doc-id"].value = id;
+
+            document.getElementById("rendafixa-modal-title").textContent = id ? "Editar Renda Fixa" : "Adicionar Renda Fixa";
+            form.querySelector(".btn-adicionar").innerHTML = id ? '<i class="fas fa-save"></i> Salvar' : '<i class="fas fa-plus"></i> Adicionar';
+
+            form["rendafixa-tipo-ativo"].value = data.tipoAtivo || "Tesouro Direto";
+            form["rendafixa-ativo"].value = data.ativo || "";
+            form["rendafixa-data-operacao"].value = data.data || hoje;
+            form["rendafixa-data-vencimento"].value = data.dataVencimento || "";
+            form["rendafixa-valor-aplicado"].value = data.valorAplicado || "";
+            form["rendafixa-quantidade"].value = data.quantidade || 1;
+            form["rendafixa-tipo-rentabilidade"].value = data.tipoRentabilidade || "Pós-Fixado";
+            form["rendafixa-taxa-contratada"].value = data.taxaContratada || "";
+
+            modal.classList.add("show");
+        };
+
+        // Listener para os botões de editar/excluir nos cards
+        document.getElementById('rendafixa-lista').addEventListener('click', async (e) => {
+            const button = e.target.closest('button.btn-crud');
+            if (!button) return;
+
+            const docId = button.dataset.id;
+            const docRef = doc(db, 'lancamentos', docId);
+
+            if (button.classList.contains('btn-excluir-rf')) {
+                if (confirm('Tem certeza que deseja excluir este lançamento de Renda Fixa?')) {
+                    await deleteDoc(docRef);
+                }
+            } else if (button.classList.contains('btn-editar-rf')) {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    openRendaFixaModal(docSnap.data(), docId);
+                }
+            }
+        });
     }
 
     function setupProventoModal(userID) {
@@ -1708,19 +1941,16 @@ document.addEventListener("DOMContentLoaded", function () {
             const lancamentosOrdenados = [...lancamentosDoAtivo].sort((a, b) => new Date(a.data) - new Date(b.data));
             const dataInicio = lancamentosOrdenados[0].data;
 
-            // --- CORREÇÃO APLICADA AQUI ---
             const hojeDate = new Date();
             const ontemDate = new Date(hojeDate);
-            ontemDate.setDate(hojeDate.getDate() - 1); // Subtrai um dia para pegar o último dado de CDI disponível
+            ontemDate.setDate(hojeDate.getDate() - 1);
             const dataFinalParaAPI = ontemDate.toISOString().split('T')[0];
-            // --- FIM DA CORREÇÃO ---
 
             const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm";
             const RANGE = '3mo';
 
             const [ativoResponse, cdiResponse, ibovResponse, ivvb11Response] = await Promise.all([
                 fetch(`https://brapi.dev/api/quote/${ticker}?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
-                // --- CORREÇÃO APLICADA NA URL DA API DO BCB ---
                 fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${dataFinalParaAPI.split('-').reverse().join('/')}`),
                 fetch(`https://brapi.dev/api/quote/^BVSP?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
                 fetch(`https://brapi.dev/api/quote/IVVB11?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`)

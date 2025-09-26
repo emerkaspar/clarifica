@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
-    <meta charset="UTF-," />
+    <meta charset="utf-," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CLARIFICA - O seu farol de investimentos</title>
     <link
@@ -21,8 +21,8 @@
     />
     
     <script src="js/chart.umd.min.js"></script>
-<script src="js/luxon.min.js"></script>
-<script src="js/chartjs-adapter-luxon.min.js"></script> 
+    <script src="js/luxon.min.js"></script>
+    <script src="js/chartjs-adapter-luxon.min.js"></script> 
     
     <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -323,11 +323,17 @@
               </p>
             </div>
             <div class="tab-pane" id="renda-fixa">
-              <h2>Renda Fixa</h2>
-              <p>
-                Em breve: seus investimentos em Tesouro Direto, CDBs, LCIs, LCAs
-                e outros.
-              </p>
+                <div class="content-container" style="max-width: none">
+                    <div class="content-header">
+                        <h3>Carteira de Renda Fixa</h3>
+                        <button id="btn-novo-lancamento-rendafixa" class="btn-adicionar">
+                            <i class="fas fa-plus"></i> Novo Lançamento
+                        </button>
+                    </div>
+                    <div id="rendafixa-lista" class="fiis-grid-container">
+                        <p>Nenhum ativo de Renda Fixa lançado ainda.</p>
+                    </div>
+                </div>
             </div>
             <div class="tab-pane" id="calculos">
               <h2>Cálculos e Projeções</h2>
@@ -442,114 +448,50 @@
                 <i class="fas fa-arrow-up"></i> Venda
               </button>
             </div>
-            <input
-              type="hidden"
-              id="operacao-tipo"
-              name="operacao-tipo"
-              value="compra"
-            />
+            <input type="hidden" id="operacao-tipo" name="operacao-tipo" value="compra"/>
+            
             <div class="form-grid">
               <div>
                 <label for="tipo-ativo" class="form-label">Tipo de ativo</label>
-                <select
-                  id="tipo-ativo"
-                  name="tipo-ativo"
-                  class="form-select"
-                  required
-                >
-                  <option value="Ações">Ações</option>
-                  <option value="FIIs">FIIs</option>
-                  <option value="ETF">ETF</option>
-                  <option value="Cripto">Criptomoedas</option>
-                  <option value="Renda Fixa">Renda Fixa</option>
-                  <option value="Tesouro Direto">Tesouro Direto</option>
+                <select id="tipo-ativo" name="tipo-ativo" class="form-select" required>
+                    <option value="Ações">Ações</option>
+                    <option value="FIIs">FIIs</option>
+                    <option value="ETF">ETF</option>
+                    <option value="Cripto">Criptomoedas</option>
                 </select>
               </div>
               <div class="input-wrapper">
                 <label for="ativo" class="form-label">Ativo</label>
-                <input
-                  type="text"
-                  id="ativo"
-                  name="ativo"
-                  placeholder="Ex: PETR4"
-                  class="form-input"
-                  required
-                  autocomplete="off"
-                />
+                <input type="text" id="ativo" name="ativo" placeholder="Ex: PETR4" class="form-input" required autocomplete="off"/>
                 <div id="ativo-sugestoes" class="sugestoes-lista"></div>
               </div>
               <div class="input-icon-wrapper">
-                <label for="data-operacao" class="form-label"
-                  >Data da Operação</label
-                >
+                <label for="data-operacao" class="form-label">Data da Operação</label>
                 <i class="fas fa-calendar-alt"></i>
-                <input
-                  type="date"
-                  id="data-operacao"
-                  name="data-operacao"
-                  class="form-input"
-                  required
-                />
+                <input type="date" id="data-operacao" name="data-operacao" class="form-input" required/>
               </div>
               <div>
                 <label for="quantidade" class="form-label">Quantidade</label>
-                <input
-                  type="number"
-                  id="quantidade"
-                  name="quantidade"
-                  value="1"
-                  step="any"
-                  class="form-input"
-                  required
-                />
+                <input type="number" id="quantidade" name="quantidade" value="1" step="any" class="form-input" required/>
               </div>
               <div>
-                <label for="preco" class="form-label">Preço em R$</label>
-                <input
-                  type="number"
-                  id="preco"
-                  name="preco"
-                  placeholder="0,00"
-                  step="0.01"
-                  class="form-input"
-                  required
-                />
+                <label for="preco" class="form-label">Preço Unitário R$</label>
+                <input type="number" id="preco" name="preco" placeholder="0,00" step="0.01" class="form-input" required/>
               </div>
               <div>
-                <label
-                  for="outros-custos"
-                  class="form-label"
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    width: 100%;
-                  "
-                >
-                  <span>Outros custos</span
-                  ><span style="color: #888">(Opcional)</span>
+                <label for="outros-custos" class="form-label" style="display: flex; justify-content: space-between; width: 100%;">
+                  <span>Outros custos</span><span style="color: #888">(Opcional)</span>
                 </label>
-                <input
-                  type="number"
-                  id="outros-custos"
-                  name="outros-custos"
-                  placeholder="0,00"
-                  step="0.01"
-                  class="form-input"
-                />
+                <input type="number" id="outros-custos" name="outros-custos" placeholder="0,00" step="0.01" class="form-input"/>
               </div>
             </div>
+
             <div class="modal-valor-total">
-              <span class="label">Valor total</span>
+              <span class="label">Valor total da operação</span>
               <span class="value" id="valor-total-calculado">R$ 0,00</span>
             </div>
             <div class="modal-footer">
-              <button
-                type="button"
-                class="btn-cancelar"
-                data-modal="lancamento-modal"
-              >
-                Cancelar
-              </button>
+              <button type="button" class="btn-cancelar" data-modal="lancamento-modal">Cancelar</button>
               <button type="submit" class="btn-adicionar">
                 <i class="fas fa-plus"></i> Adicionar
               </button>
@@ -558,6 +500,71 @@
         </div>
       </div>
     </div>
+    
+    <div id="rendafixa-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="rendafixa-modal-title">Adicionar Renda Fixa</h2>
+                <button class="modal-close-btn" data-modal="rendafixa-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-novo-rendafixa">
+                    <input type="hidden" id="rendafixa-doc-id" name="doc-id" />
+                    <div class="form-grid">
+                        <div>
+                            <label for="rendafixa-tipo-ativo" class="form-label">Tipo de Investimento</label>
+                            <select id="rendafixa-tipo-ativo" name="tipo-ativo" class="form-select" required>
+                                <option value="Tesouro Direto">Tesouro Direto</option>
+                                <option value="CDB">CDB</option>
+                                <option value="LCI">LCI</option>
+                                <option value="LCA">LCA</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="rendafixa-ativo" class="form-label">Nome do Ativo</label>
+                            <input type="text" id="rendafixa-ativo" name="ativo" placeholder="Ex: Tesouro Selic 2029" class="form-input" required/>
+                        </div>
+                        <div class="input-icon-wrapper">
+                            <label for="rendafixa-data-operacao" class="form-label">Data da Aplicação</label>
+                            <i class="fas fa-calendar-alt"></i>
+                            <input type="date" id="rendafixa-data-operacao" name="data-operacao" class="form-input" required/>
+                        </div>
+                        <div class="input-icon-wrapper">
+                            <label for="rendafixa-data-vencimento" class="form-label">Data de Vencimento</label>
+                            <i class="fas fa-calendar-alt"></i>
+                            <input type="date" id="rendafixa-data-vencimento" name="data-vencimento" class="form-input" required/>
+                        </div>
+                         <div>
+                            <label for="rendafixa-valor-aplicado" class="form-label">Valor Total Aplicado R$</label>
+                            <input type="number" id="rendafixa-valor-aplicado" name="valor-aplicado" placeholder="1000,00" step="0.01" class="form-input" required/>
+                        </div>
+                        <div>
+                            <label for="rendafixa-quantidade" class="form-label">Quantidade (p/ Tesouro Direto)</label>
+                            <input type="number" id="rendafixa-quantidade" name="quantidade" value="1" step="any" class="form-input"/>
+                        </div>
+                        <div>
+                            <label for="rendafixa-tipo-rentabilidade" class="form-label">Tipo de Rentabilidade</label>
+                            <select id="rendafixa-tipo-rentabilidade" name="tipo-rentabilidade" class="form-select" required>
+                                <option value="Pós-Fixado">Pós-Fixado (CDI/Selic)</option>
+                                <option value="Prefixado">Prefixado</option>
+                                <option value="Híbrido">Híbrido (IPCA+)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="rendafixa-taxa-contratada" class="form-label">Taxa Contratada</label>
+                            <input type="text" id="rendafixa-taxa-contratada" name="taxa-contratada" placeholder="Ex: 110% CDI, 12.5%, IPCA+6.5" class="form-input" required/>
+                        </div>
+                    </div>
+                     <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
+                        <button type="button" class="btn-cancelar" data-modal="rendafixa-modal">Cancelar</button>
+                        <button type="submit" class="btn-adicionar"><i class="fas fa-plus"></i> Adicionar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div id="provento-modal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-header">
