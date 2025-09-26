@@ -1352,13 +1352,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     </select>
                 </div>
                 <div>
-                    <label class="form-label">Setor BESST</label>
+                    <label class="form-label">Setor</label>
                     <select name="Setor BESST" class="form-select">
                         <option value="Bancos" ${valores["Setor BESST"] === "Bancos" ? "selected" : ""}>Bancos</option>
                         <option value="Energia" ${valores["Setor BESST"] === "Energia" ? "selected" : ""}>Energia</option>
                         <option value="Saneamento" ${valores["Setor BESST"] === "Saneamento" ? "selected" : ""}>Saneamento</option>
                         <option value="Seguros" ${valores["Setor BESST"] === "Seguros" ? "selected" : ""}>Seguros</option>
                         <option value="Telecomunicações" ${valores["Setor BESST"] === "Telecomunicações" ? "selected" : ""}>Telecomunicações</option>
+                        <option value="Comodities" ${valores["Setor BESST"] === "Comodities" ? "selected" : ""}>Comodities</option>
+                        <option value="Petróleo, Gás e Biocombustíveis" ${valores["Setor BESST"] === "Petróleo, Gás e Biocombustíveis" ? "selected" : ""}>Petróleo, Gás e Biocombustíveis</option>
                         <option value="Outro" ${valores["Setor BESST"] === "Outro" ? "selected" : ""}>Outro</option>
                     </select>
                 </div>`;
@@ -1404,7 +1406,6 @@ document.addEventListener("DOMContentLoaded", function () {
         modal.classList.add("show");
     };
 }
-
     // --- LÓGICA DO MODAL DE DETALHES DO FII ---
     const fiiDetalhesModal = document.getElementById("fii-detalhes-modal");
 
