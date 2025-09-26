@@ -1031,7 +1031,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     await addDoc(collection(db, "lancamentos"), lancamentoData);
                     alert("Lançamento adicionado!");
                 }
-                closeModal("lancamento-modal");
+                // closeModal("lancamento-modal"); // LINHA REMOVIDA
             } catch (error) {
                 alert("Erro ao salvar: " + error.message);
             }
@@ -1165,7 +1165,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 await addDoc(collection(db, "proventos"), proventoData);
                 alert("Provento lançado com sucesso!");
                 form.reset();
-                closeModal("provento-modal");
+                // closeModal("provento-modal"); // LINHA REMOVIDA
             } catch (error) {
                 alert("Erro ao lançar provento: " + error.message);
             }
