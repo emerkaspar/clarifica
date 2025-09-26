@@ -183,109 +183,112 @@ document.addEventListener("DOMContentLoaded", function () {
     // --- LÓGICA DA ABA DE FIIS ---
 
     async function renderFiisCarteira(lancamentos, proventos) {
-        const fiisListaDiv = document.getElementById("fiis-lista");
-        fiisListaDiv.innerHTML = `<p>Calculando sua carteira de FIIs...</p>`;
+    const fiisListaDiv = document.getElementById("fiis-lista");
+    fiisListaDiv.innerHTML = `<p>Buscando cotações, isso pode levar alguns segundos...</p>`;
 
-        const fiisLancamentos = lancamentos.filter(l => l.tipoAtivo === 'FIIs');
+    const fiisLancamentos = lancamentos.filter(l => l.tipoAtivo === 'FIIs');
 
-        if (fiisLancamentos.length === 0) {
-            fiisListaDiv.innerHTML = `<p>Nenhum FII lançado ainda.</p>`;
-            return;
+    if (fiisLancamentos.length === 0) {
+        fiisListaDiv.innerHTML = `<p>Nenhum FII lançado ainda.</p>`;
+        return;
+    }
+
+    const carteira = {};
+
+    fiisLancamentos.forEach(l => {
+        if (!carteira[l.ativo]) {
+            carteira[l.ativo] = {
+                ativo: l.ativo,
+                quantidade: 0,
+                quantidadeComprada: 0,
+                valorTotalInvestido: 0,
+                proventos: 0,
+                proventos12m: 0,
+            };
         }
-
-        const carteira = {};
-
-        fiisLancamentos.forEach(l => {
-            if (!carteira[l.ativo]) {
-                carteira[l.ativo] = {
-                    ativo: l.ativo,
-                    quantidade: 0,
-                    quantidadeComprada: 0,
-                    valorTotalInvestido: 0,
-                    proventos: 0,
-                    proventos12m: 0,
-                };
-            }
-            if (l.tipoOperacao === 'compra') {
-                carteira[l.ativo].quantidade += l.quantidade;
-                carteira[l.ativo].quantidadeComprada += l.quantidade;
-                carteira[l.ativo].valorTotalInvestido += l.valorTotal;
-            } else if (l.tipoOperacao === 'venda') {
-                carteira[l.ativo].quantidade -= l.quantidade;
-            }
-        });
-
-        const hoje = new Date();
-        const dozeMesesAtras = new Date(hoje.getFullYear() - 1, hoje.getMonth(), hoje.getDate());
-
-        proventos.forEach(p => {
-            if (p.tipoAtivo === 'FIIs' && carteira[p.ativo]) {
-                carteira[p.ativo].proventos += p.valor;
-                const dataPagamento = new Date(p.dataPagamento + "T00:00:00");
-                if (dataPagamento >= dozeMesesAtras) {
-                    carteira[p.ativo].proventos12m += p.valor;
-                }
-            }
-        });
-
-        const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
-        if (tickers.length === 0) {
-            fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
-            return;
+        if (l.tipoOperacao === 'compra') {
+            carteira[l.ativo].quantidade += l.quantidade;
+            carteira[l.ativo].quantidadeComprada += l.quantidade;
+            carteira[l.ativo].valorTotalInvestido += l.valorTotal;
+        } else if (l.tipoOperacao === 'venda') {
+            carteira[l.ativo].quantidade -= l.quantidade;
         }
+    });
 
-        try {
-            // URL ATUALIZADA PARA API v2 COM TOKEN
-            const response = await fetch(`https://brapi.dev/api/v2/quote/${tickers.join(',')}?token=${BRAAPI_TOKEN}`);
+    const hoje = new Date();
+    const dozeMesesAtras = new Date(hoje.getFullYear() - 1, hoje.getMonth(), hoje.getDate());
+
+    proventos.forEach(p => {
+        if (p.tipoAtivo === 'FIIs' && carteira[p.ativo]) {
+            carteira[p.ativo].proventos += p.valor;
+            const dataPagamento = new Date(p.dataPagamento + "T00:00:00");
+            if (dataPagamento >= dozeMesesAtras) {
+                carteira[p.ativo].proventos12m += p.valor;
+            }
+        }
+    });
+
+    const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
+    if (tickers.length === 0) {
+        fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
+        return;
+    }
+
+    try {
+        const precosAtuais = {};
+
+        // --- INÍCIO DA MUDANÇA PRINCIPAL ---
+        // Faz um loop em cada ticker e busca o preço individualmente.
+        for (const ticker of tickers) {
+            const response = await fetch(`https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`);
             const data = await response.json();
 
-            // Validação ATUALIZADA para API v2
-            if (!response.ok || !data || !data.quotes) {
-                console.error("Erro na resposta da API Brapi v2:", { status: response.status, responseData: data });
-                throw new Error(`Falha ao buscar dados da API v2. Status: ${response.status}`);
-            }
-
-            const precosAtuais = {};
-            // Estrutura de dados ATUALIZADA para data.quotes
-            data.quotes.forEach(result => {
+            // Valida a resposta para o ticker individual
+            if (response.ok && data && data.results && data.results.length > 0) {
+                const result = data.results[0];
                 precosAtuais[result.symbol] = result.regularMarketPrice;
-            });
-
-            let html = '';
-            for (const ticker of tickers) {
-                const ativo = carteira[ticker];
-                const precoAtual = precosAtuais[ticker] || 0;
-                const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
-
-                const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
-                const custoPosicaoAtual = precoMedio * ativo.quantidade;
-                const valorPosicaoAtual = precoAtual * ativo.quantidade;
-                const rentabilidade = custoPosicaoAtual > 0 ? ((valorPosicaoAtual + ativo.proventos) / custoPosicaoAtual - 1) * 100 : 0;
-
-                const dividendYield = precoAtual && ativo.quantidade > 0 ? (ativo.proventos12m / valorPosicaoAtual) * 100 : 0;
-                const yieldOnCost = custoPosicaoAtual > 0 ? (ativo.proventos12m / custoPosicaoAtual) * 100 : 0;
-
-                html += `
-                <div class="fiis-item">
-                    <div>${ativo.ativo}</div>
-                    <div>${ativo.quantidade.toLocaleString('pt-BR')}</div>
-                    <div>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                    <div>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                    <div class="${variacao >= 0 ? 'positive-change' : 'negative-change'}">${variacao.toFixed(2)}%</div>
-                    <div>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                    <div class="${rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${rentabilidade.toFixed(2)}%</div>
-                    <div>${dividendYield.toFixed(2)}%</div>
-                    <div>${yieldOnCost.toFixed(2)}%</div>
-                </div>
-            `;
+            } else {
+                console.warn(`Não foi possível buscar o preço para o ticker: ${ticker}`);
+                precosAtuais[ticker] = 0; // Define o preço como 0 se a busca falhar
             }
-            fiisListaDiv.innerHTML = html;
-
-        } catch (error) {
-            console.error("Erro ao buscar cotações ou renderizar carteira de FIIs:", error);
-            fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
         }
+        // --- FIM DA MUDANÇA PRINCIPAL ---
+
+        let html = '';
+        for (const ticker of tickers) {
+            const ativo = carteira[ticker];
+            const precoAtual = precosAtuais[ticker] || 0;
+            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+
+            const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
+            const custoPosicaoAtual = precoMedio * ativo.quantidade;
+            const valorPosicaoAtual = precoAtual * ativo.quantidade;
+            const rentabilidade = custoPosicaoAtual > 0 ? ((valorPosicaoAtual + ativo.proventos) / custoPosicaoAtual - 1) * 100 : 0;
+
+            const dividendYield = precoAtual && ativo.quantidade > 0 ? (ativo.proventos12m / valorPosicaoAtual) * 100 : 0;
+            const yieldOnCost = custoPosicaoAtual > 0 ? (ativo.proventos12m / custoPosicaoAtual) * 100 : 0;
+
+            html += `
+            <div class="fiis-item">
+                <div>${ativo.ativo}</div>
+                <div>${ativo.quantidade.toLocaleString('pt-BR')}</div>
+                <div>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div class="${variacao >= 0 ? 'positive-change' : 'negative-change'}">${variacao.toFixed(2)}%</div>
+                <div>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div class="${rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${rentabilidade.toFixed(2)}%</div>
+                <div>${dividendYield.toFixed(2)}%</div>
+                <div>${yieldOnCost.toFixed(2)}%</div>
+            </div>
+        `;
+        }
+        fiisListaDiv.innerHTML = html;
+
+    } catch (error) {
+        console.error("Erro ao buscar cotações ou renderizar carteira de FIIs:", error);
+        fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
     }
+}
 
 
     // --- LÓGICA DA ABA DE PROVENTOS ---

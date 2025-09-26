@@ -1,0 +1,6 @@
+Vai trazer tudo que tem no PC anterior:
+
+Abra o terminal na pasta C:\Clarifica\clarifica
+git fetch origin
+git reset --hard origin/main
+git clean -fd
