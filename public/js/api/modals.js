@@ -1,7 +1,10 @@
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { db } from './firebase-config.js';
-import { searchAssets } from './api/brapi.js';
-import { renderPerformanceChart } from './charts.js';
+// CORREÇÃO AQUI: Subir um nível para encontrar o firebase-config.js
+import { db } from '../firebase-config.js';
+// CORREÇÃO AQUI: O brapi.js está no mesmo diretório
+import { searchAssets } from './brapi.js';
+// CORREÇÃO AQUI: Subir um nível para encontrar o charts.js
+import { renderPerformanceChart } from '../charts.js';
 
 // --- LÓGICA GENÉRICA DE MODAIS ---
 

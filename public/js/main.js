@@ -3,7 +3,8 @@ import { collection, doc, onSnapshot, query, where, orderBy } from "https://www.
 import { auth, db } from './firebase-config.js';
 import { initializeAuth } from './auth.js';
 import { initializeUI } from './ui.js';
-import { setupAllModals } from './modals.js';
+// CORREÇÃO AQUI: O caminho para modals.js mudou
+import { setupAllModals } from './api/modals.js';
 import { renderAcoesCarteira } from './tabs/acoes.js';
 import { renderFiisCarteira } from './tabs/fiis.js';
 import { renderRendaFixaCarteira } from './tabs/rendaFixa.js';
