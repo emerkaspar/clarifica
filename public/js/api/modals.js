@@ -1,13 +1,9 @@
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-// CORREÇÃO AQUI: Subir um nível para encontrar o firebase-config.js
 import { db } from '../firebase-config.js';
-// CORREÇÃO AQUI: O brapi.js está no mesmo diretório
 import { searchAssets } from './brapi.js';
-// CORREÇÃO AQUI: Subir um nível para encontrar o charts.js
 import { renderPerformanceChart } from '../charts.js';
 
 // --- LÓGICA GENÉRICA DE MODAIS ---
-
 const closeModal = (modalId) => {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -33,7 +29,6 @@ const initializeCloseButtons = () => {
 };
 
 // --- MODAL DE LANÇAMENTO (AÇÕES, FIIS, ETC) ---
-
 function setupLancamentosModal(userID) {
     const modal = document.getElementById("lancamento-modal");
     const form = document.getElementById("form-novo-ativo");
@@ -113,7 +108,6 @@ function setupLancamentosModal(userID) {
         }
     });
 
-    // Torna a função de abrir o modal acessível globalmente
     window.openLancamentoModal = (data = {}, id = "", tipoAtivo = "Ações") => {
         form.reset();
         form["doc-id"].value = id;
@@ -140,9 +134,7 @@ function setupLancamentosModal(userID) {
     document.getElementById("btn-novo-lancamento-acao").addEventListener("click", () => window.openLancamentoModal({}, "", "Ações"));
 }
 
-
 // --- MODAL DE RENDA FIXA ---
-
 function setupRendaFixaModal(userID) {
     const modal = document.getElementById("rendafixa-modal");
     const form = document.getElementById("form-novo-rendafixa");
@@ -198,9 +190,7 @@ function setupRendaFixaModal(userID) {
     };
 }
 
-
 // --- MODAL DE PROVENTOS ---
-
 function setupProventoModal(userID) {
     const modal = document.getElementById("provento-modal");
     const form = document.getElementById("form-novo-provento");
@@ -270,7 +260,6 @@ function setupProventoModal(userID) {
 }
 
 // --- MODAL DE META DE PROVENTOS ---
-
 function setupMetaProventosModal(userID) {
     const modal = document.getElementById("meta-proventos-modal");
     const form = document.getElementById("form-meta-proventos");
@@ -319,7 +308,6 @@ function setupMetaProventosModal(userID) {
 }
 
 // --- MODAL DE CLASSIFICAÇÃO ---
-
 function setupClassificacaoModal(userID) {
     const modal = document.getElementById("classificacao-modal");
     const form = document.getElementById("form-classificacao");
@@ -332,102 +320,35 @@ function setupClassificacaoModal(userID) {
         "Fundo de Fundos": ["N/A"],
     };
 
-    // ... (cole aqui as funções 'updateEspecieOptions' e 'gerarCampos' do arquivo original)
-    // ...
     const updateEspecieOptions = (selectedTipo, currentValue = null) => {
         const selectEspecie = document.getElementById('select-especie');
-        // Define as opções, usando N/A se o tipo não tiver opções dinâmicas
         const options = especieOpcoes[selectedTipo] || ["N/A"];
         selectEspecie.innerHTML = '';
-
         options.forEach(opt => {
-            // Verifica se o valor atual deve ser selecionado (útil ao editar)
-            // Se currentValue for null, seleciona N/A por padrão se for o caso
             const isSelected = currentValue === opt || (currentValue === null && opt === "N/A");
             selectEspecie.innerHTML += `<option value="${opt}" ${isSelected ? "selected" : ""}>${opt}</option>`;
         });
     };
 
     const gerarCampos = (tipo, valores) => {
-        let html = "";
-        fieldsContainer.innerHTML = ''; // Limpa antes de gerar
-
+        fieldsContainer.innerHTML = '';
         if (tipo === "FIIs") {
-            const tipoFiiAtual = valores["Tipo FII"] || "Tijolo"; // Define Tijolo como padrão se não houver valor
-
-            // 1. Campo Tipo FII
-            let tipoFiiHtml = `
-                <div>
-                    <label class="form-label">Tipo FII</label>
-                    <select name="Tipo FII" id="select-tipo-fii" class="form-select">
-            `;
+            const tipoFiiAtual = valores["Tipo FII"] || "Tijolo";
+            let tipoFiiHtml = `<div><label class="form-label">Tipo FII</label><select name="Tipo FII" id="select-tipo-fii" class="form-select">`;
             tipoFiiOpcoes.forEach(opt => {
                 tipoFiiHtml += `<option value="${opt}" ${tipoFiiAtual === opt ? "selected" : ""}>${opt}</option>`;
             });
-            tipoFiiHtml += `
-                    </select>
-                </div>
-            `;
-
-            // 2. Campo Risco FII
-            const riscoFiiHtml = `
-                <div>
-                    <label class="form-label">Risco FII</label>
-                    <select name="Risco FII" class="form-select">
-                        <option value="Arrojado" ${valores["Risco FII"] === "Arrojado" ? "selected" : ""}>Arrojado</option>
-                        <option value="Crescimento" ${valores["Risco FII"] === "Crescimento" ? "selected" : ""}>Crescimento</option>
-                        <option value="Ancoragem" ${valores["Risco FII"] === "Ancoragem" ? "selected" : ""}>Ancoragem</option>
-                    </select>
-                </div>
-            `;
-
-            // 3. Campo Espécie (o conteúdo será preenchido após a injeção do HTML)
-            const especieHtml = `
-                <div>
-                    <label class="form-label">Espécie</label>
-                    <select name="Espécie" id="select-especie" class="form-select"></select>
-                </div>
-            `;
-
-            html += tipoFiiHtml + riscoFiiHtml + especieHtml;
-            fieldsContainer.innerHTML = html;
-
-            // --- Lógica Dinâmica para Espécie ---
+            tipoFiiHtml += `</select></div>`;
+            const riscoFiiHtml = `<div><label class="form-label">Risco FII</label><select name="Risco FII" class="form-select"><option value="Arrojado" ${valores["Risco FII"] === "Arrojado" ? "selected" : ""}>Arrojado</option><option value="Crescimento" ${valores["Risco FII"] === "Crescimento" ? "selected" : ""}>Crescimento</option><option value="Ancoragem" ${valores["Risco FII"] === "Ancoragem" ? "selected" : ""}>Ancoragem</option></select></div>`;
+            const especieHtml = `<div><label class="form-label">Espécie</label><select name="Espécie" id="select-especie" class="form-select"></select></div>`;
+            fieldsContainer.innerHTML = tipoFiiHtml + riscoFiiHtml + especieHtml;
             const selectTipoFii = document.getElementById('select-tipo-fii');
-
-            // Inicializa as opções de Espécie
             updateEspecieOptions(selectTipoFii.value, valores["Espécie"]);
-
-            // Adiciona listener para atualizar as opções de Espécie ao mudar o Tipo FII
             selectTipoFii.addEventListener('change', (e) => {
-                const novoTipo = e.target.value;
-                // Passa null para currentValue para que selecione a primeira opção do novo tipo (ou N/A)
-                updateEspecieOptions(novoTipo, null);
+                updateEspecieOptions(e.target.value, null);
             });
-
         } else if (tipo === "Ações") {
-            html = `
-                <div>
-                    <label class="form-label">Capitalização</label>
-                    <select name="Capitalização" class="form-select">
-                        <option value="Blue Chip" ${valores["Capitalização"] === "Blue Chip" ? "selected" : ""}>Blue Chip</option>
-                        <option value="Small Cap" ${valores["Capitalização"] === "Small Cap" ? "selected" : ""}>Small Cap</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="form-label">Setor</label>
-                    <select name="Setor BESST" class="form-select">
-                        <option value="Bancos" ${valores["Setor BESST"] === "Bancos" ? "selected" : ""}>Bancos</option>
-                        <option value="Energia" ${valores["Setor BESST"] === "Energia" ? "selected" : ""}>Energia</option>
-                        <option value="Saneamento" ${valores["Setor BESST"] === "Saneamento" ? "selected" : ""}>Saneamento</option>
-                        <option value="Seguros" ${valores["Setor BESST"] === "Seguros" ? "selected" : ""}>Seguros</option>
-                        <option value="Telecomunicações" ${valores["Setor BESST"] === "Telecomunicações" ? "selected" : ""}>Telecomunicações</option>
-                        <option value="Comodities" ${valores["Setor BESST"] === "Comodities" ? "selected" : ""}>Comodities</option>
-                        <option value="Petróleo, Gás e Biocombustíveis" ${valores["Setor BESST"] === "Petróleo, Gás e Biocombustíveis" ? "selected" : ""}>Petróleo, Gás e Biocombustíveis</option>
-                        <option value="Outro" ${valores["Setor BESST"] === "Outro" ? "selected" : ""}>Outro</option>
-                    </select>
-                </div>`;
-            fieldsContainer.innerHTML = html;
+            fieldsContainer.innerHTML = `<div><label class="form-label">Capitalização</label><select name="Capitalização" class="form-select"><option value="Blue Chip" ${valores["Capitalização"] === "Blue Chip" ? "selected" : ""}>Blue Chip</option><option value="Small Cap" ${valores["Capitalização"] === "Small Cap" ? "selected" : ""}>Small Cap</option></select></div><div><label class="form-label">Setor</label><select name="Setor BESST" class="form-select"><option value="Bancos" ${valores["Setor BESST"] === "Bancos" ? "selected" : ""}>Bancos</option><option value="Energia" ${valores["Setor BESST"] === "Energia" ? "selected" : ""}>Energia</option><option value="Saneamento" ${valores["Setor BESST"] === "Saneamento" ? "selected" : ""}>Saneamento</option><option value="Seguros" ${valores["Setor BESST"] === "Seguros" ? "selected" : ""}>Seguros</option><option value="Telecomunicações" ${valores["Setor BESST"] === "Telecomunicações" ? "selected" : ""}>Telecomunicações</option><option value="Comodities" ${valores["Setor BESST"] === "Comodities" ? "selected" : ""}>Comodities</option><option value="Petróleo, Gás e Biocombustíveis" ${valores["Setor BESST"] === "Petróleo, Gás e Biocombustíveis" ? "selected" : ""}>Petróleo, Gás e Biocombustíveis</option><option value="Outro" ${valores["Setor BESST"] === "Outro" ? "selected" : ""}>Outro</option></select></div>`;
         }
     };
 
@@ -466,55 +387,20 @@ function setupClassificacaoModal(userID) {
     };
 }
 
-
 // --- MODAL DE DETALHES DO ATIVO ---
-
 function setupAtivoDetalhesModal() {
-    // ... (cole aqui toda a lógica de setup e as funções 'openAtivoDetalhesModal',
-    // 'renderDetalhesLancamentos' e 'renderDetalhesProventos' do arquivo original)
-    // ...
     const ativoDetalhesModal = document.getElementById("ativo-detalhes-modal");
-
-    document.getElementById("fiis-lista").addEventListener("click", (e) => {
-        const card = e.target.closest(".fii-card");
-        if (card && card.dataset.ticker) {
-            openAtivoDetalhesModal(card.dataset.ticker, card.dataset.tipoAtivo);
-        }
-    });
-
-    document.getElementById("acoes-lista").addEventListener("click", (e) => {
-        const card = e.target.closest(".fii-card");
-        if (card && card.dataset.ticker) {
-            openAtivoDetalhesModal(card.dataset.ticker, card.dataset.tipoAtivo);
-        }
-    });
-
-    ativoDetalhesModal.addEventListener("click", (e) => {
-        if (e.target === ativoDetalhesModal || e.target.closest('.modal-close-btn')) {
-            ativoDetalhesModal.classList.remove("show");
-        }
-    });
-
-    ativoDetalhesModal.querySelector(".fii-detalhes-tabs").addEventListener("click", (e) => {
-        if (e.target.matches('.fii-detalhes-tab-link')) {
-            const tabId = e.target.dataset.tab;
-            ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
-            ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
-            e.target.classList.add('active');
-            document.getElementById(`ativo-detalhes-${tabId}`).classList.add('active');
-        }
-    });
 
     function openAtivoDetalhesModal(ticker, tipoAtivo) {
         document.getElementById("ativo-detalhes-modal-title").textContent = `Detalhes de ${ticker}`;
 
-        const lancamentosDoAtivo = allLancamentos.filter(l => l.ativo === ticker).sort((a, b) => new Date(a.data) - new Date(b.data));
-        const proventosDoAtivo = allProventosData.filter(p => p.ativo === ticker);
+        const lancamentosDoAtivo = (window.allLancamentos || []).filter(l => l.ativo === ticker).sort((a, b) => new Date(a.data) - new Date(b.data));
+        const proventosDoAtivo = (window.allProventos || []).filter(p => p.ativo === ticker);
 
         renderDetalhesLancamentos(lancamentosDoAtivo);
         renderDetalhesProventos(proventosDoAtivo);
         setTimeout(() => {
-            renderPerformanceChart(ticker, lancamentosDoAtivo);
+            renderPerformanceChart(ticker, lancamentosDoAtivo, window.allProventos);
         }, 100);
 
         // Reset para a primeira aba sempre que abrir
@@ -526,61 +412,28 @@ function setupAtivoDetalhesModal() {
         ativoDetalhesModal.classList.add("show");
     }
 
+    // A função é exposta globalmente para ser chamada de outros módulos
+    window.openAtivoDetalhesModal = openAtivoDetalhesModal;
+
     function renderDetalhesLancamentos(lancamentos) {
         const container = document.getElementById("ativo-detalhes-lancamentos");
         if (lancamentos.length === 0) {
             container.innerHTML = "<p>Nenhum lançamento para este ativo.</p>";
             return;
         }
-
         let totalCompras = 0;
         let totalVendas = 0;
-
         lancamentos.forEach(l => {
-            if (l.tipoOperacao === 'compra') {
-                totalCompras += l.valorTotal;
-            } else if (l.tipoOperacao === 'venda') {
-                totalVendas += l.valorTotal;
-            }
+            if (l.tipoOperacao === 'compra') totalCompras += l.valorTotal;
+            else if (l.tipoOperacao === 'venda') totalVendas += l.valorTotal;
         });
-
         const netTotal = totalCompras - totalVendas;
         const netClass = netTotal >= 0 ? 'positive-change' : 'negative-change';
-
-        let resumoHtml = `
-        <div class="detalhes-resumo-lancamentos" style="display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;">
-            <div class="resumo-item">
-                <span style="color: #a0a7b3; font-size: 0.85rem;">Total Compras</span>
-                <strong style="color: #22c55e;">${totalCompras.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-            </div>
-            <div class="resumo-item">
-                <span style="color: #a0a7b3; font-size: 0.85rem;">Total Vendas</span>
-                <strong style="color: #ef4444;">${totalVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-            </div>
-            <div class="resumo-item">
-                <span style="color: #a0a7b3; font-size: 0.85rem;">Total Líquido</span>
-                <strong class="${netClass}">${netTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-            </div>
-        </div>
-    `;
-
-        let listaHtml = `
-        <div class="detalhes-lista-header">
-            <div class="header-col">Data</div>
-            <div class="header-col">Operação</div>
-            <div class="header-col">Valor Total</div>
-        </div>
-    `;
+        let resumoHtml = `<div class="detalhes-resumo-lancamentos" style="display: flex; justify-content: space-between; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;"><div class="resumo-item"><span style="color: #a0a7b3; font-size: 0.85rem;">Total Compras</span><strong style="color: #22c55e;">${totalCompras.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div><div class="resumo-item"><span style="color: #a0a7b3; font-size: 0.85rem;">Total Vendas</span><strong style="color: #ef4444;">${totalVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div><div class="resumo-item"><span style="color: #a0a7b3; font-size: 0.85rem;">Total Líquido</span><strong class="${netClass}">${netTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div></div>`;
+        let listaHtml = `<div class="detalhes-lista-header"><div class="header-col">Data</div><div class="header-col">Operação</div><div class="header-col">Valor Total</div></div>`;
         lancamentos.forEach(l => {
-            listaHtml += `
-            <div class="detalhes-lista-item">
-                <div>${new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-                <div class="${l.tipoOperacao === 'compra' ? 'operacao-compra' : 'operacao-venda'}">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)} (${l.quantidade} x ${l.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})</div>
-                <div>${l.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-            </div>
-        `;
+            listaHtml += `<div class="detalhes-lista-item"><div>${new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div><div class="${l.tipoOperacao === 'compra' ? 'operacao-compra' : 'operacao-venda'}">${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)} (${l.quantidade} x ${l.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})</div><div>${l.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div></div>`;
         });
-
         container.innerHTML = resumoHtml + listaHtml;
     }
 
@@ -590,36 +443,26 @@ function setupAtivoDetalhesModal() {
             container.innerHTML = "<p>Nenhum provento para este ativo.</p>";
             return;
         }
-
         const totalProventos = proventos.reduce((acc, p) => acc + p.valor, 0);
-
-        let html = `
-        <div class="detalhes-resumo-proventos" style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;">
-            <span style="color: #a0a7b3; font-size: 0.85rem; display: block;">Total de Proventos Recebidos</span>
-            <strong style="color: #00d9c3; font-size: 1.5rem;">${totalProventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-        </div>
-        <div class="detalhes-lista-header">
-            <div class="header-col">Data Pag.</div>
-            <div class="header-col">Tipo</div>
-            <div class="header-col">Valor Recebido</div>
-        </div>
-    `;
+        let html = `<div class="detalhes-resumo-proventos" style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #2a2c30;"><span style="color: #a0a7b3; font-size: 0.85rem; display: block;">Total de Proventos Recebidos</span><strong style="color: #00d9c3; font-size: 1.5rem;">${totalProventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div><div class="detalhes-lista-header"><div class="header-col">Data Pag.</div><div class="header-col">Tipo</div><div class="header-col">Valor Recebido</div></div>`;
         proventos.forEach(p => {
-            html += `
-            <div class="detalhes-lista-item">
-                <div>${new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-                <div>${p.tipoProvento}</div>
-                <div style="color: #00d9c3;">${p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-            </div>
-        `;
+            html += `<div class="detalhes-lista-item"><div>${new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</div><div>${p.tipoProvento}</div><div style="color: #00d9c3;">${p.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div></div>`;
         });
         container.innerHTML = html;
     }
+
+    ativoDetalhesModal.querySelector(".fii-detalhes-tabs").addEventListener("click", (e) => {
+        if (e.target.matches('.fii-detalhes-tab-link')) {
+            const tabId = e.target.dataset.tab;
+            ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
+            ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
+            e.target.classList.add('active');
+            document.getElementById(`ativo-detalhes-${tabId}`).classList.add('active');
+        }
+    });
 }
 
-
 // --- FUNÇÃO DE SETUP PRINCIPAL ---
-
 export function setupAllModals(userID) {
     initializeCloseButtons();
     setupLancamentosModal(userID);
@@ -627,5 +470,5 @@ export function setupAllModals(userID) {
     setupProventoModal(userID);
     setupMetaProventosModal(userID);
     setupClassificacaoModal(userID);
-    setupAtivoDetalhesModal(); // Esta não depende do userID diretamente, mas sim dos dados globais
+    setupAtivoDetalhesModal();
 }

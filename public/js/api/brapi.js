@@ -2,7 +2,8 @@
 const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm";
 
 /**
- * Busca os preços atuais para uma lista de tickers.
+ * Busca os preços atuais para uma lista de tickers, fazendo uma requisição por ativo
+ * para se adequar ao plano gratuito da API Brapi.
  * @param {string[]} tickers - Um array de tickers. Ex: ['PETR4', 'VALE3']
  * @returns {Promise<{[ticker: string]: number}>} Um objeto mapeando cada ticker ao seu preço atual.
  */
@@ -12,22 +13,33 @@ export async function fetchCurrentPrices(tickers) {
     }
 
     const precosAtuais = {};
-    // A API da Brapi permite buscar múltiplos tickers de uma vez, separados por vírgula.
-    const tickersString = tickers.join(',');
+
+    // Cria um array de "promessas" de busca, uma para cada ticker.
+    const promises = tickers.map(ticker =>
+        fetch(`https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                // Se uma requisição falhar, avisa no console mas não quebra o processo.
+                console.warn(`Não foi possível buscar o preço para: ${ticker}`);
+                return null;
+            })
+    );
 
     try {
-        const response = await fetch(`https://brapi.dev/api/quote/${tickersString}?token=${BRAAPI_TOKEN}`);
-        const data = await response.json();
+        // Espera todas as requisições individuais terminarem.
+        const results = await Promise.all(promises);
 
-        if (response.ok && data && data.results) {
-            data.results.forEach(result => {
+        // Processa os resultados de cada requisição.
+        results.forEach(data => {
+            if (data && data.results && data.results[0]) {
+                const result = data.results[0];
                 precosAtuais[result.symbol] = result.regularMarketPrice;
-            });
-        } else {
-            console.warn(`Não foi possível buscar os preços para: ${tickersString}`);
-        }
+            }
+        });
     } catch (error) {
-        console.error("Erro ao buscar cotações na Brapi:", error);
+        console.error("Erro ao buscar múltiplas cotações na Brapi:", error);
     }
 
     return precosAtuais;

@@ -3,7 +3,6 @@ import { collection, doc, onSnapshot, query, where, orderBy } from "https://www.
 import { auth, db } from './firebase-config.js';
 import { initializeAuth } from './auth.js';
 import { initializeUI } from './ui.js';
-// CORREÇÃO AQUI: O caminho para modals.js mudou
 import { setupAllModals } from './api/modals.js';
 import { renderAcoesCarteira } from './tabs/acoes.js';
 import { renderFiisCarteira } from './tabs/fiis.js';
@@ -14,7 +13,6 @@ import { updateProventosTab } from './tabs/proventos.js';
 import { renderMovimentacaoChart } from './charts.js';
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
-// Estas variáveis guardam os dados principais para que não precisem ser buscados toda hora.
 let currentUserID = null;
 let allLancamentos = [];
 let allProventos = [];
@@ -31,21 +29,22 @@ const onLogin = (userID) => {
 // Função que será chamada quando o usuário fizer logout
 const onLogout = () => {
     currentUserID = null;
-    // Aqui você pode limpar os dados da tela se desejar
     allLancamentos = [];
     allProventos = [];
     allClassificacoes = {};
     currentProventosMeta = null;
-    // TODO: Adicionar funções para limpar cada aba da interface
+    // Limpar a interface (TODO: Adicionar funções para limpar cada aba)
 };
 
 // --- OUVINTES DE DADOS (LISTENERS) ---
-// Ficam "escutando" em tempo real qualquer alteração no banco de dados.
 function initializeDataListeners(userID) {
     // Listener para Lançamentos
     const qLancamentos = query(collection(db, "lancamentos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
     onSnapshot(qLancamentos, (snapshot) => {
         allLancamentos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        // Disponibiliza os dados globalmente para outros módulos
+        window.allLancamentos = allLancamentos;
+
         // Re-renderiza tudo que depende dos lançamentos
         renderHistorico(allLancamentos);
         renderMovimentacaoChart(allLancamentos);
@@ -59,9 +58,12 @@ function initializeDataListeners(userID) {
     const qProventos = query(collection(db, "proventos"), where("userID", "==", userID), orderBy("dataPagamento", "desc"));
     onSnapshot(qProventos, (snapshot) => {
         allProventos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        // Disponibiliza os dados globalmente para outros módulos
+        window.allProventos = allProventos;
+
         // Re-renderiza tudo que depende de proventos
         updateProventosTab(allProventos, currentProventosMeta);
-        renderAcoesCarteira(allLancamentos, allProventos); // Precisa re-renderizar para atualizar proventos nos cards
+        renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
     });
 
@@ -82,7 +84,6 @@ function initializeDataListeners(userID) {
 }
 
 // --- INICIALIZAÇÃO GERAL ---
-// O código começa a rodar aqui quando a página carrega.
 document.addEventListener("DOMContentLoaded", () => {
     initializeAuth(onLogin, onLogout);
     initializeUI();
