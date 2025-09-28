@@ -509,6 +509,20 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 217, 195, 0.2);
 }
+/* NOVO ESTILO PARA BOTÃO SECUNDÁRIO */
+.btn-secondary {
+    background-color: transparent;
+    border: 1px solid #3a404d;
+    color: #a0a7b3 !important; /* Important para sobrescrever a cor base */
+}
+
+.btn-secondary:hover {
+    background-color: #2a2c30;
+    border-color: #a0a7b3;
+    color: #e0e0e0 !important;
+    box-shadow: none; /* Remove a sombra do hover primário */
+}
+
 .content-container {
   max-width: 900px;
   margin: 0 auto;
