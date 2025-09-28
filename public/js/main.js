@@ -18,6 +18,7 @@ let allLancamentos = [];
 let allProventos = [];
 let allClassificacoes = {};
 let currentProventosMeta = null;
+let allValoresManuaisTD = {}; // Novo estado para valores manuais
 
 // Função que será chamada quando o usuário fizer login
 const onLogin = (userID) => {
@@ -33,7 +34,7 @@ const onLogout = () => {
     allProventos = [];
     allClassificacoes = {};
     currentProventosMeta = null;
-    // Limpar a interface (TODO: Adicionar funções para limpar cada aba)
+    allValoresManuaisTD = {}; // Limpa o estado no logout
 };
 
 // --- OUVINTES DE DADOS (LISTENERS) ---
@@ -42,16 +43,13 @@ function initializeDataListeners(userID) {
     const qLancamentos = query(collection(db, "lancamentos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
     onSnapshot(qLancamentos, (snapshot) => {
         allLancamentos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        // Disponibiliza os dados globalmente para outros módulos
         window.allLancamentos = allLancamentos;
 
-        // Re-renderiza tudo que depende dos lançamentos
         renderHistorico(allLancamentos);
         renderMovimentacaoChart(allLancamentos);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
-        // A LINHA ABAIXO FOI CORRIGIDA
-        renderRendaFixaCarteira(allLancamentos, userID);
+        renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
     });
 
@@ -59,10 +57,8 @@ function initializeDataListeners(userID) {
     const qProventos = query(collection(db, "proventos"), where("userID", "==", userID), orderBy("dataPagamento", "desc"));
     onSnapshot(qProventos, (snapshot) => {
         allProventos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        // Disponibiliza os dados globalmente para outros módulos
         window.allProventos = allProventos;
 
-        // Re-renderiza tudo que depende de proventos
         updateProventosTab(allProventos, currentProventosMeta);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
@@ -81,6 +77,18 @@ function initializeDataListeners(userID) {
     onSnapshot(metaDocRef, (doc) => {
         currentProventosMeta = doc.exists() ? doc.data() : null;
         updateProventosTab(allProventos, currentProventosMeta);
+    });
+
+    // NOVO: Listener para Valores Manuais do Tesouro Direto
+    const qValoresManuais = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID));
+    onSnapshot(qValoresManuais, (snapshot) => {
+        allValoresManuaisTD = {};
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            allValoresManuaisTD[data.ativo] = { id: doc.id, ...data };
+        });
+        // Re-renderiza a Renda Fixa sempre que um valor manual for alterado
+        renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
     });
 }
 

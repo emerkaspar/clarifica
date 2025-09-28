@@ -1,13 +1,14 @@
 import { fetchIndexers } from '../api/bcb.js';
 import { db } from '../firebase-config.js';
-import { doc, deleteDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 /**
  * Renderiza os cards da carteira de Renda Fixa.
  * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
  * @param {string} userID - O ID do usuário logado.
+ * @param {object} valoresManuais - Objeto com os valores manuais salvos para o Tesouro.
  */
-export async function renderRendaFixaCarteira(lancamentos, userID) {
+export async function renderRendaFixaCarteira(lancamentos, userID, valoresManuais) {
     const rendaFixaListaDiv = document.getElementById("rendafixa-lista");
     if (!rendaFixaListaDiv) return;
 
@@ -21,29 +22,16 @@ export async function renderRendaFixaCarteira(lancamentos, userID) {
     }
 
     try {
-        // Busca todos os valores manuais do usuário de uma vez
-        const q = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID));
-        const querySnapshot = await getDocs(q);
-        const valoresManuais = {};
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            valoresManuais[data.ativo] = { valor: data.valor, data: data.data };
-        });
-
         const hoje = new Date();
         const dataMaisAntiga = rfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, rfLancamentos[0].data);
 
-        // 1. Busca os indexadores usando o módulo da API do BCB
         const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
 
-        // 2. Gera o HTML para cada ativo de renda fixa
         const htmlPromises = rfLancamentos.map(async (ativo) => {
             let valorBase = ativo.valorAplicado;
             let dataBase = ativo.data;
 
-            // **NOVA LÓGICA**: Verifica se existe um valor manual e multiplica pela quantidade
-            if (ativo.tipoAtivo === 'Tesouro Direto' && valoresManuais[ativo.ativo]) {
-                // Multiplica o valor unitário manual pela quantidade do ativo
+            if (ativo.tipoAtivo === 'Tesouro Direto' && valoresManuais && valoresManuais[ativo.ativo]) {
                 valorBase = valoresManuais[ativo.ativo].valor * ativo.quantidade;
                 dataBase = valoresManuais[ativo.ativo].data;
             }
@@ -52,7 +40,6 @@ export async function renderRendaFixaCarteira(lancamentos, userID) {
             let valorBruto = valorBase;
             const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
 
-            // --- Lógica de cálculo da rentabilidade ---
             if (ativo.tipoRentabilidade === 'Pós-Fixado') {
                 let acumuladorCDI = 1;
                 const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
@@ -90,7 +77,6 @@ export async function renderRendaFixaCarteira(lancamentos, userID) {
                 const diasUteis = diasCorridosCalculo * (252 / 365.25);
                 valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
             }
-            // --- Fim da lógica de cálculo ---
 
             const lucro = valorBruto - ativo.valorAplicado;
             let aliquotaIR = 0;

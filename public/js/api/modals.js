@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { db } from '../firebase-config.js';
 import { searchAssets } from './brapi.js';
 import { renderPerformanceChart } from '../charts.js';
@@ -392,11 +392,34 @@ function setupAtualizarValorTdModal(userID) {
     const modal = document.getElementById("atualizar-valor-td-modal");
     const form = document.getElementById("form-atualizar-valor-td");
     const selectAtivo = document.getElementById("atualizar-td-ativo");
+    const historicoDiv = document.getElementById("historico-valores-manuais-lista");
+    const hoje = new Date().toISOString().split("T")[0];
+
+    const renderHistoricoValoresManuais = (valores) => {
+        if (valores.length === 0) {
+            historicoDiv.innerHTML = '<p style="font-size: 0.8rem; color: #a0a7b3;">Nenhum valor manual salvo.</p>';
+            return;
+        }
+        historicoDiv.innerHTML = valores.map(v => `
+            <div class="lista-item" style="grid-template-columns: 2fr 1fr 1fr auto; min-width: 400px; padding: 10px 15px;">
+                <div class="lista-item-valor">${v.ativo}</div>
+                <div class="lista-item-valor">${new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+                <div class="lista-item-valor">${v.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                <div class="lista-acoes">
+                    <button class="btn-crud btn-editar-valor-manual" data-id="${v.id}" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                    <button class="btn-crud btn-excluir-valor-manual" data-id="${v.id}" title="Excluir"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                </div>
+            </div>
+        `).join('');
+    };
 
     document.getElementById("btn-atualizar-valor-td").addEventListener("click", () => {
-        // Popula o select com os títulos de Tesouro Direto do usuário
-        const tesouroLancamentos = (window.allLancamentos || [])
-            .filter(l => l.tipoAtivo === 'Tesouro Direto');
+        form.reset();
+        form["atualizar-td-doc-id"].value = '';
+        form['data-posicao'].value = hoje;
+        form.querySelector('.btn-salvar').innerHTML = '<i class="fas fa-save"></i> Salvar Valor';
+
+        const tesouroLancamentos = (window.allLancamentos || []).filter(l => l.tipoAtivo === 'Tesouro Direto');
         const titulosUnicos = [...new Set(tesouroLancamentos.map(l => l.ativo))];
 
         selectAtivo.innerHTML = '<option value="">Selecione um título</option>';
@@ -408,12 +431,18 @@ function setupAtualizarValorTdModal(userID) {
             selectAtivo.innerHTML = '<option value="">Nenhum Tesouro Direto na carteira</option>';
         }
 
-        form.reset();
+        const q = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID), orderBy("timestamp", "desc"), limit(5));
+        onSnapshot(q, (snapshot) => {
+            const valores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderHistoricoValoresManuais(valores);
+        });
+
         modal.classList.add("show");
     });
 
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
+        const docId = form["atualizar-td-doc-id"].value;
         const ativo = form.ativo.value;
         const dataPosicao = form["data-posicao"].value;
         const valorAtual = parseFloat(form["valor-atual"].value);
@@ -423,7 +452,6 @@ function setupAtualizarValorTdModal(userID) {
             return;
         }
 
-        const docId = `${userID}_${ativo.replace(/\s+/g, '_')}`; // Cria um ID único
         const valorManualData = {
             userID: userID,
             ativo: ativo,
@@ -433,16 +461,51 @@ function setupAtualizarValorTdModal(userID) {
         };
 
         try {
-            await setDoc(doc(db, "valoresManuaisTD", docId), valorManualData, { merge: true });
-            closeModal("atualizar-valor-td-modal");
-            alert("Valor manual salvo com sucesso!");
+            if (docId) { // Editando
+                await updateDoc(doc(db, "valoresManuaisTD", docId), valorManualData);
+                alert("Valor atualizado com sucesso!");
+            } else { // Criando novo
+                const newDocId = `${userID}_${ativo.replace(/[\s/.]+/g, '_')}`;
+                await setDoc(doc(db, "valoresManuaisTD", newDocId), valorManualData, { merge: true });
+                alert("Valor manual salvo com sucesso!");
+            }
+            form.reset();
+            form["atualizar-td-doc-id"].value = '';
+            form['data-posicao'].value = hoje;
+            form.querySelector('.btn-salvar').innerHTML = '<i class="fas fa-save"></i> Salvar Valor';
+
         } catch (error) {
             console.error("Erro ao salvar valor manual do Tesouro: ", error);
             alert("Erro ao salvar: " + error.message);
         }
     });
-}
 
+    historicoDiv.addEventListener("click", async (e) => {
+        const button = e.target.closest('button.btn-crud');
+        if (!button) return;
+
+        const docId = button.dataset.id;
+        const docRef = doc(db, 'valoresManuaisTD', docId);
+
+        if (button.classList.contains('btn-excluir-valor-manual')) {
+            if (confirm('Tem certeza que deseja excluir este valor manual?')) {
+                await deleteDoc(docRef);
+                alert('Valor excluído.');
+            }
+        } else if (button.classList.contains('btn-editar-valor-manual')) {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                form.ativo.value = data.ativo;
+                form['data-posicao'].value = data.data;
+                form['valor-atual'].value = data.valor;
+                form['atualizar-td-doc-id'].value = docId;
+                form.querySelector('.btn-salvar').innerHTML = '<i class="fas fa-edit"></i> Atualizar Valor';
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    });
+}
 
 // --- MODAL DE DETALHES DO ATIVO ---
 function setupAtivoDetalhesModal() {
@@ -469,7 +532,6 @@ function setupAtivoDetalhesModal() {
         ativoDetalhesModal.classList.add("show");
     }
 
-    // A função é exposta globalmente para ser chamada de outros módulos
     window.openAtivoDetalhesModal = openAtivoDetalhesModal;
 
     function renderDetalhesLancamentos(lancamentos) {
@@ -528,5 +590,5 @@ export function setupAllModals(userID) {
     setupMetaProventosModal(userID);
     setupClassificacaoModal(userID);
     setupAtivoDetalhesModal();
-    setupAtualizarValorTdModal(userID); // Adiciona o novo modal
+    setupAtualizarValorTdModal(userID);
 }
