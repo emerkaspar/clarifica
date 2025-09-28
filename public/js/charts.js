@@ -367,7 +367,6 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
         performanceChart = null;
     }
 
-    // ... (cole aqui toda a lógica da função renderPerformanceChart do seu arquivo original)
     const container = document.getElementById('ativo-detalhes-performance');
 
     if (performanceChart) {
@@ -457,22 +456,35 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
             }
         });
 
-        const normalizarIndice = (dadosIndice) => {
+        // LÓGICA CORRIGIDA: Função de normalização mais robusta
+        const normalizarIndice = (dadosIndice, dataInicioStr) => {
+            if (!dadosIndice || !dadosIndice.results || dadosIndice.results.length === 0) return {};
+
             const precosHistoricos = dadosIndice.results[0].historicalDataPrice;
             if (!precosHistoricos || precosHistoricos.length === 0) return {};
 
-            const indiceNoPrimeiroDia = precosHistoricos.find(item => new Date(item.date * 1000).toISOString().split('T')[0] === dataInicioStr)?.close;
-            if (!indiceNoPrimeiroDia) return {};
+            // Encontra o primeiro preço disponível na data de início ou APÓS ela
+            const primeiroPrecoDisponivel = precosHistoricos.find(item =>
+                new Date(item.date * 1000).toISOString().split('T')[0] >= dataInicioStr
+            );
+
+            if (!primeiroPrecoDisponivel) {
+                console.warn(`Não foi possível encontrar um preço base para normalizar o índice ${dadosIndice.results[0].symbol}`);
+                return {};
+            }
+
+            const valorBase = primeiroPrecoDisponivel.close;
 
             return precosHistoricos.reduce((acc, item) => {
                 const data = new Date(item.date * 1000).toISOString().split('T')[0];
-                acc[data] = ((item.close / indiceNoPrimeiroDia) - 1) * 100;
+                acc[data] = ((item.close / valorBase) - 1) * 100;
                 return acc;
             }, {});
         };
 
-        const historicoIBOV = (dadosIBOV && dadosIBOV.results && dadosIBOV.results.length > 0) ? normalizarIndice(dadosIBOV) : {};
-        const historicoIVVB11 = (dadosIVVB11 && dadosIVVB11.results && dadosIVVB11.results.length > 0) ? normalizarIndice(dadosIVVB11) : {};
+        const historicoIBOV = normalizarIndice(dadosIBOV, dataInicioStr);
+        const historicoIVVB11 = normalizarIndice(dadosIVVB11, dataInicioStr);
+
 
         const labels = [];
         const dataCarteira = [];

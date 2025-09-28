@@ -132,6 +132,7 @@ function setupLancamentosModal(userID) {
     document.getElementById("btn-mostrar-form").addEventListener("click", () => window.openLancamentoModal());
     document.getElementById("btn-novo-lancamento-fii").addEventListener("click", () => window.openLancamentoModal({}, "", "FIIs"));
     document.getElementById("btn-novo-lancamento-acao").addEventListener("click", () => window.openLancamentoModal({}, "", "Ações"));
+    document.getElementById("btn-novo-lancamento-etf").addEventListener("click", () => window.openLancamentoModal({ ativo: 'IVVB11' }, "", "ETF"));
 }
 
 // --- MODAL DE RENDA FIXA ---

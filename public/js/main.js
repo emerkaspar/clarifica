@@ -6,6 +6,7 @@ import { initializeUI } from './ui.js';
 import { setupAllModals } from './api/modals.js';
 import { renderAcoesCarteira } from './tabs/acoes.js';
 import { renderFiisCarteira } from './tabs/fiis.js';
+import { renderEtfCarteira } from './tabs/etf.js';
 import { renderRendaFixaCarteira } from './tabs/rendaFixa.js';
 import { renderHistorico } from './tabs/lancamentos.js';
 import { renderClassificacao } from './tabs/classificacao.js';
@@ -49,6 +50,7 @@ function initializeDataListeners(userID) {
         renderMovimentacaoChart(allLancamentos);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
+        renderEtfCarteira(allLancamentos, allProventos);
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
     });
@@ -62,6 +64,7 @@ function initializeDataListeners(userID) {
         updateProventosTab(allProventos, currentProventosMeta);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
+        renderEtfCarteira(allLancamentos, allProventos);
     });
 
     // Listener para Classificações
