@@ -50,7 +50,8 @@ function initializeDataListeners(userID) {
         renderMovimentacaoChart(allLancamentos);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
-        renderRendaFixaCarteira(allLancamentos);
+        // A LINHA ABAIXO FOI CORRIGIDA
+        renderRendaFixaCarteira(allLancamentos, userID);
         renderClassificacao(allLancamentos, allClassificacoes);
     });
 

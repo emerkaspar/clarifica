@@ -326,9 +326,14 @@
                 <div class="content-container" style="max-width: none">
                     <div class="content-header">
                         <h3>Carteira de Renda Fixa</h3>
-                        <button id="btn-novo-lancamento-rendafixa" class="btn-adicionar">
-                            <i class="fas fa-plus"></i> Novo Lançamento
-                        </button>
+                        <div>
+                          <button id="btn-atualizar-valor-td" class="btn-adicionar" style="background-color: #5A67D8; margin-right: 10px;">
+                              <i class="fas fa-edit"></i> Atualizar Valor Manual
+                          </button>
+                          <button id="btn-novo-lancamento-rendafixa" class="btn-adicionar">
+                              <i class="fas fa-plus"></i> Novo Lançamento
+                          </button>
+                        </div>
                     </div>
                     <div id="rendafixa-lista" class="fiis-grid-container">
                         <p>Nenhum ativo de Renda Fixa lançado ainda.</p>
@@ -805,6 +810,40 @@
         </div>
       </div>
     </div>
+
+    <div id="atualizar-valor-td-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="atualizar-valor-td-modal-title">Atualizar Valor Manual do Tesouro</h2>
+                <button class="modal-close-btn" data-modal="atualizar-valor-td-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-atualizar-valor-td">
+                    <div class="form-grid" style="grid-template-columns: 1fr;">
+                        <div>
+                            <label for="atualizar-td-ativo" class="form-label">Selecione o Título do Tesouro</label>
+                            <select id="atualizar-td-ativo" name="ativo" class="form-select" required>
+                                </select>
+                        </div>
+                        <div class="input-icon-wrapper">
+                            <label for="atualizar-td-data" class="form-label">Data da Posição</label>
+                            <i class="fas fa-calendar-alt"></i>
+                            <input type="date" id="atualizar-td-data" name="data-posicao" class="form-input" required/>
+                        </div>
+                         <div>
+                            <label for="atualizar-td-valor" class="form-label">Valor Atual do Título (Bruto)</label>
+                            <input type="number" id="atualizar-td-valor" name="valor-atual" placeholder="1234,56" step="0.01" class="form-input" required/>
+                        </div>
+                    </div>
+                     <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
+                        <button type="button" class="btn-cancelar" data-modal="atualizar-valor-td-modal">Cancelar</button>
+                        <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar Valor</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 
     <script src="js/main.js" type="module"></script>
   </body>

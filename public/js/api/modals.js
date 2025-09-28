@@ -387,6 +387,63 @@ function setupClassificacaoModal(userID) {
     };
 }
 
+// --- MODAL DE ATUALIZAR VALOR DO TESOURO DIRETO ---
+function setupAtualizarValorTdModal(userID) {
+    const modal = document.getElementById("atualizar-valor-td-modal");
+    const form = document.getElementById("form-atualizar-valor-td");
+    const selectAtivo = document.getElementById("atualizar-td-ativo");
+
+    document.getElementById("btn-atualizar-valor-td").addEventListener("click", () => {
+        // Popula o select com os títulos de Tesouro Direto do usuário
+        const tesouroLancamentos = (window.allLancamentos || [])
+            .filter(l => l.tipoAtivo === 'Tesouro Direto');
+        const titulosUnicos = [...new Set(tesouroLancamentos.map(l => l.ativo))];
+
+        selectAtivo.innerHTML = '<option value="">Selecione um título</option>';
+        if (titulosUnicos.length > 0) {
+            titulosUnicos.forEach(titulo => {
+                selectAtivo.innerHTML += `<option value="${titulo}">${titulo}</option>`;
+            });
+        } else {
+            selectAtivo.innerHTML = '<option value="">Nenhum Tesouro Direto na carteira</option>';
+        }
+
+        form.reset();
+        modal.classList.add("show");
+    });
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const ativo = form.ativo.value;
+        const dataPosicao = form["data-posicao"].value;
+        const valorAtual = parseFloat(form["valor-atual"].value);
+
+        if (!ativo || !dataPosicao || !valorAtual) {
+            alert("Por favor, preencha todos os campos.");
+            return;
+        }
+
+        const docId = `${userID}_${ativo.replace(/\s+/g, '_')}`; // Cria um ID único
+        const valorManualData = {
+            userID: userID,
+            ativo: ativo,
+            data: dataPosicao,
+            valor: valorAtual,
+            timestamp: serverTimestamp(),
+        };
+
+        try {
+            await setDoc(doc(db, "valoresManuaisTD", docId), valorManualData, { merge: true });
+            closeModal("atualizar-valor-td-modal");
+            alert("Valor manual salvo com sucesso!");
+        } catch (error) {
+            console.error("Erro ao salvar valor manual do Tesouro: ", error);
+            alert("Erro ao salvar: " + error.message);
+        }
+    });
+}
+
+
 // --- MODAL DE DETALHES DO ATIVO ---
 function setupAtivoDetalhesModal() {
     const ativoDetalhesModal = document.getElementById("ativo-detalhes-modal");
@@ -471,4 +528,5 @@ export function setupAllModals(userID) {
     setupMetaProventosModal(userID);
     setupClassificacaoModal(userID);
     setupAtivoDetalhesModal();
+    setupAtualizarValorTdModal(userID); // Adiciona o novo modal
 }

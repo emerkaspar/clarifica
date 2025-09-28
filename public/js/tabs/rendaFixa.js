@@ -1,12 +1,13 @@
 import { fetchIndexers } from '../api/bcb.js';
 import { db } from '../firebase-config.js';
-import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { doc, deleteDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 /**
  * Renderiza os cards da carteira de Renda Fixa.
  * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
+ * @param {string} userID - O ID do usuário logado.
  */
-export async function renderRendaFixaCarteira(lancamentos) {
+export async function renderRendaFixaCarteira(lancamentos, userID) {
     const rendaFixaListaDiv = document.getElementById("rendafixa-lista");
     if (!rendaFixaListaDiv) return;
 
@@ -20,6 +21,15 @@ export async function renderRendaFixaCarteira(lancamentos) {
     }
 
     try {
+        // Busca todos os valores manuais do usuário de uma vez
+        const q = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID));
+        const querySnapshot = await getDocs(q);
+        const valoresManuais = {};
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            valoresManuais[data.ativo] = { valor: data.valor, data: data.data };
+        });
+
         const hoje = new Date();
         const dataMaisAntiga = rfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, rfLancamentos[0].data);
 
@@ -27,47 +37,57 @@ export async function renderRendaFixaCarteira(lancamentos) {
         const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
 
         // 2. Gera o HTML para cada ativo de renda fixa
-        const html = rfLancamentos.map(ativo => {
-            const dataAplicacao = new Date(ativo.data + 'T00:00:00');
-            let valorBruto = ativo.valorAplicado;
-            const diasCorridos = Math.floor((hoje - dataAplicacao) / (1000 * 60 * 60 * 24));
+        const htmlPromises = rfLancamentos.map(async (ativo) => {
+            let valorBase = ativo.valorAplicado;
+            let dataBase = ativo.data;
+
+            // **NOVA LÓGICA**: Verifica se existe um valor manual e multiplica pela quantidade
+            if (ativo.tipoAtivo === 'Tesouro Direto' && valoresManuais[ativo.ativo]) {
+                // Multiplica o valor unitário manual pela quantidade do ativo
+                valorBase = valoresManuais[ativo.ativo].valor * ativo.quantidade;
+                dataBase = valoresManuais[ativo.ativo].data;
+            }
+
+            const dataCalculo = new Date(dataBase + 'T00:00:00');
+            let valorBruto = valorBase;
+            const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
 
             // --- Lógica de cálculo da rentabilidade ---
             if (ativo.tipoRentabilidade === 'Pós-Fixado') {
                 let acumuladorCDI = 1;
                 const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
-
                 historicoCDI
                     .filter(item => {
                         const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
-                        return itemDate >= dataAplicacao && itemDate <= hoje;
+                        return itemDate >= dataCalculo && itemDate <= hoje;
                     })
                     .forEach(item => {
                         acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI);
                     });
-                valorBruto = ativo.valorAplicado * acumuladorCDI;
+                valorBruto = valorBase * acumuladorCDI;
 
             } else if (ativo.tipoRentabilidade === 'Prefixado') {
                 const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
-                const diasUteis = diasCorridos * (252 / 365.25);
-                valorBruto = ativo.valorAplicado * Math.pow(1 + taxaAnual, diasUteis / 252);
+                const diasUteis = diasCorridosCalculo * (252 / 365.25);
+                valorBruto = valorBase * Math.pow(1 + taxaAnual, diasUteis / 252);
 
             } else if (ativo.tipoRentabilidade === 'Híbrido') {
                 let acumuladorIPCA = 1;
-                const taxaPrefixadaAnual = parseFloat(ativo.taxaContratada.match(/(\d+(\.\d+)?)%/)[1]) / 100;
+                const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
+                const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
 
                 historicoIPCA
                     .filter(item => {
                         const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
-                        return itemDate.getFullYear() > dataAplicacao.getFullYear() ||
-                            (itemDate.getFullYear() === dataAplicacao.getFullYear() && itemDate.getMonth() >= dataAplicacao.getMonth());
+                        return itemDate.getFullYear() > dataCalculo.getFullYear() ||
+                            (itemDate.getFullYear() === dataCalculo.getFullYear() && itemDate.getMonth() >= dataCalculo.getMonth());
                     })
                     .forEach(item => {
                         acumuladorIPCA *= (1 + parseFloat(item.valor) / 100);
                     });
 
-                const valorCorrigido = ativo.valorAplicado * acumuladorIPCA;
-                const diasUteis = diasCorridos * (252 / 365.25);
+                const valorCorrigido = valorBase * acumuladorIPCA;
+                const diasUteis = diasCorridosCalculo * (252 / 365.25);
                 valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
             }
             // --- Fim da lógica de cálculo ---
@@ -76,9 +96,10 @@ export async function renderRendaFixaCarteira(lancamentos) {
             let aliquotaIR = 0;
             const isentoIR = ['LCI', 'LCA'].includes(ativo.tipoAtivo);
             if (lucro > 0 && !isentoIR) {
-                if (diasCorridos <= 180) aliquotaIR = 0.225;
-                else if (diasCorridos <= 360) aliquotaIR = 0.20;
-                else if (diasCorridos <= 720) aliquotaIR = 0.175;
+                const diasTotaisDesdeAplicacao = Math.floor((hoje - new Date(ativo.data + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+                if (diasTotaisDesdeAplicacao <= 180) aliquotaIR = 0.225;
+                else if (diasTotaisDesdeAplicacao <= 360) aliquotaIR = 0.20;
+                else if (diasTotaisDesdeAplicacao <= 720) aliquotaIR = 0.175;
                 else aliquotaIR = 0.15;
             }
             const impostoDevido = lucro * aliquotaIR;
@@ -135,9 +156,10 @@ export async function renderRendaFixaCarteira(lancamentos) {
                     </div>
                 </div>
             `;
-        }).join('');
+        });
 
-        rendaFixaListaDiv.innerHTML = html;
+        const html = await Promise.all(htmlPromises);
+        rendaFixaListaDiv.innerHTML = html.join('');
 
     } catch (error) {
         console.error("Erro ao renderizar carteira de Renda Fixa:", error);
