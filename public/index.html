@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
-    <meta charset="utf-," />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CLARIFICA - O seu farol de investimentos</title>
     <link
@@ -19,106 +19,16 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
-    
+
     <script src="js/chart.umd.min.js"></script>
     <script src="js/luxon.min.js"></script>
-    <script src="js/chartjs-adapter-luxon.min.js"></script> 
-    
+    <script src="js/chartjs-adapter-luxon.min.js"></script>
+
     <link rel="stylesheet" href="css/style.css" />
-</head>
-</head>
+  </head>
   <body>
     <div class="container">
       <div class="top-menu-container">
-        <div class="container">
-    <div class="top-menu-container">
-        <div class="top-menu-left">
-            <a href="#" class="logo"><img
-                src="https://raw.githubusercontent.com/emerkaspar/clarifica/refs/heads/main/Clarifica_logo.png"
-                alt="Logomarca Clarifica"
-            /></a>
-        </div>
-
-        <div class="main-summary-header">
-            <div class="summary-card-item">
-                <div class="summary-title">
-                    <i class="fas fa-wallet"></i>
-                    <span>Patrimônio total</span>
-                </div>
-                <div class="summary-main-value" id="summary-patrimonio-total">R$ 0,00</div>
-                <div class="summary-sub-line">
-                    <span id="summary-valor-investido">Valor investido: R$ 0,00</span>
-                    <span class="summary-pill" id="summary-patrimonio-percent">0,00%</span>
-                </div>
-            </div>
-            <div class="summary-card-item">
-                <div class="summary-title">
-                    <i class="fas fa-chart-pie"></i>
-                    <span>Lucro total</span>
-                </div>
-                <div class="summary-main-value" id="summary-lucro-total">R$ 0,00</div>
-                <div class="summary-sub-line multiple">
-                    <div>
-                        <span>Ganho de Capital</span>
-                        <span class="sub-value" id="summary-ganho-capital">R$ 0,00</span>
-                    </div>
-                    <div>
-                        <span>Dividendos recebidos</span>
-                        <span class="sub-value" id="summary-dividendos-recebidos">R$ 0,00</span>
-                    </div>
-                </div>
-            </div>
-            <div class="summary-card-item">
-                <div class="summary-title">
-                    <i class="fas fa-hand-holding-usd"></i>
-                    <span>Proventos recebidos (12M)</span>
-                </div>
-                <div class="summary-main-value" id="summary-proventos-12m">R$ 0,00</div>
-                <div class="summary-sub-line">
-                    <span id="summary-proventos-total">Total: R$ 0,00</span>
-                </div>
-            </div>
-            <div class="summary-card-item">
-                <div class="summary-title-group">
-                    <div class="summary-title small">
-                        <span>Variação</span>
-                        <i class="fas fa-info-circle" title="Variação do patrimônio sem contar os proventos."></i>
-                    </div>
-                    <div class="summary-title small">
-                        <span>Rentabilidade</span>
-                        <i class="fas fa-info-circle" title="Variação do patrimônio somada a todos os proventos recebidos."></i>
-                    </div>
-                </div>
-                <div class="summary-main-value-group">
-                    <div>
-                        <span class="summary-main-value small positive" id="summary-variacao-percent">0,00%</span>
-                        <span class="sub-value" id="summary-variacao-valor">+ R$ 0,00</span>
-                    </div>
-                    <div>
-                        <span class="summary-main-value small positive" id="summary-rentabilidade-percent">0,00%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <nav class="header-nav">
-            <a href="#">Funcionalidades</a>
-            <a href="#">Para Quem é?</a>
-            <a href="#">Contato</a>
-        </nav>
-        <div class="top-menu-right">
-            ```
-
-### 2. Estilos CSS (`public/css/style.css`)
-
-Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicionamos na etapa anterior por este novo código. Ele irá reformatar os cards para o novo local.
-
-**Substitua isto:**
-
-```css
-/* --- ESTILOS PARA O CABEÇALHO DE RESUMO PRINCIPAL --- */
-.main-summary-header { ... }
-.summary-card-item { ... }
-/* ... (todas as regras até .summary-main-value.small) ... */
         <div class="top-menu-left">
           <a href="#" class="logo"
             ><img
@@ -126,11 +36,103 @@ Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicion
               alt="Logomarca Clarifica"
           /></a>
         </div>
+
+        <div class="main-summary-header">
+          <div class="summary-card-item">
+            <div class="summary-title">
+              <i class="fas fa-wallet"></i>
+              <span>Patrimônio total</span>
+            </div>
+            <div class="summary-main-value" id="summary-patrimonio-total">
+              R$ 0,00
+            </div>
+            <div class="summary-sub-line">
+              <span id="summary-valor-investido">Valor investido: R$ 0,00</span>
+              <span class="summary-pill" id="summary-patrimonio-percent"
+                >0,00%</span
+              >
+            </div>
+          </div>
+          <div class="summary-card-item">
+            <div class="summary-title">
+              <i class="fas fa-chart-pie"></i>
+              <span>Lucro total</span>
+            </div>
+            <div class="summary-main-value" id="summary-lucro-total">
+              R$ 0,00
+            </div>
+            <div class="summary-sub-line multiple">
+              <div>
+                <span>Ganho de Capital</span>
+                <span class="sub-value" id="summary-ganho-capital"
+                  >R$ 0,00</span
+                >
+              </div>
+              <div>
+                <span>Dividendos recebidos</span>
+                <span class="sub-value" id="summary-dividendos-recebidos"
+                  >R$ 0,00</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="summary-card-item">
+            <div class="summary-title">
+              <i class="fas fa-hand-holding-usd"></i>
+              <span>Proventos recebidos (12M)</span>
+            </div>
+            <div class="summary-main-value" id="summary-proventos-12m">
+              R$ 0,00
+            </div>
+            <div class="summary-sub-line">
+              <span id="summary-proventos-total">Total: R$ 0,00</span>
+            </div>
+          </div>
+          <div class="summary-card-item">
+            <div class="summary-title-group">
+              <div class="summary-title small">
+                <span>Variação</span>
+                <i
+                  class="fas fa-info-circle"
+                  title="Variação do patrimônio sem contar os proventos."
+                ></i>
+              </div>
+              <div class="summary-title small">
+                <span>Rentabilidade</span>
+                <i
+                  class="fas fa-info-circle"
+                  title="Variação do patrimônio somada a todos os proventos recebidos."
+                ></i>
+              </div>
+            </div>
+            <div class="summary-main-value-group">
+              <div>
+                <span
+                  class="summary-main-value small positive"
+                  id="summary-variacao-percent"
+                  >0,00%</span
+                >
+                <span class="sub-value" id="summary-variacao-valor"
+                  >+ R$ 0,00</span
+                >
+              </div>
+              <div>
+                <span
+                  class="summary-main-value small positive"
+                  id="summary-rentabilidade-percent"
+                  >0,00%</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
         <nav class="header-nav">
           <a href="#">Funcionalidades</a>
           <a href="#">Para Quem é?</a>
           <a href="#">Contato</a>
         </nav>
+
         <div class="top-menu-right">
           <button id="btn-header-login-google">
             <i class="fab fa-google"></i> Fazer Login
@@ -210,71 +212,6 @@ Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicion
 
       <div id="app-content">
         <div class="main-content-wrapper">
-          <div class="main-summary-header">
-    <div class="summary-card-item">
-        <div class="summary-title">
-            <i class="fas fa-wallet"></i>
-            <span>Patrimônio total</span>
-        </div>
-        <div class="summary-main-value" id="summary-patrimonio-total">R$ 0,00</div>
-        <div class="summary-sub-line">
-            <span id="summary-valor-investido">Valor investido: R$ 0,00</span>
-            <span class="summary-pill" id="summary-patrimonio-percent">0,00%</span>
-        </div>
-    </div>
-
-    <div class="summary-card-item">
-        <div class="summary-title">
-            <i class="fas fa-chart-pie"></i>
-            <span>Lucro total</span>
-        </div>
-        <div class="summary-main-value" id="summary-lucro-total">R$ 0,00</div>
-        <div class="summary-sub-line multiple">
-            <div>
-                <span>Ganho de Capital</span>
-                <span class="sub-value" id="summary-ganho-capital">R$ 0,00</span>
-            </div>
-            <div>
-                <span>Dividendos recebidos</span>
-                <span class="sub-value" id="summary-dividendos-recebidos">R$ 0,00</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="summary-card-item">
-        <div class="summary-title">
-            <i class="fas fa-hand-holding-usd"></i>
-            <span>Proventos recebidos (12M)</span>
-        </div>
-        <div class="summary-main-value" id="summary-proventos-12m">R$ 0,00</div>
-        <div class="summary-sub-line">
-            <span id="summary-proventos-total">Total: R$ 0,00</span>
-        </div>
-    </div>
-
-    <div class="summary-card-item">
-        <div class="summary-title-group">
-            <div class="summary-title small">
-                <span>Variação</span>
-                <i class="fas fa-info-circle" title="Variação do patrimônio sem contar os proventos."></i>
-            </div>
-            <div class="summary-title small">
-                <span>Rentabilidade</span>
-                <i class="fas fa-info-circle" title="Variação do patrimônio somada a todos os proventos recebidos."></i>
-            </div>
-        </div>
-        <div class="summary-main-value-group">
-            <div>
-                <span class="summary-main-value small positive" id="summary-variacao-percent">0,00%</span>
-                <span class="sub-value" id="summary-variacao-valor">+ R$ 0,00</span>
-            </div>
-            <div>
-                <span class="summary-main-value small positive" id="summary-rentabilidade-percent">0,00%</span>
-            </div>
-        </div>
-    </div>
-</div>
-          
           <div class="nav-tabs-wrapper">
             <ul class="nav-tabs" id="myTab">
               <li>
@@ -444,289 +381,419 @@ Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicion
             </div>
 
             <div class="tab-pane" id="acoes">
-    <div class="content-container" style="max-width: none">
-        <div class="valorization-header">
-            <div id="acoes-valorization-card" class="valorization-card">
-    <div class="valorization-title">
-        <i class="fas fa-arrow-trend-up"></i>
-        <span>Valorização do dia (Ações)</span>
-    </div>
-    <div class="valorization-main">
-        <span id="acoes-valorization-reais" class="valorization-value">Calculando...</span>
-        <span id="acoes-valorization-percent" class="valorization-pill"></span>
-    </div>
+              <div class="content-container" style="max-width: none">
+                <div class="valorization-header">
+                  <div id="acoes-valorization-card" class="valorization-card">
+                    <div class="valorization-title">
+                      <i class="fas fa-arrow-trend-up"></i>
+                      <span>Valorização do dia (Ações)</span>
+                    </div>
+                    <div class="valorization-main">
+                      <span
+                        id="acoes-valorization-reais"
+                        class="valorization-value"
+                        >Calculando...</span
+                      >
+                      <span
+                        id="acoes-valorization-percent"
+                        class="valorization-pill"
+                      ></span>
+                    </div>
 
-    <div class="highlights-container">
-        <div class="highlight-block">
-            <div class="highlight-title">
-                <i class="fas fa-calendar-day"></i>
-                <span>Destaques do Dia</span>
-            </div>
-            <div id="acoes-highlights-day" class="highlight-content">
-                </div>
-        </div>
-        <div class="highlight-block">
-            <div class="highlight-title">
-                <i class="fas fa-chart-line"></i>
-                <span>Destaques Históricos</span>
-            </div>
-            <div id="acoes-highlights-history" class="highlight-content">
-                </div>
-        </div>
-    </div>
-</div>
+                    <div class="highlights-container">
+                      <div class="highlight-block">
+                        <div class="highlight-title">
+                          <i class="fas fa-calendar-day"></i>
+                          <span>Destaques do Dia</span>
+                        </div>
+                        <div
+                          id="acoes-highlights-day"
+                          class="highlight-content"
+                        ></div>
+                      </div>
+                      <div class="highlight-block">
+                        <div class="highlight-title">
+                          <i class="fas fa-chart-line"></i>
+                          <span>Destaques Históricos</span>
+                        </div>
+                        <div
+                          id="acoes-highlights-history"
+                          class="highlight-content"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
 
-            <div id="acoes-summary-card" class="valorization-card summary-card-details">
-                <div class="valorization-title">
-                    <i class="fas fa-wallet"></i>
-                    <span>Resumo da Carteira</span>
-                </div>
-                <div class="summary-details-grid">
-                    <div class="summary-item">
+                  <div
+                    id="acoes-summary-card"
+                    class="valorization-card summary-card-details"
+                  >
+                    <div class="valorization-title">
+                      <i class="fas fa-wallet"></i>
+                      <span>Resumo da Carteira</span>
+                    </div>
+                    <div class="summary-details-grid">
+                      <div class="summary-item">
                         <span class="summary-label">Total Investido</span>
-                        <span id="acoes-total-investido" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span id="acoes-total-investido" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Patrimônio Atual</span>
-                        <span id="acoes-patrimonio-atual" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span id="acoes-patrimonio-atual" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Rentabilidade Total</span>
-                        <span id="acoes-rentabilidade-reais" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span
+                          id="acoes-rentabilidade-reais"
+                          class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Valorização</span>
-                        <span id="acoes-valorizacao-percent" class="summary-value">0,00%</span>
-                    </div>
-                     <div class="summary-item">
+                        <span
+                          id="acoes-valorizacao-percent"
+                          class="summary-value"
+                          >0,00%</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Rentabilidade</span>
-                        <span id="acoes-rentabilidade-percent" class="summary-value">0,00%</span>
+                        <span
+                          id="acoes-rentabilidade-percent"
+                          class="summary-value"
+                          >0,00%</span
+                        >
+                      </div>
                     </div>
+                  </div>
                 </div>
-            </div>
-        </div>
-        <div class="content-header">
-            <h3>Carteira de Ações</h3>
-            <button id="btn-novo-lancamento-acao" class="btn-adicionar">
-                <i class="fas fa-plus"></i> Novo Lançamento
-            </button>
-        </div>
-        <div id="acoes-lista" class="fiis-grid-container">
-            <p>Calculando sua carteira de Ações...</p>
-        </div>
-    </div>
-</div>
-            <div class="tab-pane" id="fiis">
-    <div class="content-container" style="max-width: none">
-        <div class="valorization-header">
-            <div id="fiis-valorization-card" class="valorization-card">
-    <div class="valorization-title">
-        <i class="fas fa-arrow-trend-up"></i>
-        <span>Valorização do dia (FIIs)</span>
-    </div>
-    <div class="valorization-main">
-        <span id="fiis-valorization-reais" class="valorization-value">Calculando...</span>
-        <span id="fiis-valorization-percent" class="valorization-pill"></span>
-    </div>
-
-    <div class="highlights-container">
-        <div class="highlight-block">
-            <div class="highlight-title">
-                <i class="fas fa-calendar-day"></i>
-                <span>Destaques do Dia</span>
-            </div>
-            <div id="fiis-highlights-day" class="highlight-content">
-                </div>
-        </div>
-        <div class="highlight-block">
-            <div class="highlight-title">
-                <i class="fas fa-chart-line"></i>
-                <span>Destaques Históricos</span>
-            </div>
-            <div id="fiis-highlights-history" class="highlight-content">
-                </div>
-        </div>
-    </div>
-</div>
-            <div id="fiis-summary-card" class="valorization-card summary-card-details">
-                <div class="valorization-title">
-                    <i class="fas fa-wallet"></i>
-                    <span>Resumo da Carteira</span>
-                </div>
-                <div class="summary-details-grid">
-                    <div class="summary-item">
-                        <span class="summary-label">Total Investido</span>
-                        <span id="fiis-total-investido" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Patrimônio Atual</span>
-                        <span id="fiis-patrimonio-atual" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Rentabilidade Total</span>
-                        <span id="fiis-rentabilidade-reais" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Valorização</span>
-                        <span id="fiis-valorizacao-percent" class="summary-value">0,00%</span>
-                    </div>
-                     <div class="summary-item">
-                        <span class="summary-label">Rentabilidade</span>
-                        <span id="fiis-rentabilidade-percent" class="summary-value">0,00%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="content-header">
-            <h3>Carteira de Fundos Imobiliários (FIIs)</h3>
-             <div style="display: flex; gap: 10px;">
-                <button id="btn-divisao-ideal-fiis" class="btn-adicionar btn-secondary">
-                    <i class="fas fa-tasks"></i> Divisão Ideal de FIIs
-                </button>
-                <button id="btn-novo-lancamento-fii" class="btn-adicionar">
+                <div class="content-header">
+                  <h3>Carteira de Ações</h3>
+                  <button id="btn-novo-lancamento-acao" class="btn-adicionar">
                     <i class="fas fa-plus"></i> Novo Lançamento
-                </button>
+                  </button>
+                </div>
+                <div id="acoes-lista" class="fiis-grid-container">
+                  <p>Calculando sua carteira de Ações...</p>
+                </div>
+              </div>
             </div>
-        </div>
-        <div id="fiis-lista" class="fiis-grid-container">
-            <p>Calculando sua carteira de FIIs...</p>
-        </div>
-        <div class="divisao-ideal-container" style="margin-top: 40px;">
-            <h3 style="color: #e0e0e0; border-bottom: 1px solid #2a2c30; padding-bottom: 10px; margin-bottom: 20px;">Análise de Divisão da Carteira de FIIs</h3>
-            <div class="charts-grid-container">
-                <div id="divisao-tipo-chart-container" class="chart-wrapper">
-                    <canvas id="divisao-tipo-chart"></canvas>
+            <div class="tab-pane" id="fiis">
+              <div class="content-container" style="max-width: none">
+                <div class="valorization-header">
+                  <div id="fiis-valorization-card" class="valorization-card">
+                    <div class="valorization-title">
+                      <i class="fas fa-arrow-trend-up"></i>
+                      <span>Valorização do dia (FIIs)</span>
+                    </div>
+                    <div class="valorization-main">
+                      <span
+                        id="fiis-valorization-reais"
+                        class="valorization-value"
+                        >Calculando...</span
+                      >
+                      <span
+                        id="fiis-valorization-percent"
+                        class="valorization-pill"
+                      ></span>
+                    </div>
+
+                    <div class="highlights-container">
+                      <div class="highlight-block">
+                        <div class="highlight-title">
+                          <i class="fas fa-calendar-day"></i>
+                          <span>Destaques do Dia</span>
+                        </div>
+                        <div
+                          id="fiis-highlights-day"
+                          class="highlight-content"
+                        ></div>
+                      </div>
+                      <div class="highlight-block">
+                        <div class="highlight-title">
+                          <i class="fas fa-chart-line"></i>
+                          <span>Destaques Históricos</span>
+                        </div>
+                        <div
+                          id="fiis-highlights-history"
+                          class="highlight-content"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    id="fiis-summary-card"
+                    class="valorization-card summary-card-details"
+                  >
+                    <div class="valorization-title">
+                      <i class="fas fa-wallet"></i>
+                      <span>Resumo da Carteira</span>
+                    </div>
+                    <div class="summary-details-grid">
+                      <div class="summary-item">
+                        <span class="summary-label">Total Investido</span>
+                        <span id="fiis-total-investido" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
+                        <span class="summary-label">Patrimônio Atual</span>
+                        <span id="fiis-patrimonio-atual" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
+                        <span class="summary-label">Rentabilidade Total</span>
+                        <span
+                          id="fiis-rentabilidade-reais"
+                          class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
+                        <span class="summary-label">Valorização</span>
+                        <span
+                          id="fiis-valorizacao-percent"
+                          class="summary-value"
+                          >0,00%</span
+                        >
+                      </div>
+                      <div class="summary-item">
+                        <span class="summary-label">Rentabilidade</span>
+                        <span
+                          id="fiis-rentabilidade-percent"
+                          class="summary-value"
+                          >0,00%</span
+                        >
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div id="divisao-risco-chart-container" class="chart-wrapper">
-                    <canvas id="divisao-risco-chart"></canvas>
+                <div class="content-header">
+                  <h3>Carteira de Fundos Imobiliários (FIIs)</h3>
+                  <div style="display: flex; gap: 10px">
+                    <button
+                      id="btn-divisao-ideal-fiis"
+                      class="btn-adicionar btn-secondary"
+                    >
+                      <i class="fas fa-tasks"></i> Divisão Ideal de FIIs
+                    </button>
+                    <button id="btn-novo-lancamento-fii" class="btn-adicionar">
+                      <i class="fas fa-plus"></i> Novo Lançamento
+                    </button>
+                  </div>
                 </div>
-                <div id="divisao-especie-chart-container" class="chart-wrapper full-width">
-                    <canvas id="divisao-especie-chart"></canvas>
+                <div id="fiis-lista" class="fiis-grid-container">
+                  <p>Calculando sua carteira de FIIs...</p>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
+                <div class="divisao-ideal-container" style="margin-top: 40px">
+                  <h3
+                    style="
+                      color: #e0e0e0;
+                      border-bottom: 1px solid #2a2c30;
+                      padding-bottom: 10px;
+                      margin-bottom: 20px;
+                    "
+                  >
+                    Análise de Divisão da Carteira de FIIs
+                  </h3>
+                  <div class="charts-grid-container">
+                    <div
+                      id="divisao-tipo-chart-container"
+                      class="chart-wrapper"
+                    >
+                      <canvas id="divisao-tipo-chart"></canvas>
+                    </div>
+                    <div
+                      id="divisao-risco-chart-container"
+                      class="chart-wrapper"
+                    >
+                      <canvas id="divisao-risco-chart"></canvas>
+                    </div>
+                    <div
+                      id="divisao-especie-chart-container"
+                      class="chart-wrapper full-width"
+                    >
+                      <canvas id="divisao-especie-chart"></canvas>
+                    </div>
+                  </div>
                 </div>
+              </div>
             </div>
             <div class="tab-pane" id="etf-cripto">
-    <div class="content-container" style="max-width: none;">
-
-        <div class="valorization-header">
-            <div id="etf-valorization-card" class="valorization-card">
-                <div class="valorization-title">
-                    <i class="fas fa-arrow-trend-up"></i>
-                    <span>Valorização do dia (ETFs)</span>
-                </div>
-                <div class="valorization-main">
-                    <span id="etf-valorization-reais" class="valorization-value">Calculando...</span>
-                    <span id="etf-valorization-percent" class="valorization-pill"></span>
-                </div>
-            </div>
-            <div id="etf-summary-card" class="valorization-card summary-card-details">
-                <div class="valorization-title">
-                    <i class="fas fa-wallet"></i>
-                    <span>Resumo da Carteira (ETFs)</span>
-                </div>
-                <div class="summary-details-grid">
-                    <div class="summary-item">
+              <div class="content-container" style="max-width: none">
+                <div class="valorization-header">
+                  <div id="etf-valorization-card" class="valorization-card">
+                    <div class="valorization-title">
+                      <i class="fas fa-arrow-trend-up"></i>
+                      <span>Valorização do dia (ETFs)</span>
+                    </div>
+                    <div class="valorization-main">
+                      <span
+                        id="etf-valorization-reais"
+                        class="valorization-value"
+                        >Calculando...</span
+                      >
+                      <span
+                        id="etf-valorization-percent"
+                        class="valorization-pill"
+                      ></span>
+                    </div>
+                  </div>
+                  <div
+                    id="etf-summary-card"
+                    class="valorization-card summary-card-details"
+                  >
+                    <div class="valorization-title">
+                      <i class="fas fa-wallet"></i>
+                      <span>Resumo da Carteira (ETFs)</span>
+                    </div>
+                    <div class="summary-details-grid">
+                      <div class="summary-item">
                         <span class="summary-label">Total Investido</span>
-                        <span id="etf-total-investido" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span id="etf-total-investido" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Patrimônio Atual</span>
-                        <span id="etf-patrimonio-atual" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span id="etf-patrimonio-atual" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Rentabilidade Total</span>
-                        <span id="etf-rentabilidade-reais" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span id="etf-rentabilidade-reais" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Rentabilidade</span>
-                        <span id="etf-rentabilidade-percent" class="summary-value">0,00%</span>
+                        <span
+                          id="etf-rentabilidade-percent"
+                          class="summary-value"
+                          >0,00%</span
+                        >
+                      </div>
                     </div>
+                  </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="content-header">
-            <h3>Carteira de ETFs</h3>
-            <button id="btn-novo-lancamento-etf" class="btn-adicionar">
-                <i class="fas fa-plus"></i> Novo Lançamento
-            </button>
-        </div>
-        <div id="etf-lista" class="fiis-grid-container">
-            <p>Nenhum ETF lançado ainda.</p>
-        </div>
+                <div class="content-header">
+                  <h3>Carteira de ETFs</h3>
+                  <button id="btn-novo-lancamento-etf" class="btn-adicionar">
+                    <i class="fas fa-plus"></i> Novo Lançamento
+                  </button>
+                </div>
+                <div id="etf-lista" class="fiis-grid-container">
+                  <p>Nenhum ETF lançado ainda.</p>
+                </div>
 
-        <div class="valorization-header" style="margin-top: 40px;">
-             <div id="cripto-valorization-card" class="valorization-card">
-                <div class="valorization-title">
-                    <i class="fas fa-arrow-trend-up"></i>
-                    <span>Valorização do dia (Cripto)</span>
-                </div>
-                <div class="valorization-main">
-                    <span id="cripto-valorization-reais" class="valorization-value">Indisponível</span>
-                    <span id="cripto-valorization-percent" class="valorization-pill"></span>
-                </div>
-            </div>
-             <div id="cripto-summary-card" class="valorization-card summary-card-details">
-                <div class="valorization-title">
-                    <i class="fas fa-wallet"></i>
-                    <span>Resumo da Carteira (Cripto)</span>
-                </div>
-                <div class="summary-details-grid">
-                    <div class="summary-item">
+                <div class="valorization-header" style="margin-top: 40px">
+                  <div id="cripto-valorization-card" class="valorization-card">
+                    <div class="valorization-title">
+                      <i class="fas fa-arrow-trend-up"></i>
+                      <span>Valorização do dia (Cripto)</span>
+                    </div>
+                    <div class="valorization-main">
+                      <span
+                        id="cripto-valorization-reais"
+                        class="valorization-value"
+                        >Indisponível</span
+                      >
+                      <span
+                        id="cripto-valorization-percent"
+                        class="valorization-pill"
+                      ></span>
+                    </div>
+                  </div>
+                  <div
+                    id="cripto-summary-card"
+                    class="valorization-card summary-card-details"
+                  >
+                    <div class="valorization-title">
+                      <i class="fas fa-wallet"></i>
+                      <span>Resumo da Carteira (Cripto)</span>
+                    </div>
+                    <div class="summary-details-grid">
+                      <div class="summary-item">
                         <span class="summary-label">Total Investido</span>
-                        <span id="cripto-total-investido" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span id="cripto-total-investido" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Patrimônio Atual</span>
-                        <span id="cripto-patrimonio-atual" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span id="cripto-patrimonio-atual" class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Rentabilidade Total</span>
-                        <span id="cripto-rentabilidade-reais" class="summary-value">R$ 0,00</span>
-                    </div>
-                    <div class="summary-item">
+                        <span
+                          id="cripto-rentabilidade-reais"
+                          class="summary-value"
+                          >R$ 0,00</span
+                        >
+                      </div>
+                      <div class="summary-item">
                         <span class="summary-label">Rentabilidade</span>
-                        <span id="cripto-rentabilidade-percent" class="summary-value">0,00%</span>
+                        <span
+                          id="cripto-rentabilidade-percent"
+                          class="summary-value"
+                          >0,00%</span
+                        >
+                      </div>
                     </div>
+                  </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="content-header" style="margin-top: 20px;">
-            <h3>Carteira de Criptomoedas</h3>
-            <button id="btn-novo-lancamento-cripto" class="btn-adicionar">
-                <i class="fas fa-plus"></i> Novo Lançamento
-            </button>
-        </div>
-         <div id="cripto-lista" class="fiis-grid-container">
-            <p>Nenhuma Criptomoeda lançada ainda.</p>
-        </div>
-    </div>
-</div>
+                <div class="content-header" style="margin-top: 20px">
+                  <h3>Carteira de Criptomoedas</h3>
+                  <button id="btn-novo-lancamento-cripto" class="btn-adicionar">
+                    <i class="fas fa-plus"></i> Novo Lançamento
+                  </button>
+                </div>
+                <div id="cripto-lista" class="fiis-grid-container">
+                  <p>Nenhuma Criptomoeda lançada ainda.</p>
+                </div>
+              </div>
+            </div>
             <div class="tab-pane" id="renda-fixa">
-                <div class="content-container" style="max-width: none">
-                    <div class="content-header">
-                        <h3>Carteira de Renda Fixa</h3>
-                        <div style="display: flex; gap: 10px;">
-                          <a href="https://investidor10.com.br/tesouro-direto/" target="_blank" class="btn-adicionar btn-secondary">
-                            <i class="fas fa-search-dollar"></i> Consultar valores TD
-                          </a>
-                          <button id="btn-atualizar-valor-td" class="btn-adicionar btn-secondary">
-                              <i class="fas fa-edit"></i> Atualizar Valor Manual
-                          </button>
-                          <button id="btn-novo-lancamento-rendafixa" class="btn-adicionar">
-                              <i class="fas fa-plus"></i> Novo Lançamento
-                          </button>
-                        </div>
-                    </div>
-                    <div id="rendafixa-lista" class="fiis-grid-container">
-                        <p>Nenhum ativo de Renda Fixa lançado ainda.</p>
-                    </div>
+              <div class="content-container" style="max-width: none">
+                <div class="content-header">
+                  <h3>Carteira de Renda Fixa</h3>
+                  <div style="display: flex; gap: 10px">
+                    <a
+                      href="https://investidor10.com.br/tesouro-direto/"
+                      target="_blank"
+                      class="btn-adicionar btn-secondary"
+                    >
+                      <i class="fas fa-search-dollar"></i> Consultar valores TD
+                    </a>
+                    <button
+                      id="btn-atualizar-valor-td"
+                      class="btn-adicionar btn-secondary"
+                    >
+                      <i class="fas fa-edit"></i> Atualizar Valor Manual
+                    </button>
+                    <button
+                      id="btn-novo-lancamento-rendafixa"
+                      class="btn-adicionar"
+                    >
+                      <i class="fas fa-plus"></i> Novo Lançamento
+                    </button>
+                  </div>
                 </div>
+                <div id="rendafixa-lista" class="fiis-grid-container">
+                  <p>Nenhum ativo de Renda Fixa lançado ainda.</p>
+                </div>
+              </div>
             </div>
             <div class="tab-pane" id="calculos">
               <h2>Cálculos e Projeções</h2>
@@ -841,41 +908,99 @@ Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicion
                 <i class="fas fa-arrow-up"></i> Venda
               </button>
             </div>
-            <input type="hidden" id="operacao-tipo" name="operacao-tipo" value="compra"/>
-            
+            <input
+              type="hidden"
+              id="operacao-tipo"
+              name="operacao-tipo"
+              value="compra"
+            />
+
             <div class="form-grid">
               <div>
                 <label for="tipo-ativo" class="form-label">Tipo de ativo</label>
-                <select id="tipo-ativo" name="tipo-ativo" class="form-select" required>
-                    <option value="Ações">Ações</option>
-                    <option value="FIIs">FIIs</option>
-                    <option value="ETF">ETF</option>
-                    <option value="Cripto">Criptomoedas</option>
+                <select
+                  id="tipo-ativo"
+                  name="tipo-ativo"
+                  class="form-select"
+                  required
+                >
+                  <option value="Ações">Ações</option>
+                  <option value="FIIs">FIIs</option>
+                  <option value="ETF">ETF</option>
+                  <option value="Cripto">Criptomoedas</option>
                 </select>
               </div>
               <div class="input-wrapper">
                 <label for="ativo" class="form-label">Ativo</label>
-                <input type="text" id="ativo" name="ativo" placeholder="Ex: PETR4" class="form-input" required autocomplete="off"/>
+                <input
+                  type="text"
+                  id="ativo"
+                  name="ativo"
+                  placeholder="Ex: PETR4"
+                  class="form-input"
+                  required
+                  autocomplete="off"
+                />
                 <div id="ativo-sugestoes" class="sugestoes-lista"></div>
               </div>
               <div class="input-icon-wrapper">
-                <label for="data-operacao" class="form-label">Data da Operação</label>
+                <label for="data-operacao" class="form-label"
+                  >Data da Operação</label
+                >
                 <i class="fas fa-calendar-alt"></i>
-                <input type="date" id="data-operacao" name="data-operacao" class="form-input" required/>
+                <input
+                  type="date"
+                  id="data-operacao"
+                  name="data-operacao"
+                  class="form-input"
+                  required
+                />
               </div>
               <div>
                 <label for="quantidade" class="form-label">Quantidade</label>
-                <input type="number" id="quantidade" name="quantidade" value="1" step="any" class="form-input" required/>
+                <input
+                  type="number"
+                  id="quantidade"
+                  name="quantidade"
+                  value="1"
+                  step="any"
+                  class="form-input"
+                  required
+                />
               </div>
               <div>
                 <label for="preco" class="form-label">Preço Unitário R$</label>
-                <input type="number" id="preco" name="preco" placeholder="0,00" step="0.01" class="form-input" required/>
+                <input
+                  type="number"
+                  id="preco"
+                  name="preco"
+                  placeholder="0,00"
+                  step="0.01"
+                  class="form-input"
+                  required
+                />
               </div>
               <div>
-                <label for="outros-custos" class="form-label" style="display: flex; justify-content: space-between; width: 100%;">
-                  <span>Outros custos</span><span style="color: #888">(Opcional)</span>
+                <label
+                  for="outros-custos"
+                  class="form-label"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    width: 100%;
+                  "
+                >
+                  <span>Outros custos</span
+                  ><span style="color: #888">(Opcional)</span>
                 </label>
-                <input type="number" id="outros-custos" name="outros-custos" placeholder="0,00" step="0.01" class="form-input"/>
+                <input
+                  type="number"
+                  id="outros-custos"
+                  name="outros-custos"
+                  placeholder="0,00"
+                  step="0.01"
+                  class="form-input"
+                />
               </div>
             </div>
 
@@ -884,7 +1009,13 @@ Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicion
               <span class="value" id="valor-total-calculado">R$ 0,00</span>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn-cancelar" data-modal="lancamento-modal">Cancelar</button>
+              <button
+                type="button"
+                class="btn-cancelar"
+                data-modal="lancamento-modal"
+              >
+                Cancelar
+              </button>
               <button type="submit" class="btn-adicionar">
                 <i class="fas fa-plus"></i> Adicionar
               </button>
@@ -893,69 +1024,149 @@ Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicion
         </div>
       </div>
     </div>
-    
+
     <div id="rendafixa-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="rendafixa-modal-title">Adicionar Renda Fixa</h2>
-                <button class="modal-close-btn" data-modal="rendafixa-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="form-novo-rendafixa">
-                    <input type="hidden" id="rendafixa-doc-id" name="doc-id" />
-                    <div class="form-grid">
-                        <div>
-                            <label for="rendafixa-tipo-ativo" class="form-label">Tipo de Investimento</label>
-                            <select id="rendafixa-tipo-ativo" name="tipo-ativo" class="form-select" required>
-                                <option value="Tesouro Direto">Tesouro Direto</option>
-                                <option value="CDB">CDB</option>
-                                <option value="LCI">LCI</option>
-                                <option value="LCA">LCA</option>
-                                <option value="Outro">Outro</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="rendafixa-ativo" class="form-label">Nome do Ativo</label>
-                            <input type="text" id="rendafixa-ativo" name="ativo" placeholder="Ex: Tesouro Selic 2029" class="form-input" required/>
-                        </div>
-                        <div class="input-icon-wrapper">
-                            <label for="rendafixa-data-operacao" class="form-label">Data da Aplicação</label>
-                            <i class="fas fa-calendar-alt"></i>
-                            <input type="date" id="rendafixa-data-operacao" name="data-operacao" class="form-input" required/>
-                        </div>
-                        <div class="input-icon-wrapper">
-                            <label for="rendafixa-data-vencimento" class="form-label">Data de Vencimento</label>
-                            <i class="fas fa-calendar-alt"></i>
-                            <input type="date" id="rendafixa-data-vencimento" name="data-vencimento" class="form-input" required/>
-                        </div>
-                         <div>
-                            <label for="rendafixa-valor-aplicado" class="form-label">Valor Total Aplicado R$</label>
-                            <input type="number" id="rendafixa-valor-aplicado" name="valor-aplicado" placeholder="1000,00" step="0.01" class="form-input" required/>
-                        </div>
-                        <div>
-                            <label for="rendafixa-quantidade" class="form-label">Quantidade (p/ Tesouro Direto)</label>
-                            <input type="number" id="rendafixa-quantidade" name="quantidade" value="1" step="any" class="form-input"/>
-                        </div>
-                        <div>
-                            <label for="rendafixa-tipo-rentabilidade" class="form-label">Tipo de Rentabilidade</label>
-                            <select id="rendafixa-tipo-rentabilidade" name="tipo-rentabilidade" class="form-select" required>
-                                <option value="Pós-Fixado">Pós-Fixado (CDI/Selic)</option>
-                                <option value="Prefixado">Prefixado</option>
-                                <option value="Híbrido">Híbrido (IPCA+)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="rendafixa-taxa-contratada" class="form-label">Taxa Contratada</label>
-                            <input type="text" id="rendafixa-taxa-contratada" name="taxa-contratada" placeholder="Ex: 110% CDI, 12.5%, IPCA+6.5" class="form-input" required/>
-                        </div>
-                    </div>
-                     <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
-                        <button type="button" class="btn-cancelar" data-modal="rendafixa-modal">Cancelar</button>
-                        <button type="submit" class="btn-adicionar"><i class="fas fa-plus"></i> Adicionar</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="rendafixa-modal-title">Adicionar Renda Fixa</h2>
+          <button class="modal-close-btn" data-modal="rendafixa-modal">
+            &times;
+          </button>
         </div>
+        <div class="modal-body">
+          <form id="form-novo-rendafixa">
+            <input type="hidden" id="rendafixa-doc-id" name="doc-id" />
+            <div class="form-grid">
+              <div>
+                <label for="rendafixa-tipo-ativo" class="form-label"
+                  >Tipo de Investimento</label
+                >
+                <select
+                  id="rendafixa-tipo-ativo"
+                  name="tipo-ativo"
+                  class="form-select"
+                  required
+                >
+                  <option value="Tesouro Direto">Tesouro Direto</option>
+                  <option value="CDB">CDB</option>
+                  <option value="LCI">LCI</option>
+                  <option value="LCA">LCA</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+              <div>
+                <label for="rendafixa-ativo" class="form-label"
+                  >Nome do Ativo</label
+                >
+                <input
+                  type="text"
+                  id="rendafixa-ativo"
+                  name="ativo"
+                  placeholder="Ex: Tesouro Selic 2029"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div class="input-icon-wrapper">
+                <label for="rendafixa-data-operacao" class="form-label"
+                  >Data da Aplicação</label
+                >
+                <i class="fas fa-calendar-alt"></i>
+                <input
+                  type="date"
+                  id="rendafixa-data-operacao"
+                  name="data-operacao"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div class="input-icon-wrapper">
+                <label for="rendafixa-data-vencimento" class="form-label"
+                  >Data de Vencimento</label
+                >
+                <i class="fas fa-calendar-alt"></i>
+                <input
+                  type="date"
+                  id="rendafixa-data-vencimento"
+                  name="data-vencimento"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div>
+                <label for="rendafixa-valor-aplicado" class="form-label"
+                  >Valor Total Aplicado R$</label
+                >
+                <input
+                  type="number"
+                  id="rendafixa-valor-aplicado"
+                  name="valor-aplicado"
+                  placeholder="1000,00"
+                  step="0.01"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div>
+                <label for="rendafixa-quantidade" class="form-label"
+                  >Quantidade (p/ Tesouro Direto)</label
+                >
+                <input
+                  type="number"
+                  id="rendafixa-quantidade"
+                  name="quantidade"
+                  value="1"
+                  step="any"
+                  class="form-input"
+                />
+              </div>
+              <div>
+                <label for="rendafixa-tipo-rentabilidade" class="form-label"
+                  >Tipo de Rentabilidade</label
+                >
+                <select
+                  id="rendafixa-tipo-rentabilidade"
+                  name="tipo-rentabilidade"
+                  class="form-select"
+                  required
+                >
+                  <option value="Pós-Fixado">Pós-Fixado (CDI/Selic)</option>
+                  <option value="Prefixado">Prefixado</option>
+                  <option value="Híbrido">Híbrido (IPCA+)</option>
+                </select>
+              </div>
+              <div>
+                <label for="rendafixa-taxa-contratada" class="form-label"
+                  >Taxa Contratada</label
+                >
+                <input
+                  type="text"
+                  id="rendafixa-taxa-contratada"
+                  name="taxa-contratada"
+                  placeholder="Ex: 110% CDI, 12.5%, IPCA+6.5"
+                  class="form-input"
+                  required
+                />
+              </div>
+            </div>
+            <div
+              class="modal-footer"
+              style="padding-top: 25px; padding-right: 0; padding-bottom: 0"
+            >
+              <button
+                type="button"
+                class="btn-cancelar"
+                data-modal="rendafixa-modal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn-adicionar">
+                <i class="fas fa-plus"></i> Adicionar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <div id="provento-modal" class="modal-overlay">
@@ -1173,163 +1384,365 @@ Agora, substitua **todo o bloco de estilos** do cabeçalho de resumo que adicion
         </div>
       </div>
     </div>
-    
+
     <div id="ativo-detalhes-modal" class="modal-overlay">
-      <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-content" style="max-width: 800px">
         <div class="modal-header">
           <h2 id="ativo-detalhes-modal-title">Detalhes do Ativo</h2>
           <button class="modal-close-btn" data-modal="ativo-detalhes-modal">
             &times;
           </button>
         </div>
-        <div class="modal-body" style="padding: 0;">
+        <div class="modal-body" style="padding: 0">
           <div class="fii-detalhes-tabs">
-            <button class="fii-detalhes-tab-link active" data-tab="performance">Performance</button>
-            <button class="fii-detalhes-tab-link" data-tab="lancamentos">Lançamentos</button>
-            <button class="fii-detalhes-tab-link" data-tab="proventos">Proventos</button>
+            <button class="fii-detalhes-tab-link active" data-tab="performance">
+              Performance
+            </button>
+            <button class="fii-detalhes-tab-link" data-tab="lancamentos">
+              Lançamentos
+            </button>
+            <button class="fii-detalhes-tab-link" data-tab="proventos">
+              Proventos
+            </button>
           </div>
-          <div class="fii-detalhes-tab-content active" id="ativo-detalhes-performance">
+          <div
+            class="fii-detalhes-tab-content active"
+            id="ativo-detalhes-performance"
+          >
             <div class="performance-chart-container">
-                <canvas id="performance-chart"></canvas>
+              <canvas id="performance-chart"></canvas>
             </div>
           </div>
-          <div class="fii-detalhes-tab-content" id="ativo-detalhes-lancamentos">
-            </div>
-          <div class="fii-detalhes-tab-content" id="ativo-detalhes-proventos">
-            </div>
+          <div
+            class="fii-detalhes-tab-content"
+            id="ativo-detalhes-lancamentos"
+          ></div>
+          <div
+            class="fii-detalhes-tab-content"
+            id="ativo-detalhes-proventos"
+          ></div>
         </div>
       </div>
     </div>
 
     <div id="atualizar-valor-td-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="atualizar-valor-td-modal-title">Atualizar Valor Manual do Tesouro</h2>
-                <button class="modal-close-btn" data-modal="atualizar-valor-td-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="form-atualizar-valor-td">
-                    <input type="hidden" id="atualizar-td-doc-id" name="doc-id" />
-                    <div class="form-grid" style="grid-template-columns: 1fr;">
-                        <div>
-                            <label for="atualizar-td-ativo" class="form-label">Selecione o Título do Tesouro</label>
-                            <select id="atualizar-td-ativo" name="ativo" class="form-select" required>
-                                </select>
-                        </div>
-                        <div class="input-icon-wrapper">
-                            <label for="atualizar-td-data" class="form-label">Data da Posição</label>
-                            <i class="fas fa-calendar-alt"></i>
-                            <input type="date" id="atualizar-td-data" name="data-posicao" class="form-input" required/>
-                        </div>
-                         <div>
-                            <label for="atualizar-td-valor" class="form-label">Valor Atual do Título (Unitário)</label>
-                            <input type="number" id="atualizar-td-valor" name="valor-atual" placeholder="1234,56" step="0.01" class="form-input" required/>
-                        </div>
-                    </div>
-                     <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
-                        <button type="button" class="btn-cancelar" data-modal="atualizar-valor-td-modal">Cancelar</button>
-                        <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar Valor</button>
-                    </div>
-                </form>
-
-                <div class="historico-valores-container" style="border-top: 1px solid #2a2c30; margin-top: 25px; padding-top: 15px;">
-                  <h4 class="card-title" style="margin-top: 0; margin-bottom: 10px; font-size: 1rem;">Últimos 5 Valores Manuais</h4>
-                  <div id="historico-valores-manuais-lista">
-                    </div>
-                </div>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="atualizar-valor-td-modal-title">
+            Atualizar Valor Manual do Tesouro
+          </h2>
+          <button class="modal-close-btn" data-modal="atualizar-valor-td-modal">
+            &times;
+          </button>
         </div>
+        <div class="modal-body">
+          <form id="form-atualizar-valor-td">
+            <input type="hidden" id="atualizar-td-doc-id" name="doc-id" />
+            <div class="form-grid" style="grid-template-columns: 1fr">
+              <div>
+                <label for="atualizar-td-ativo" class="form-label"
+                  >Selecione o Título do Tesouro</label
+                >
+                <select
+                  id="atualizar-td-ativo"
+                  name="ativo"
+                  class="form-select"
+                  required
+                ></select>
+              </div>
+              <div class="input-icon-wrapper">
+                <label for="atualizar-td-data" class="form-label"
+                  >Data da Posição</label
+                >
+                <i class="fas fa-calendar-alt"></i>
+                <input
+                  type="date"
+                  id="atualizar-td-data"
+                  name="data-posicao"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div>
+                <label for="atualizar-td-valor" class="form-label"
+                  >Valor Atual do Título (Unitário)</label
+                >
+                <input
+                  type="number"
+                  id="atualizar-td-valor"
+                  name="valor-atual"
+                  placeholder="1234,56"
+                  step="0.01"
+                  class="form-input"
+                  required
+                />
+              </div>
+            </div>
+            <div
+              class="modal-footer"
+              style="padding-top: 25px; padding-right: 0; padding-bottom: 0"
+            >
+              <button
+                type="button"
+                class="btn-cancelar"
+                data-modal="atualizar-valor-td-modal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn-salvar">
+                <i class="fas fa-save"></i> Salvar Valor
+              </button>
+            </div>
+          </form>
+
+          <div
+            class="historico-valores-container"
+            style="
+              border-top: 1px solid #2a2c30;
+              margin-top: 25px;
+              padding-top: 15px;
+            "
+          >
+            <h4
+              class="card-title"
+              style="margin-top: 0; margin-bottom: 10px; font-size: 1rem"
+            >
+              Últimos 5 Valores Manuais
+            </h4>
+            <div id="historico-valores-manuais-lista"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="divisao-ideal-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="divisao-ideal-modal-title">Definir Divisão Ideal de FIIs</h2>
-                <button class="modal-close-btn" data-modal="divisao-ideal-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="form-divisao-ideal">
-                    <div class="form-section">
-                        <h4>Divisão por Tipo</h4>
-                        <div class="form-grid">
-                            <div>
-                                <label for="ideal-tipo-tijolo" class="form-label">Tijolo (%)</label>
-                                <input type="number" id="ideal-tipo-tijolo" name="tipo-tijolo" placeholder="60" min="0" max="100" class="form-input" data-group="tipo" />
-                            </div>
-                            <div>
-                                <label for="ideal-tipo-papel" class="form-label">Papel (%)</label>
-                                <input type="number" id="ideal-tipo-papel" name="tipo-papel" placeholder="40" min="0" max="100" class="form-input" data-group="tipo" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h4>Divisão por Risco</h4>
-                        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
-                             <div>
-                                <label for="ideal-risco-arrojado" class="form-label">Arrojado (%)</label>
-                                <input type="number" id="ideal-risco-arrojado" name="risco-arrojado" placeholder="20" min="0" max="100" class="form-input" data-group="risco" />
-                            </div>
-                            <div>
-                                <label for="ideal-risco-crescimento" class="form-label">Crescimento (%)</label>
-                                <input type="number" id="ideal-risco-crescimento" name="risco-crescimento" placeholder="40" min="0" max="100" class="form-input" data-group="risco" />
-                            </div>
-                            <div>
-                                <label for="ideal-risco-ancoragem" class="form-label">Ancoragem (%)</label>
-                                <input type="number" id="ideal-risco-ancoragem" name="risco-ancoragem" placeholder="40" min="0" max="100" class="form-input" data-group="risco" />
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-section-divider"></div>
-
-                    <div id="subdivisao-tijolo" class="form-section form-subsection">
-                        <h5>Subdivisão de Tijolo</h5>
-                         <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-                            <div>
-                                <label for="ideal-tijolo-lajes" class="form-label">Lajes Corp. (%)</label>
-                                <input type="number" id="ideal-tijolo-lajes" name="tijolo-lajes" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
-                            </div>
-                            <div>
-                                <label for="ideal-tijolo-shoppings" class="form-label">Shoppings (%)</label>
-                                <input type="number" id="ideal-tijolo-shoppings" name="tijolo-shoppings" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
-                            </div>
-                             <div>
-                                <label for="ideal-tijolo-logistica" class="form-label">Logística (%)</label>
-                                <input type="number" id="ideal-tijolo-logistica" name="tijolo-logistica" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
-                            </div>
-                             <div>
-                                <label for="ideal-tijolo-outros" class="form-label">Outros (%)</label>
-                                <input type="number" id="ideal-tijolo-outros" name="tijolo-outros" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="subdivisao-papel" class="form-section form-subsection">
-                        <h5>Subdivisão de Papel</h5>
-                         <div class="form-grid">
-                            <div>
-                                <label for="ideal-papel-cdi" class="form-label">Atrelado ao CDI (%)</label>
-                                <input type="number" id="ideal-papel-cdi" name="papel-cdi" placeholder="50" min="0" max="100" class="form-input" data-group="papel" />
-                            </div>
-                            <div>
-                                <label for="ideal-papel-ipca" class="form-label">Atrelado ao IPCA (%)</label>
-                                <input type="number" id="ideal-papel-ipca" name="papel-ipca" placeholder="50" min="0" max="100" class="form-input" data-group="papel" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="divisao-validation-message" class="validation-message"></div>
-
-                    <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
-                        <button type="button" class="btn-cancelar" data-modal="divisao-ideal-modal">Cancelar</button>
-                        <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar Divisão</button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="divisao-ideal-modal-title">Definir Divisão Ideal de FIIs</h2>
+          <button class="modal-close-btn" data-modal="divisao-ideal-modal">
+            &times;
+          </button>
         </div>
-    </div>
+        <div class="modal-body">
+          <form id="form-divisao-ideal">
+            <div class="form-section">
+              <h4>Divisão por Tipo</h4>
+              <div class="form-grid">
+                <div>
+                  <label for="ideal-tipo-tijolo" class="form-label"
+                    >Tijolo (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-tipo-tijolo"
+                    name="tipo-tijolo"
+                    placeholder="60"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="tipo"
+                  />
+                </div>
+                <div>
+                  <label for="ideal-tipo-papel" class="form-label"
+                    >Papel (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-tipo-papel"
+                    name="tipo-papel"
+                    placeholder="40"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="tipo"
+                  />
+                </div>
+              </div>
+            </div>
 
+            <div class="form-section">
+              <h4>Divisão por Risco</h4>
+              <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr">
+                <div>
+                  <label for="ideal-risco-arrojado" class="form-label"
+                    >Arrojado (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-risco-arrojado"
+                    name="risco-arrojado"
+                    placeholder="20"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="risco"
+                  />
+                </div>
+                <div>
+                  <label for="ideal-risco-crescimento" class="form-label"
+                    >Crescimento (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-risco-crescimento"
+                    name="risco-crescimento"
+                    placeholder="40"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="risco"
+                  />
+                </div>
+                <div>
+                  <label for="ideal-risco-ancoragem" class="form-label"
+                    >Ancoragem (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-risco-ancoragem"
+                    name="risco-ancoragem"
+                    placeholder="40"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="risco"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section-divider"></div>
+
+            <div id="subdivisao-tijolo" class="form-section form-subsection">
+              <h5>Subdivisão de Tijolo</h5>
+              <div
+                class="form-grid"
+                style="grid-template-columns: 1fr 1fr 1fr 1fr"
+              >
+                <div>
+                  <label for="ideal-tijolo-lajes" class="form-label"
+                    >Lajes Corp. (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-tijolo-lajes"
+                    name="tijolo-lajes"
+                    placeholder="25"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="tijolo"
+                  />
+                </div>
+                <div>
+                  <label for="ideal-tijolo-shoppings" class="form-label"
+                    >Shoppings (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-tijolo-shoppings"
+                    name="tijolo-shoppings"
+                    placeholder="25"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="tijolo"
+                  />
+                </div>
+                <div>
+                  <label for="ideal-tijolo-logistica" class="form-label"
+                    >Logística (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-tijolo-logistica"
+                    name="tijolo-logistica"
+                    placeholder="25"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="tijolo"
+                  />
+                </div>
+                <div>
+                  <label for="ideal-tijolo-outros" class="form-label"
+                    >Outros (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-tijolo-outros"
+                    name="tijolo-outros"
+                    placeholder="25"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="tijolo"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div id="subdivisao-papel" class="form-section form-subsection">
+              <h5>Subdivisão de Papel</h5>
+              <div class="form-grid">
+                <div>
+                  <label for="ideal-papel-cdi" class="form-label"
+                    >Atrelado ao CDI (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-papel-cdi"
+                    name="papel-cdi"
+                    placeholder="50"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="papel"
+                  />
+                </div>
+                <div>
+                  <label for="ideal-papel-ipca" class="form-label"
+                    >Atrelado ao IPCA (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="ideal-papel-ipca"
+                    name="papel-ipca"
+                    placeholder="50"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                    data-group="papel"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              id="divisao-validation-message"
+              class="validation-message"
+            ></div>
+
+            <div
+              class="modal-footer"
+              style="padding-top: 25px; padding-right: 0; padding-bottom: 0"
+            >
+              <button
+                type="button"
+                class="btn-cancelar"
+                data-modal="divisao-ideal-modal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn-salvar">
+                <i class="fas fa-save"></i> Salvar Divisão
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 
     <script src="js/main.js" type="module"></script>
   </body>
