@@ -21,6 +21,7 @@ let allProventos = [];
 let allClassificacoes = {};
 let currentProventosMeta = null;
 let allValoresManuaisTD = {};
+let userConfig = {}; // Novo estado para configurações do usuário
 
 // Função que será chamada quando o usuário fizer login
 const onLogin = (userID) => {
@@ -37,6 +38,7 @@ const onLogout = () => {
     allClassificacoes = {};
     currentProventosMeta = null;
     allValoresManuaisTD = {};
+    userConfig = {};
 };
 
 // --- OUVINTES DE DADOS (LISTENERS) ---
@@ -50,7 +52,7 @@ function initializeDataListeners(userID) {
         renderHistorico(allLancamentos);
         renderMovimentacaoChart(allLancamentos);
         renderAcoesCarteira(allLancamentos, allProventos);
-        renderFiisCarteira(allLancamentos, allProventos);
+        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
@@ -65,7 +67,7 @@ function initializeDataListeners(userID) {
 
         updateProventosTab(allProventos, currentProventosMeta);
         renderAcoesCarteira(allLancamentos, allProventos);
-        renderFiisCarteira(allLancamentos, allProventos);
+        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
     });
@@ -76,6 +78,7 @@ function initializeDataListeners(userID) {
         allClassificacoes = {};
         snapshot.docs.forEach((doc) => { allClassificacoes[doc.id] = doc.data(); });
         renderClassificacao(allLancamentos, allClassificacoes);
+        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
     });
 
     // Listener para Metas
@@ -94,6 +97,14 @@ function initializeDataListeners(userID) {
             allValoresManuaisTD[data.ativo] = { id: doc.id, ...data };
         });
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
+    });
+
+    // NOVO: Listener para Configurações Gerais do Usuário
+    const configDocRef = doc(db, "configuracoes", userID);
+    onSnapshot(configDocRef, (doc) => {
+        userConfig = doc.exists() ? doc.data() : {};
+        // Re-renderiza a aba de FIIs com a nova configuração ideal
+        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
     });
 }
 
