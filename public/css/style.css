@@ -1313,3 +1313,146 @@ torico-lista p,
     font-weight: 600;
     color: #e0e0e0;
 }
+/* ESTILOS PARA OS DESTAQUES DENTRO DO CARD DE VALORIZAÇÃO */
+.destaques-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #2a2c30;
+}
+
+.destaque-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.destaque-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.destaque-header i {
+    color: #00d9c3;
+    font-size: 0.9rem;
+}
+
+.destaque-header span {
+    font-size: 0.85rem;
+    color: #a0a7b3;
+    font-weight: 600;
+}
+
+.destaque-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+}
+
+.destaque-valor {
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.destaque-valor.positive {
+    color: #00d9c3;
+}
+
+.destaque-valor.negative {
+    color: #ef4444;
+}
+
+/* Ajuste para o card de valorização acomodar os destaques */
+#fiis-valorization-card {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ajuste responsivo */
+@media (max-width: 768px) {
+    .destaques-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    #fiis-valorization-card {
+        min-height: auto;
+    }
+}
+.destaque-percent {
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+/* --- ESTILOS PARA OS DESTAQUES DE RENTABILIDADE (FIIs) --- */
+
+.highlights-container {
+    display: flex;
+    width: 100%;
+    border-top: 1px solid #2a2c30;
+    margin-top: 15px;
+    padding-top: 15px;
+    gap: 20px;
+}
+
+.highlight-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.highlight-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: #a0a7b3;
+    font-weight: 500;
+}
+
+.highlight-title i {
+    color: #a0a7b3;
+    font-size: 0.9rem;
+}
+
+.highlight-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.highlight-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.highlight-item .ticker {
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.highlight-item .value {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.highlight-item .value.positive {
+    color: #00d9c3; /* Turquesa para positivo */
+}
+
+.highlight-item .value.negative {
+    color: #ef4444; /* Vermelho para negativo */
+}
