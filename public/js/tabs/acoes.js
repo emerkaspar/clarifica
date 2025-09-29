@@ -4,12 +4,13 @@ import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
  * Calcula e renderiza a valorização do dia para a carteira de Ações.
  * @param {Array<string>} tickers - A lista de tickers de Ações na carteira.
  * @param {object} carteira - O objeto da carteira consolidada.
+ * @returns {Promise<Array<object>>} - Retorna a performance diária de cada ação.
  */
 async function renderAcoesDayValorization(tickers, carteira) {
     const valorizationReaisDiv = document.getElementById("acoes-valorization-reais");
     const valorizationPercentDiv = document.getElementById("acoes-valorization-percent");
 
-    if (!valorizationReaisDiv || !valorizationPercentDiv) return;
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return [];
 
     valorizationReaisDiv.textContent = "Calculando...";
     valorizationPercentDiv.innerHTML = "";
@@ -22,6 +23,7 @@ async function renderAcoesDayValorization(tickers, carteira) {
         let totalValorizacaoReais = 0;
         let totalInvestidoPonderado = 0;
         let variacaoPonderadaTotal = 0;
+        const dailyPerformance = [];
 
         results.forEach((data, index) => {
             if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
@@ -33,12 +35,13 @@ async function renderAcoesDayValorization(tickers, carteira) {
                 const valorPosicaoAtual = hoje * quantidade;
 
                 if (ontem > 0) {
-                    const variacaoPercentual = ((hoje / ontem) - 1);
+                    const variacaoPercentual = ((hoje / ontem) - 1) * 100;
                     const variacaoReais = (hoje - ontem) * quantidade;
                     
                     totalValorizacaoReais += variacaoReais;
                     totalInvestidoPonderado += valorPosicaoAtual;
-                    variacaoPonderadaTotal += variacaoPercentual * valorPosicaoAtual;
+                    variacaoPonderadaTotal += variacaoPercentual * (valorPosicaoAtual / 100);
+                    dailyPerformance.push({ ticker, changePercent: variacaoPercentual });
                 }
             }
         });
@@ -59,9 +62,12 @@ async function renderAcoesDayValorization(tickers, carteira) {
         valorizationPercentDiv.innerHTML = `${sinal}${percentualFormatado} ${iconeSeta}`;
         valorizationPercentDiv.classList.add(corClasse);
 
+        return dailyPerformance;
+
     } catch (error) {
         console.error("Erro ao calcular a valorização do dia para Ações:", error);
         valorizationReaisDiv.textContent = "Erro ao carregar";
+        return [];
     }
 }
 
@@ -113,6 +119,51 @@ function renderAcoesSummary(carteira, precosAtuais) {
     updateField('acoes-rentabilidade-percent', rentabilidadePercent, false, true);
 }
 
+/**
+ * Renderiza os destaques de rentabilidade para ações (diária e histórica).
+ * @param {Array<object>} dailyPerformance - Performance diária de cada ativo.
+ * @param {Array<object>} historicalPerformance - Performance histórica de cada ativo.
+ */
+function renderAcoesHighlights(dailyPerformance, historicalPerformance) {
+    const dayContainer = document.getElementById("acoes-highlights-day");
+    const historyContainer = document.getElementById("acoes-highlights-history");
+
+    if (!dayContainer || !historyContainer) return;
+
+    const createHtml = (item) => {
+        if (!item) return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+        const isPositive = item.changePercent >= 0;
+        const colorClass = isPositive ? 'positive' : 'negative';
+        const arrow = isPositive ? '↑' : '↓';
+        return `
+            <div class="highlight-item">
+                <span class="ticker">${item.ticker}</span>
+                <span class="value ${colorClass}">${item.changePercent.toFixed(2)}% ${arrow}</span>
+            </div>
+        `;
+    };
+
+    // Destaques do Dia
+    if (dailyPerformance.length > 0) {
+        dailyPerformance.sort((a, b) => b.changePercent - a.changePercent);
+        const highestDay = dailyPerformance[0];
+        const lowestDay = dailyPerformance[dailyPerformance.length - 1];
+        dayContainer.innerHTML = createHtml(highestDay) + createHtml(lowestDay);
+    } else {
+        dayContainer.innerHTML = createHtml(null) + createHtml(null);
+    }
+
+    // Destaques Históricos
+    if (historicalPerformance.length > 0) {
+        historicalPerformance.sort((a, b) => b.changePercent - a.changePercent);
+        const highestHistory = historicalPerformance[0];
+        const lowestHistory = historicalPerformance[historicalPerformance.length - 1];
+        historyContainer.innerHTML = createHtml(highestHistory) + createHtml(lowestHistory);
+    } else {
+        historyContainer.innerHTML = createHtml(null) + createHtml(null);
+    }
+}
+
 
 /**
  * Renderiza os cards da carteira de ações.
@@ -141,6 +192,7 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         document.getElementById("acoes-rentabilidade-reais").textContent = "R$ 0,00";
         document.getElementById("acoes-valorizacao-percent").textContent = "0,00%";
         document.getElementById("acoes-rentabilidade-percent").textContent = "0,00%";
+        renderAcoesHighlights([], []); // Limpa os destaques
         return;
     }
 
@@ -174,13 +226,15 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
     const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
     if (tickers.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
+        renderAcoesHighlights([], []); // Limpa os destaques
         return;
     }
 
-    renderAcoesDayValorization(tickers, carteira);
+    const dailyPerformance = await renderAcoesDayValorization(tickers, carteira);
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
+        const historicalPerformance = [];
 
         renderAcoesSummary(carteira, precosAtuais);
 
@@ -190,38 +244,33 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
+            
             const variacaoReais = valorPosicaoAtual - valorInvestido;
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
+
             const rentabilidadeReais = variacaoReais + ativo.proventos;
             const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
-            const variacaoSinal = variacaoReais >= 0 ? '+' : '';
-            const variacaoClasse = variacaoReais >= 0 ? 'positive-change' : 'negative-change';
-            const variacaoIcone = variacaoReais >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
-            const rentabilidadeSinal = rentabilidadeReais >= 0 ? '+' : '';
-            const rentabilidadeClasse = rentabilidadeReais >= 0 ? 'positive-change' : 'negative-change';
-            const rentabilidadeIcone = rentabilidadeReais >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+            
+            historicalPerformance.push({ ticker, changePercent: variacaoPercent });
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações">
                     <div class="fii-card-ticker">${ativo.ativo}</div>
+                    
                     <div class="fii-card-metric-main">
                         <div class="label">Valor Atual da Posição</div>
                         <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                     </div>
-                    <div class="card-results-container">
-                        <div class="card-result-item ${variacaoClasse}">
-                            <span class="result-label">Variação:</span>
-                            <span class="result-value">
-                                ${variacaoSinal}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoPercent.toFixed(2)}%) ${variacaoIcone}
-                            </span>
+                    
+                    <div class="fii-card-results-container">
+                        <div class="fii-card-result ${variacaoReais >= 0 ? 'positive-change' : 'negative-change'}">
+                            Variação: ${variacaoReais >= 0 ? '+' : ''}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoPercent.toFixed(2)}%) ${variacaoReais >= 0 ? '↑' : '↓'}
                         </div>
-                        <div class="card-result-item ${rentabilidadeClasse}">
-                            <span class="result-label">Rentabilidade:</span>
-                            <span class="result-value">
-                                ${rentabilidadeSinal}${rentabilidadeReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercent.toFixed(2)}%) ${rentabilidadeIcone}
-                            </span>
+                        <div class="fii-card-result ${rentabilidadeReais >= 0 ? 'positive-change' : 'negative-change'}">
+                            Rentabilidade: ${rentabilidadeReais >= 0 ? '+' : ''}${rentabilidadeReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercent.toFixed(2)}%) ${rentabilidadeReais >= 0 ? '↑' : '↓'}
                         </div>
                     </div>
+
                     <div class="fii-card-details">
                         <div class="detail-item">
                             <span>Valor Investido</span>
@@ -249,6 +298,7 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         }).join('');
 
         acoesListaDiv.innerHTML = html;
+        renderAcoesHighlights(dailyPerformance, historicalPerformance);
 
     } catch (error) {
         console.error("Erro ao renderizar carteira de Ações:", error);
@@ -256,6 +306,7 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
     }
 }
 
+// Event listener para abrir o modal de detalhes quando um card for clicado.
 document.getElementById("acoes-lista").addEventListener("click", (e) => {
     const card = e.target.closest(".fii-card");
     if (card && card.dataset.ticker && window.openAtivoDetalhesModal) {
