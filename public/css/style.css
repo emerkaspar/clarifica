@@ -1283,3 +1283,33 @@ torico-lista p,
 .valorization-pill.negative {
     background-color: #ef4444; /* Vermelho para negativo */
 }
+
+/* ... (estilos existentes) ... */
+
+/* --- ESTILOS ADICIONAIS PARA O CARD DE RESUMO --- */
+.summary-card-details {
+    flex-basis: 380px; /* Largura base maior para o card de resumo */
+}
+
+.summary-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 5px;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-label {
+    font-size: 0.8rem;
+    color: #a0a7b3;
+}
+
+.summary-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e0e0e0;
+}

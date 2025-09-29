@@ -1,9 +1,5 @@
 import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
 
-// A função openAtivoDetalhesModal será importada ou definida no futuro,
-// por enquanto, vamos assumir que ela existe globalmente para o event listener.
-// Idealmente, isso seria gerenciado por um módulo de UI principal.
-
 /**
  * Calcula e renderiza a valorização do dia para a carteira de Ações.
  * @param {Array<string>} tickers - A lista de tickers de Ações na carteira.
@@ -69,6 +65,54 @@ async function renderAcoesDayValorization(tickers, carteira) {
     }
 }
 
+/**
+ * Calcula e renderiza o resumo da carteira de Ações.
+ * @param {object} carteira - O objeto da carteira consolidada.
+ * @param {object} precosAtuais - Objeto com os preços atuais dos ativos.
+ */
+function renderAcoesSummary(carteira, precosAtuais) {
+    let totalInvestido = 0;
+    let patrimonioAtual = 0;
+    let totalProventos = 0;
+
+    Object.values(carteira).forEach(ativo => {
+        if (ativo.quantidade > 0) {
+            const precoAtual = precosAtuais[ativo.ativo] || 0;
+            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+            
+            totalInvestido += precoMedio * ativo.quantidade;
+            patrimonioAtual += precoAtual * ativo.quantidade;
+            totalProventos += ativo.proventos;
+        }
+    });
+
+    const rentabilidadeReais = patrimonioAtual - totalInvestido + totalProventos;
+    const valorizacaoPercent = totalInvestido > 0 ? ((patrimonioAtual / totalInvestido) - 1) * 100 : 0;
+    const rentabilidadePercent = totalInvestido > 0 ? (rentabilidadeReais / totalInvestido) * 100 : 0;
+
+    const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatPercent = (value) => `${value.toFixed(2)}%`;
+
+    const updateField = (id, value, isCurrency = true, addSign = false) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const formattedValue = isCurrency ? formatCurrency(value) : formatPercent(value);
+            const sinal = value >= 0 ? '+' : '';
+            element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
+            element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
+            if (id === 'acoes-total-investido' || id === 'acoes-patrimonio-atual') {
+                element.style.color = '#e0e0e0'; // Cor padrão para valores não-indicativos
+            }
+        }
+    };
+    
+    updateField('acoes-total-investido', totalInvestido);
+    updateField('acoes-patrimonio-atual', patrimonioAtual);
+    updateField('acoes-rentabilidade-reais', rentabilidadeReais, true, true);
+    updateField('acoes-valorizacao-percent', valorizacaoPercent, false, true);
+    updateField('acoes-rentabilidade-percent', rentabilidadePercent, false, true);
+}
+
 
 /**
  * Renderiza os cards da carteira de ações.
@@ -92,12 +136,18 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
             percentDiv.innerHTML = "";
             percentDiv.className = 'valorization-pill';
         }
+        // Limpa também o card de resumo
+        document.getElementById("acoes-total-investido").textContent = "R$ 0,00";
+        document.getElementById("acoes-patrimonio-atual").textContent = "R$ 0,00";
+        document.getElementById("acoes-rentabilidade-reais").textContent = "R$ 0,00";
+        document.getElementById("acoes-valorizacao-percent").textContent = "0,00%";
+        document.getElementById("acoes-rentabilidade-percent").textContent = "0,00%";
         return;
     }
 
     const carteira = {};
 
-    // 1. Consolida os lançamentos para calcular a posição atual de cada ativo
+    // 1. Consolida os lançamentos
     acoesLancamentos.forEach(l => {
         if (!carteira[l.ativo]) {
             carteira[l.ativo] = {
@@ -117,35 +167,28 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         }
     });
 
-    // 2. Adiciona os proventos recebidos para cada ativo
+    // 2. Adiciona os proventos
     proventos.forEach(p => {
         if (p.tipoAtivo === 'Ações' && carteira[p.ativo]) {
             carteira[p.ativo].proventos += p.valor;
         }
     });
 
-    // 3. Filtra apenas os tickers que o usuário ainda possui em carteira
+    // 3. Filtra os tickers com posição
     const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
     if (tickers.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
-        const reaisDiv = document.getElementById("acoes-valorization-reais");
-        const percentDiv = document.getElementById("acoes-valorization-percent");
-        if (reaisDiv) reaisDiv.textContent = "N/A";
-        if (percentDiv) {
-            percentDiv.innerHTML = "";
-            percentDiv.className = 'valorization-pill';
-        }
         return;
     }
 
-    // Chama a função de valorização do dia
     renderAcoesDayValorization(tickers, carteira);
 
     try {
-        // 4. Busca os preços atuais de todos os tickers de uma vez usando a API modularizada
         const precosAtuais = await fetchCurrentPrices(tickers);
 
-        // 5. Gera o HTML dos cards com os dados calculados e recebidos
+        // Renderiza o card de resumo
+        renderAcoesSummary(carteira, precosAtuais);
+
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker] || 0;
@@ -203,7 +246,6 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
 }
 
 // Event listener para abrir o modal de detalhes quando um card for clicado.
-// Esta parte pode ser movida para um arquivo de UI central no futuro.
 document.getElementById("acoes-lista").addEventListener("click", (e) => {
     const card = e.target.closest(".fii-card");
     if (card && card.dataset.ticker && window.openAtivoDetalhesModal) {

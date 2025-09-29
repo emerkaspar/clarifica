@@ -13,7 +13,6 @@ async function renderFiisDayValorization(tickers, carteira) {
 
     if (!valorizationReaisDiv || !valorizationPercentDiv) return;
 
-    // Estado inicial enquanto calcula
     valorizationReaisDiv.textContent = "Calculando...";
     valorizationPercentDiv.innerHTML = "";
     valorizationPercentDiv.className = 'valorization-pill';
@@ -30,7 +29,7 @@ async function renderFiisDayValorization(tickers, carteira) {
         results.forEach((data, index) => {
             if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
                 const ticker = tickers[index];
-                const prices = data.results[0].historicalDataPrice.reverse(); // Garante que o mais recente está em [0]
+                const prices = data.results[0].historicalDataPrice.reverse();
                 const hoje = prices[0].close;
                 const ontem = prices[1].close;
                 const quantidade = carteira[ticker].quantidade;
@@ -41,7 +40,7 @@ async function renderFiisDayValorization(tickers, carteira) {
                     const variacaoReais = (hoje - ontem) * quantidade;
                     
                     totalValorizacaoReais += variacaoReais;
-                    totalInvestidoPonderado += valorPosicaoAtual; // Usar valor atual como peso
+                    totalInvestidoPonderado += valorPosicaoAtual;
                     variacaoPonderadaTotal += variacaoPercentual * valorPosicaoAtual;
                 }
             }
@@ -63,11 +62,58 @@ async function renderFiisDayValorization(tickers, carteira) {
         valorizationPercentDiv.innerHTML = `${sinal}${percentualFormatado} ${iconeSeta}`;
         valorizationPercentDiv.classList.add(corClasse);
 
-
     } catch (error) {
         console.error("Erro ao calcular a valorização do dia para FIIs:", error);
-        valorizationReaisDiv.textContent = "Erro";
+        valorizationReaisDiv.textContent = "Erro ao carregar";
     }
+}
+
+/**
+ * Calcula e renderiza o resumo da carteira de FIIs.
+ * @param {object} carteira - O objeto da carteira consolidada.
+ * @param {object} precosAtuais - Objeto com os preços atuais dos ativos.
+ */
+function renderFiisSummary(carteira, precosAtuais) {
+    let totalInvestido = 0;
+    let patrimonioAtual = 0;
+    let totalProventos = 0;
+
+    Object.values(carteira).forEach(ativo => {
+        if (ativo.quantidade > 0) {
+            const precoAtual = precosAtuais[ativo.ativo] || 0;
+            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+            
+            totalInvestido += precoMedio * ativo.quantidade;
+            patrimonioAtual += precoAtual * ativo.quantidade;
+            totalProventos += ativo.proventos;
+        }
+    });
+
+    const rentabilidadeReais = patrimonioAtual - totalInvestido + totalProventos;
+    const valorizacaoPercent = totalInvestido > 0 ? ((patrimonioAtual / totalInvestido) - 1) * 100 : 0;
+    const rentabilidadePercent = totalInvestido > 0 ? (rentabilidadeReais / totalInvestido) * 100 : 0;
+
+    const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatPercent = (value) => `${value.toFixed(2)}%`;
+
+    const updateField = (id, value, isCurrency = true, addSign = false) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const formattedValue = isCurrency ? formatCurrency(value) : formatPercent(value);
+            const sinal = value >= 0 ? '+' : '';
+            element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
+            element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
+            if (id === 'fiis-total-investido' || id === 'fiis-patrimonio-atual') {
+                element.style.color = '#e0e0e0';
+            }
+        }
+    };
+    
+    updateField('fiis-total-investido', totalInvestido);
+    updateField('fiis-patrimonio-atual', patrimonioAtual);
+    updateField('fiis-rentabilidade-reais', rentabilidadeReais, true, true);
+    updateField('fiis-valorizacao-percent', valorizacaoPercent, false, true);
+    updateField('fiis-rentabilidade-percent', rentabilidadePercent, false, true);
 }
 
 
@@ -92,6 +138,13 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         document.getElementById("fiis-valorization-reais").textContent = "N/A";
         document.getElementById("fiis-valorization-percent").innerHTML = "";
         document.getElementById("fiis-valorization-percent").className = 'valorization-pill';
+        
+        // Limpa também o card de resumo
+        document.getElementById("fiis-total-investido").textContent = "R$ 0,00";
+        document.getElementById("fiis-patrimonio-atual").textContent = "R$ 0,00";
+        document.getElementById("fiis-rentabilidade-reais").textContent = "R$ 0,00";
+        document.getElementById("fiis-valorizacao-percent").textContent = "0,00%";
+        document.getElementById("fiis-rentabilidade-percent").textContent = "0,00%";
         return;
     }
 
@@ -126,20 +179,17 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
     if (tickers.length === 0) {
         fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
         renderDivisaoFiisCharts(null, null);
-        document.getElementById("fiis-valorization-reais").textContent = "N/A";
-        document.getElementById("fiis-valorization-percent").innerHTML = "";
-        document.getElementById("fiis-valorization-percent").className = 'valorization-pill';
         return;
     }
 
-    // Chama a nova função de valorização
     renderFiisDayValorization(tickers, carteira);
-
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
 
-        // --- CÁLCULO DA POSIÇÃO ATUAL E RENDERIZAÇÃO DOS GRÁFICOS ---
+        // Renderiza o card de resumo
+        renderFiisSummary(carteira, precosAtuais);
+
         let totalValorFiis = 0;
         const valoresAtuais = {
             tipo: { 'Tijolo': 0, 'Papel': 0 },
@@ -158,13 +208,9 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             if (classif) {
                 if (classif['Tipo FII'] === 'Tijolo') valoresAtuais.tipo.Tijolo += valorPosicaoAtual;
                 if (classif['Tipo FII'] === 'Papel') valoresAtuais.tipo.Papel += valorPosicaoAtual;
-
-                // CORREÇÃO APLICADA AQUI:
-                // A verificação agora checa se a *chave* existe no objeto, em vez de checar se o *valor* é maior que zero.
                 if (classif['Risco FII'] in valoresAtuais.risco) {
                     valoresAtuais.risco[classif['Risco FII']] += valorPosicaoAtual;
                 }
-
                 if (classif['Tipo FII'] === 'Tijolo') {
                     const especie = classif['Espécie'];
                     if (valoresAtuais.especieTijolo.hasOwnProperty(especie)) {
@@ -180,7 +226,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             }
         });
 
-        // Geração do HTML do card (lógica existente)
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker] || 0;
@@ -213,15 +258,13 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
         fiisListaDiv.innerHTML = html;
 
-        // Converte valores acumulados em percentuais
-        const divisaoAtualPercentual = JSON.parse(JSON.stringify(valoresAtuais)); // Deep copy
+        const divisaoAtualPercentual = JSON.parse(JSON.stringify(valoresAtuais));
         for (const categoria in divisaoAtualPercentual) {
             for (const subcat in divisaoAtualPercentual[categoria]) {
                 divisaoAtualPercentual[categoria][subcat] = totalValorFiis > 0 ? (valoresAtuais[categoria][subcat] / totalValorFiis) * 100 : 0;
             }
         }
 
-        // Chama a função para renderizar os gráficos de divisão
         renderDivisaoFiisCharts(divisaoAtualPercentual, divisaoIdeal);
 
     } catch (error) {
@@ -230,7 +273,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
     }
 }
 
-// Event listener para abrir o modal de detalhes quando um card for clicado.
 document.getElementById("fiis-lista").addEventListener("click", (e) => {
     const card = e.target.closest(".fii-card");
     if (card && card.dataset.ticker && window.openAtivoDetalhesModal) {
