@@ -7,6 +7,7 @@ import { setupAllModals } from './api/modals.js';
 import { renderAcoesCarteira } from './tabs/acoes.js';
 import { renderFiisCarteira } from './tabs/fiis.js';
 import { renderEtfCarteira } from './tabs/etf.js';
+import { renderCriptoCarteira } from './tabs/cripto.js';
 import { renderRendaFixaCarteira } from './tabs/rendaFixa.js';
 import { renderHistorico } from './tabs/lancamentos.js';
 import { renderClassificacao } from './tabs/classificacao.js';
@@ -19,7 +20,7 @@ let allLancamentos = [];
 let allProventos = [];
 let allClassificacoes = {};
 let currentProventosMeta = null;
-let allValoresManuaisTD = {}; // Novo estado para valores manuais
+let allValoresManuaisTD = {};
 
 // Função que será chamada quando o usuário fizer login
 const onLogin = (userID) => {
@@ -35,7 +36,7 @@ const onLogout = () => {
     allProventos = [];
     allClassificacoes = {};
     currentProventosMeta = null;
-    allValoresManuaisTD = {}; // Limpa o estado no logout
+    allValoresManuaisTD = {};
 };
 
 // --- OUVINTES DE DADOS (LISTENERS) ---
@@ -51,6 +52,7 @@ function initializeDataListeners(userID) {
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
         renderEtfCarteira(allLancamentos, allProventos);
+        renderCriptoCarteira(allLancamentos, allProventos);
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
     });
@@ -65,6 +67,7 @@ function initializeDataListeners(userID) {
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos);
         renderEtfCarteira(allLancamentos, allProventos);
+        renderCriptoCarteira(allLancamentos, allProventos);
     });
 
     // Listener para Classificações
@@ -82,7 +85,7 @@ function initializeDataListeners(userID) {
         updateProventosTab(allProventos, currentProventosMeta);
     });
 
-    // NOVO: Listener para Valores Manuais do Tesouro Direto
+    // Listener para Valores Manuais do Tesouro Direto
     const qValoresManuais = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID));
     onSnapshot(qValoresManuais, (snapshot) => {
         allValoresManuaisTD = {};
@@ -90,7 +93,6 @@ function initializeDataListeners(userID) {
             const data = doc.data();
             allValoresManuaisTD[data.ativo] = { id: doc.id, ...data };
         });
-        // Re-renderiza a Renda Fixa sempre que um valor manual for alterado
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
     });
 }
