@@ -137,6 +137,81 @@ function setupLancamentosModal(userID) {
 
 }
 
+// --- MODAL DE DIVISÃO IDEAL DE FIIS (NOVO) ---
+function setupDivisaoIdealModal(userID) {
+    const modal = document.getElementById("divisao-ideal-modal");
+    if (!modal) return;
+
+    const form = document.getElementById("form-divisao-ideal");
+    const openBtn = document.getElementById("btn-divisao-ideal-fiis");
+    const validationMessageDiv = document.getElementById("divisao-validation-message");
+    const configDocRef = doc(db, "configuracoes", userID);
+
+    const populateForm = (data = {}) => {
+        form.querySelectorAll("input[type='number']").forEach(input => {
+            input.value = data[input.name] || '';
+        });
+    };
+
+    const validatePercentages = () => {
+        const groups = {};
+        form.querySelectorAll("input[data-group]").forEach(input => {
+            const groupName = input.dataset.group;
+            if (!groups[groupName]) {
+                groups[groupName] = 0;
+            }
+            groups[groupName] += parseFloat(input.value) || 0;
+        });
+
+        let messages = [];
+        for (const group in groups) {
+            if (groups[group] !== 100 && groups[group] > 0) {
+                messages.push(`A soma para "${group}" é ${groups[group]}%, mas deveria ser 100%.`);
+            }
+        }
+
+        if (messages.length > 0) {
+            validationMessageDiv.innerHTML = messages.join('<br>');
+            validationMessageDiv.style.display = 'block';
+        } else {
+            validationMessageDiv.style.display = 'none';
+        }
+    };
+
+    openBtn.addEventListener("click", async () => {
+        form.reset();
+        try {
+            const docSnap = await getDoc(configDocRef);
+            if (docSnap.exists() && docSnap.data().divisaoIdealFIIs) {
+                populateForm(docSnap.data().divisaoIdealFIIs);
+            }
+        } catch (error) {
+            console.error("Erro ao carregar divisão ideal:", error);
+        }
+        validatePercentages();
+        modal.classList.add("show");
+    });
+
+    form.addEventListener("input", validatePercentages);
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const dataToSave = {};
+        form.querySelectorAll("input[type='number']").forEach(input => {
+            dataToSave[input.name] = parseFloat(input.value) || 0;
+        });
+
+        try {
+            await setDoc(configDocRef, { divisaoIdealFIIs: dataToSave }, { merge: true });
+            closeModal("divisao-ideal-modal");
+        } catch (error) {
+            console.error("Erro ao salvar divisão ideal:", error);
+            alert("Erro ao salvar configuração. Tente novamente.");
+        }
+    });
+}
+
+
 // --- MODAL DE RENDA FIXA ---
 function setupRendaFixaModal(userID) {
     const modal = document.getElementById("rendafixa-modal");
@@ -588,6 +663,7 @@ function setupAtivoDetalhesModal() {
 export function setupAllModals(userID) {
     initializeCloseButtons();
     setupLancamentosModal(userID);
+    setupDivisaoIdealModal(userID);
     setupRendaFixaModal(userID);
     setupProventoModal(userID);
     setupMetaProventosModal(userID);

@@ -1174,3 +1174,48 @@ torico-lista p,
     font-weight: 500;
     color: #e0e0e0;
 }
+/* ... (todo o seu CSS existente) ... */
+
+/* ESTILOS PARA O MODAL DE DIVISÃO IDEAL */
+
+.form-section {
+    margin-bottom: 25px;
+}
+
+.form-section h4 {
+    margin: 0 0 15px 0;
+    color: #00d9c3;
+    border-bottom: 1px solid #2a2c30;
+    padding-bottom: 8px;
+    font-size: 1rem;
+}
+
+.form-section-divider {
+    height: 1px;
+    background-color: #2a2c30;
+    margin: 30px 0;
+}
+
+.form-subsection h5 {
+    margin: 0 0 10px 0;
+    color: #a0a7b3;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.form-subsection {
+    padding-left: 15px;
+    border-left: 2px solid #2a2c30;
+}
+
+.validation-message {
+    display: none;
+    background-color: rgba(236, 201, 75, 0.1);
+    border: 1px solid #ECC94B;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 15px;
+    color: #ECC94B;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}

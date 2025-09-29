@@ -306,9 +306,14 @@
                 <div class="content-container" style="max-width: none">
                     <div class="content-header">
                         <h3>Carteira de Fundos Imobiliários (FIIs)</h3>
-                        <button id="btn-novo-lancamento-fii" class="btn-adicionar">
-                            <i class="fas fa-plus"></i> Novo Lançamento
-                        </button>
+                         <div style="display: flex; gap: 10px;">
+                            <button id="btn-divisao-ideal-fiis" class="btn-adicionar btn-secondary">
+                                <i class="fas fa-tasks"></i> Divisão Ideal de FIIs
+                            </button>
+                            <button id="btn-novo-lancamento-fii" class="btn-adicionar">
+                                <i class="fas fa-plus"></i> Novo Lançamento
+                            </button>
+                        </div>
                     </div>
                     <div id="fiis-lista" class="fiis-grid-container">
                         <p>Calculando sua carteira de FIIs...</p>
@@ -699,6 +704,7 @@
         </div>
       </div>
     </div>
+
     <div id="meta-proventos-modal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-header">
@@ -759,6 +765,7 @@
         </div>
       </div>
     </div>
+
     <div id="classificacao-modal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-header">
@@ -866,6 +873,95 @@
                   <div id="historico-valores-manuais-lista">
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="divisao-ideal-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="divisao-ideal-modal-title">Definir Divisão Ideal de FIIs</h2>
+                <button class="modal-close-btn" data-modal="divisao-ideal-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-divisao-ideal">
+                    <div class="form-section">
+                        <h4>Divisão por Tipo</h4>
+                        <div class="form-grid">
+                            <div>
+                                <label for="ideal-tipo-tijolo" class="form-label">Tijolo (%)</label>
+                                <input type="number" id="ideal-tipo-tijolo" name="tipo-tijolo" placeholder="60" min="0" max="100" class="form-input" data-group="tipo" />
+                            </div>
+                            <div>
+                                <label for="ideal-tipo-papel" class="form-label">Papel (%)</label>
+                                <input type="number" id="ideal-tipo-papel" name="tipo-papel" placeholder="40" min="0" max="100" class="form-input" data-group="tipo" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Divisão por Risco</h4>
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                             <div>
+                                <label for="ideal-risco-arrojado" class="form-label">Arrojado (%)</label>
+                                <input type="number" id="ideal-risco-arrojado" name="risco-arrojado" placeholder="20" min="0" max="100" class="form-input" data-group="risco" />
+                            </div>
+                            <div>
+                                <label for="ideal-risco-crescimento" class="form-label">Crescimento (%)</label>
+                                <input type="number" id="ideal-risco-crescimento" name="risco-crescimento" placeholder="40" min="0" max="100" class="form-input" data-group="risco" />
+                            </div>
+                            <div>
+                                <label for="ideal-risco-ancoragem" class="form-label">Ancoragem (%)</label>
+                                <input type="number" id="ideal-risco-ancoragem" name="risco-ancoragem" placeholder="40" min="0" max="100" class="form-input" data-group="risco" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section-divider"></div>
+
+                    <div id="subdivisao-tijolo" class="form-section form-subsection">
+                        <h5>Subdivisão de Tijolo</h5>
+                         <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                            <div>
+                                <label for="ideal-tijolo-lajes" class="form-label">Lajes Corp. (%)</label>
+                                <input type="number" id="ideal-tijolo-lajes" name="tijolo-lajes" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
+                            </div>
+                            <div>
+                                <label for="ideal-tijolo-shoppings" class="form-label">Shoppings (%)</label>
+                                <input type="number" id="ideal-tijolo-shoppings" name="tijolo-shoppings" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
+                            </div>
+                             <div>
+                                <label for="ideal-tijolo-logistica" class="form-label">Logística (%)</label>
+                                <input type="number" id="ideal-tijolo-logistica" name="tijolo-logistica" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
+                            </div>
+                             <div>
+                                <label for="ideal-tijolo-outros" class="form-label">Outros (%)</label>
+                                <input type="number" id="ideal-tijolo-outros" name="tijolo-outros" placeholder="25" min="0" max="100" class="form-input" data-group="tijolo" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="subdivisao-papel" class="form-section form-subsection">
+                        <h5>Subdivisão de Papel</h5>
+                         <div class="form-grid">
+                            <div>
+                                <label for="ideal-papel-cdi" class="form-label">Atrelado ao CDI (%)</label>
+                                <input type="number" id="ideal-papel-cdi" name="papel-cdi" placeholder="50" min="0" max="100" class="form-input" data-group="papel" />
+                            </div>
+                            <div>
+                                <label for="ideal-papel-ipca" class="form-label">Atrelado ao IPCA (%)</label>
+                                <input type="number" id="ideal-papel-ipca" name="papel-ipca" placeholder="50" min="0" max="100" class="form-input" data-group="papel" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="divisao-validation-message" class="validation-message"></div>
+
+                    <div class="modal-footer" style="padding-top: 25px; padding-right: 0; padding-bottom: 0;">
+                        <button type="button" class="btn-cancelar" data-modal="divisao-ideal-modal">Cancelar</button>
+                        <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar Divisão</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
