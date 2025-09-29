@@ -1364,3 +1364,110 @@ body {
   width: 100%;
   text-align: center;
 }
+/* --- ESTILOS PARA A ABA PATRIMÔNIO --- */
+
+.patrimonio-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.patrimonio-card {
+  background-color: #1a1b1e;
+  border: 1px solid #2a2c30;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.patrimonio-card h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.chart-container-large {
+  height: 350px;
+}
+
+.chart-container-donut {
+  height: 200px;
+  margin-bottom: 20px;
+}
+
+.allocation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.allocation-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 15px;
+  align-items: center;
+}
+
+.allocation-label {
+  color: #a0a7b3;
+}
+.allocation-value {
+  color: #e0e0e0;
+  font-weight: 600;
+  text-align: right;
+}
+.allocation-percent {
+  background-color: #2a2c30;
+  color: #e0e0e0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  width: 60px;
+  text-align: center;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.patrimonio-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.patrimonio-card th,
+.patrimonio-card td {
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.patrimonio-card thead {
+  border-bottom: 2px solid #2a2c30;
+}
+
+.patrimonio-card th {
+  color: #a0a7b3;
+  font-weight: 600;
+}
+
+.patrimonio-card tbody tr {
+  border-bottom: 1px solid #2a2c30;
+}
+
+.patrimonio-card tbody tr:last-child {
+  border-bottom: none;
+}
+
+.patrimonio-card td {
+  color: #e0e0e0;
+}
+
+@media (max-width: 992px) {
+  .patrimonio-grid {
+    grid-template-columns: 1fr;
+  }
+}

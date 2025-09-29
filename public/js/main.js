@@ -14,6 +14,7 @@ import { renderClassificacao } from './tabs/classificacao.js';
 import { updateProventosTab } from './tabs/proventos.js';
 import { renderMovimentacaoChart } from './charts.js';
 import { updateMainSummaryHeader } from './summary.js';
+import { renderPatrimonioTab } from './tabs/patrimonio.js'; // <-- ADICIONADO AQUI
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 let currentUserID = null;
@@ -43,7 +44,6 @@ const onLogout = () => {
 };
 
 // --- OUVINTES DE DADOS (LISTENERS) ---
-// --- OUVINTES DE DADOS (LISTENERS) ---
 function initializeDataListeners(userID) {
     // Listener para Lançamentos
     const qLancamentos = query(collection(db, "lancamentos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
@@ -62,6 +62,7 @@ function initializeDataListeners(userID) {
         renderCriptoCarteira(allLancamentos, allProventos);
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
+        renderPatrimonioTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
     });
 
     // Listener para Proventos
@@ -78,6 +79,7 @@ function initializeDataListeners(userID) {
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
+        renderPatrimonioTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
     });
 
     // Listener para Classificações

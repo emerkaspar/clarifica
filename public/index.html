@@ -237,11 +237,46 @@
           </div>
           <div class="tab-content" id="myTabContent">
             <div class="tab-pane active" id="patrimonio">
-              <h2>Visão Geral do Patrimônio</h2>
-              <p>
-                Em breve: consolidação total da sua carteira, gráficos de
-                evolução e alocação por tipo de ativo.
-              </p>
+              <div id="patrimonio-content">
+                <div class="patrimonio-grid">
+                  <div class="patrimonio-card chart-card">
+                    <h3>Evolução do Patrimônio</h3>
+                    <div class="chart-container-large">
+                      <canvas id="patrimonio-evolution-chart"></canvas>
+                    </div>
+                  </div>
+                  <div class="patrimonio-card chart-card">
+                    <h3>Ativos na Carteira</h3>
+                    <div class="chart-container-donut">
+                      <canvas id="asset-allocation-chart"></canvas>
+                    </div>
+                    <div
+                      id="allocation-details"
+                      class="allocation-details"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="patrimonio-card table-card">
+                  <h3>Posição Consolidada</h3>
+                  <div class="table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Ativo</th>
+                          <th>Tipo</th>
+                          <th>Quantidade</th>
+                          <th>Preço Médio</th>
+                          <th>Valor Atual</th>
+                          <th>Rentabilidade</th>
+                          <th>% Carteira</th>
+                        </tr>
+                      </thead>
+                      <tbody id="posicao-consolidada-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="tab-pane" id="rentabilidade">
               <h2>Análise de Rentabilidade</h2>
