@@ -1,5 +1,75 @@
-import { fetchCurrentPrices } from '../api/brapi.js';
+import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
 import { renderDivisaoFiisCharts } from './fiisCharts.js';
+
+
+/**
+ * Calcula e renderiza a valorização do dia para a carteira de FIIs.
+ * @param {Array<string>} tickers - A lista de tickers de FIIs na carteira.
+ * @param {object} carteira - O objeto da carteira consolidada.
+ */
+async function renderFiisDayValorization(tickers, carteira) {
+    const valorizationReaisDiv = document.getElementById("fiis-valorization-reais");
+    const valorizationPercentDiv = document.getElementById("fiis-valorization-percent");
+
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return;
+
+    // Estado inicial enquanto calcula
+    valorizationReaisDiv.textContent = "Calculando...";
+    valorizationPercentDiv.innerHTML = "";
+    valorizationPercentDiv.className = 'valorization-pill';
+
+
+    try {
+        const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
+        const results = await Promise.all(promises);
+
+        let totalValorizacaoReais = 0;
+        let totalInvestidoPonderado = 0;
+        let variacaoPonderadaTotal = 0;
+
+        results.forEach((data, index) => {
+            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
+                const ticker = tickers[index];
+                const prices = data.results[0].historicalDataPrice.reverse(); // Garante que o mais recente está em [0]
+                const hoje = prices[0].close;
+                const ontem = prices[1].close;
+                const quantidade = carteira[ticker].quantidade;
+                const valorPosicaoAtual = hoje * quantidade;
+
+                if (ontem > 0) {
+                    const variacaoPercentual = ((hoje / ontem) - 1);
+                    const variacaoReais = (hoje - ontem) * quantidade;
+                    
+                    totalValorizacaoReais += variacaoReais;
+                    totalInvestidoPonderado += valorPosicaoAtual; // Usar valor atual como peso
+                    variacaoPonderadaTotal += variacaoPercentual * valorPosicaoAtual;
+                }
+            }
+        });
+
+        const variacaoPercentualFinal = totalInvestidoPonderado > 0 ? (variacaoPonderadaTotal / totalInvestidoPonderado) * 100 : 0;
+        
+        const isPositive = totalValorizacaoReais >= 0;
+        const sinal = isPositive ? '+' : '';
+        const corClasse = isPositive ? 'positive' : 'negative';
+        const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+
+        const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
+        
+        valorizationReaisDiv.textContent = `${sinal}${valorizacaoReaisFormatada}`;
+        valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
+
+        valorizationPercentDiv.innerHTML = `${sinal}${percentualFormatado} ${iconeSeta}`;
+        valorizationPercentDiv.classList.add(corClasse);
+
+
+    } catch (error) {
+        console.error("Erro ao calcular a valorização do dia para FIIs:", error);
+        valorizationReaisDiv.textContent = "Erro";
+    }
+}
+
 
 /**
  * Renderiza a aba de Fundos Imobiliários (FIIs).
@@ -18,8 +88,10 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
     if (fiisLancamentos.length === 0) {
         fiisListaDiv.innerHTML = `<p>Nenhum FII lançado ainda.</p>`;
-        // Limpa os gráficos se não houver FIIs
         renderDivisaoFiisCharts(null, null);
+        document.getElementById("fiis-valorization-reais").textContent = "N/A";
+        document.getElementById("fiis-valorization-percent").innerHTML = "";
+        document.getElementById("fiis-valorization-percent").className = 'valorization-pill';
         return;
     }
 
@@ -54,8 +126,15 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
     if (tickers.length === 0) {
         fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
         renderDivisaoFiisCharts(null, null);
+        document.getElementById("fiis-valorization-reais").textContent = "N/A";
+        document.getElementById("fiis-valorization-percent").innerHTML = "";
+        document.getElementById("fiis-valorization-percent").className = 'valorization-pill';
         return;
     }
+
+    // Chama a nova função de valorização
+    renderFiisDayValorization(tickers, carteira);
+
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);

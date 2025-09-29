@@ -1219,3 +1219,67 @@ torico-lista p,
     font-size: 0.85rem;
     line-height: 1.5;
 }
+/* --- ESTILOS PARA O HEADER DE VALORIZAÇÃO --- */
+.valorization-header {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.valorization-card {
+    background-color: #1a1b1e;
+    border: 1px solid #2a2c30;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Espaço entre título e valor principal */
+    flex-grow: 1;
+    flex-basis: 280px; /* Base de largura para responsividade */
+}
+
+.valorization-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #a0a7b3;
+    font-weight: 500;
+}
+
+.valorization-title i {
+    color: #a0a7b3;
+}
+
+.valorization-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.valorization-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #e0e0e0;
+}
+
+.valorization-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 15px;
+    color: #1f2937;
+}
+
+.valorization-pill.positive {
+    background-color: #00d9c3; /* Turquesa para positivo */
+}
+
+.valorization-pill.negative {
+    background-color: #ef4444; /* Vermelho para negativo */
+}

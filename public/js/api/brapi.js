@@ -92,12 +92,10 @@ export async function fetchCryptoPrices(tickers) {
 /**
  * Busca dados históricos para o gráfico de performance.
  * @param {string} ticker - O ticker do ativo.
- * @param {string} range - O período (ex: '3mo', '1y').
+ * @param {string} range - O período (ex: '5d', '1mo', '3mo').
  * @returns {Promise<any>} O objeto de resposta da API com os dados históricos.
  */
-export async function fetchHistoricalData(ticker, range = '3mo') {
-    // ATENÇÃO: A busca de histórico para cripto precisaria de uma lógica separada
-    // usando a API da CoinGecko, pois a Brapi não fornecerá.
+export async function fetchHistoricalData(ticker, range = '1mo') {
     // Por enquanto, o gráfico de performance para cripto não funcionará.
     try {
         const response = await fetch(`https://brapi.dev/api/quote/${ticker}?range=${range}&interval=1d&token=${BRAAPI_TOKEN}`);

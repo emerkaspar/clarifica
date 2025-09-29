@@ -1,8 +1,74 @@
-import { fetchCurrentPrices } from '../api/brapi.js';
+import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
 
 // A função openAtivoDetalhesModal será importada ou definida no futuro,
 // por enquanto, vamos assumir que ela existe globalmente para o event listener.
 // Idealmente, isso seria gerenciado por um módulo de UI principal.
+
+/**
+ * Calcula e renderiza a valorização do dia para a carteira de Ações.
+ * @param {Array<string>} tickers - A lista de tickers de Ações na carteira.
+ * @param {object} carteira - O objeto da carteira consolidada.
+ */
+async function renderAcoesDayValorization(tickers, carteira) {
+    const valorizationReaisDiv = document.getElementById("acoes-valorization-reais");
+    const valorizationPercentDiv = document.getElementById("acoes-valorization-percent");
+
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return;
+
+    valorizationReaisDiv.textContent = "Calculando...";
+    valorizationPercentDiv.innerHTML = "";
+    valorizationPercentDiv.className = 'valorization-pill';
+
+    try {
+        const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
+        const results = await Promise.all(promises);
+
+        let totalValorizacaoReais = 0;
+        let totalInvestidoPonderado = 0;
+        let variacaoPonderadaTotal = 0;
+
+        results.forEach((data, index) => {
+            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
+                const ticker = tickers[index];
+                const prices = data.results[0].historicalDataPrice.reverse();
+                const hoje = prices[0].close;
+                const ontem = prices[1].close;
+                const quantidade = carteira[ticker].quantidade;
+                const valorPosicaoAtual = hoje * quantidade;
+
+                if (ontem > 0) {
+                    const variacaoPercentual = ((hoje / ontem) - 1);
+                    const variacaoReais = (hoje - ontem) * quantidade;
+                    
+                    totalValorizacaoReais += variacaoReais;
+                    totalInvestidoPonderado += valorPosicaoAtual;
+                    variacaoPonderadaTotal += variacaoPercentual * valorPosicaoAtual;
+                }
+            }
+        });
+
+        const variacaoPercentualFinal = totalInvestidoPonderado > 0 ? (variacaoPonderadaTotal / totalInvestidoPonderado) * 100 : 0;
+        
+        const isPositive = totalValorizacaoReais >= 0;
+        const sinal = isPositive ? '+' : '';
+        const corClasse = isPositive ? 'positive' : 'negative';
+        const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+
+        const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
+        
+        valorizationReaisDiv.textContent = `${sinal}${valorizacaoReaisFormatada}`;
+        valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
+
+        valorizationPercentDiv.innerHTML = `${sinal}${percentualFormatado} ${iconeSeta}`;
+        valorizationPercentDiv.classList.add(corClasse);
+
+    } catch (error) {
+        console.error("Erro ao calcular a valorização do dia para Ações:", error);
+        valorizationReaisDiv.textContent = "Erro ao carregar";
+    }
+}
+
 
 /**
  * Renderiza os cards da carteira de ações.
@@ -19,6 +85,13 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
 
     if (acoesLancamentos.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação lançada ainda.</p>`;
+        const reaisDiv = document.getElementById("acoes-valorization-reais");
+        const percentDiv = document.getElementById("acoes-valorization-percent");
+        if (reaisDiv) reaisDiv.textContent = "N/A";
+        if (percentDiv) {
+            percentDiv.innerHTML = "";
+            percentDiv.className = 'valorization-pill';
+        }
         return;
     }
 
@@ -55,8 +128,18 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
     const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
     if (tickers.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
+        const reaisDiv = document.getElementById("acoes-valorization-reais");
+        const percentDiv = document.getElementById("acoes-valorization-percent");
+        if (reaisDiv) reaisDiv.textContent = "N/A";
+        if (percentDiv) {
+            percentDiv.innerHTML = "";
+            percentDiv.className = 'valorization-pill';
+        }
         return;
     }
+
+    // Chama a função de valorização do dia
+    renderAcoesDayValorization(tickers, carteira);
 
     try {
         // 4. Busca os preços atuais de todos os tickers de uma vez usando a API modularizada

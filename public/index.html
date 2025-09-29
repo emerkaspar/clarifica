@@ -290,46 +290,71 @@
             </div>
 
             <div class="tab-pane" id="acoes">
-                <div class="content-container" style="max-width: none">
-                    <div class="content-header">
-                        <h3>Carteira de Ações</h3>
-                        <button id="btn-novo-lancamento-acao" class="btn-adicionar">
-                            <i class="fas fa-plus"></i> Novo Lançamento
-                        </button>
-                    </div>
-                    <div id="acoes-lista" class="fiis-grid-container">
-                        <p>Calculando sua carteira de Ações...</p>
-                    </div>
+    <div class="content-container" style="max-width: none">
+        <div class="valorization-header">
+            <div id="acoes-valorization-card" class="valorization-card">
+                <div class="valorization-title">
+                    <i class="fas fa-arrow-trend-up"></i>
+                    <span>Valorização do dia (Ações)</span>
+                </div>
+                <div class="valorization-main">
+                    <span id="acoes-valorization-reais" class="valorization-value">Calculando...</span>
+                    <span id="acoes-valorization-percent" class="valorization-pill"></span>
                 </div>
             </div>
+            </div>
+        <div class="content-header">
+            <h3>Carteira de Ações</h3>
+            <button id="btn-novo-lancamento-acao" class="btn-adicionar">
+                <i class="fas fa-plus"></i> Novo Lançamento
+            </button>
+        </div>
+        <div id="acoes-lista" class="fiis-grid-container">
+            <p>Calculando sua carteira de Ações...</p>
+        </div>
+    </div>
+</div>
             <div class="tab-pane" id="fiis">
-                <div class="content-container" style="max-width: none">
-                    <div class="content-header">
-                        <h3>Carteira de Fundos Imobiliários (FIIs)</h3>
-                         <div style="display: flex; gap: 10px;">
-                            <button id="btn-divisao-ideal-fiis" class="btn-adicionar btn-secondary">
-                                <i class="fas fa-tasks"></i> Divisão Ideal de FIIs
-                            </button>
-                            <button id="btn-novo-lancamento-fii" class="btn-adicionar">
-                                <i class="fas fa-plus"></i> Novo Lançamento
-                            </button>
-                        </div>
-                    </div>
-                    <div id="fiis-lista" class="fiis-grid-container">
-                        <p>Calculando sua carteira de FIIs...</p>
-                    </div>
-                    <div class="divisao-ideal-container" style="margin-top: 40px;">
-    <h3 style="color: #e0e0e0; border-bottom: 1px solid #2a2c30; padding-bottom: 10px; margin-bottom: 20px;">Análise de Divisão da Carteira de FIIs</h3>
-
-    <div class="charts-grid-container">
-        <div id="divisao-tipo-chart-container" class="chart-wrapper">
-            <canvas id="divisao-tipo-chart"></canvas>
+    <div class="content-container" style="max-width: none">
+        <div class="valorization-header">
+            <div id="fiis-valorization-card" class="valorization-card">
+                <div class="valorization-title">
+                    <i class="fas fa-arrow-trend-up"></i>
+                    <span>Valorização do dia (FIIs)</span>
+                </div>
+                <div class="valorization-main">
+                    <span id="fiis-valorization-reais" class="valorization-value">Calculando...</span>
+                    <span id="fiis-valorization-percent" class="valorization-pill"></span>
+                </div>
+            </div>
+            </div>
+        <div class="content-header">
+            <h3>Carteira de Fundos Imobiliários (FIIs)</h3>
+             <div style="display: flex; gap: 10px;">
+                <button id="btn-divisao-ideal-fiis" class="btn-adicionar btn-secondary">
+                    <i class="fas fa-tasks"></i> Divisão Ideal de FIIs
+                </button>
+                <button id="btn-novo-lancamento-fii" class="btn-adicionar">
+                    <i class="fas fa-plus"></i> Novo Lançamento
+                </button>
+            </div>
         </div>
-        <div id="divisao-risco-chart-container" class="chart-wrapper">
-            <canvas id="divisao-risco-chart"></canvas>
+        <div id="fiis-lista" class="fiis-grid-container">
+            <p>Calculando sua carteira de FIIs...</p>
         </div>
-        <div id="divisao-especie-chart-container" class="chart-wrapper full-width">
-            <canvas id="divisao-especie-chart"></canvas>
+        <div class="divisao-ideal-container" style="margin-top: 40px;">
+            <h3 style="color: #e0e0e0; border-bottom: 1px solid #2a2c30; padding-bottom: 10px; margin-bottom: 20px;">Análise de Divisão da Carteira de FIIs</h3>
+            <div class="charts-grid-container">
+                <div id="divisao-tipo-chart-container" class="chart-wrapper">
+                    <canvas id="divisao-tipo-chart"></canvas>
+                </div>
+                <div id="divisao-risco-chart-container" class="chart-wrapper">
+                    <canvas id="divisao-risco-chart"></canvas>
+                </div>
+                <div id="divisao-especie-chart-container" class="chart-wrapper full-width">
+                    <canvas id="divisao-especie-chart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </div>
