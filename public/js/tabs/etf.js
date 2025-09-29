@@ -1,4 +1,116 @@
-import { fetchCurrentPrices } from '../api/brapi.js';
+import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
+
+/**
+ * Calcula e renderiza a valorização do dia para a carteira de ETFs.
+ * @param {Array<string>} tickers - A lista de tickers de ETFs na carteira.
+ * @param {object} carteira - O objeto da carteira consolidada.
+ */
+async function renderEtfDayValorization(tickers, carteira) {
+    const valorizationReaisDiv = document.getElementById("etf-valorization-reais");
+    const valorizationPercentDiv = document.getElementById("etf-valorization-percent");
+
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return;
+
+    valorizationReaisDiv.textContent = "Calculando...";
+    valorizationPercentDiv.innerHTML = "";
+    valorizationPercentDiv.className = 'valorization-pill';
+
+    try {
+        const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
+        const results = await Promise.all(promises);
+
+        let totalValorizacaoReais = 0;
+        let totalInvestidoPonderado = 0;
+        let variacaoPonderadaTotal = 0;
+
+        results.forEach((data, index) => {
+            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
+                const ticker = tickers[index];
+                const prices = data.results[0].historicalDataPrice.reverse();
+                const hoje = prices[0].close;
+                const ontem = prices[1].close;
+                const quantidade = carteira[ticker].quantidade;
+                const valorPosicaoAtual = hoje * quantidade;
+
+                if (ontem > 0) {
+                    const variacaoPercentual = ((hoje / ontem) - 1);
+                    const variacaoReais = (hoje - ontem) * quantidade;
+                    
+                    totalValorizacaoReais += variacaoReais;
+                    totalInvestidoPonderado += valorPosicaoAtual;
+                    variacaoPonderadaTotal += variacaoPercentual * valorPosicaoAtual;
+                }
+            }
+        });
+
+        const variacaoPercentualFinal = totalInvestidoPonderado > 0 ? (variacaoPonderadaTotal / totalInvestidoPonderado) * 100 : 0;
+        
+        const isPositive = totalValorizacaoReais >= 0;
+        const sinal = isPositive ? '+' : '';
+        const corClasse = isPositive ? 'positive' : 'negative';
+        const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+
+        const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
+        
+        valorizationReaisDiv.textContent = `${sinal}${valorizacaoReaisFormatada}`;
+        valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
+
+        valorizationPercentDiv.innerHTML = `${sinal}${percentualFormatado} ${iconeSeta}`;
+        valorizationPercentDiv.classList.add(corClasse);
+
+    } catch (error) {
+        console.error("Erro ao calcular a valorização do dia para ETFs:", error);
+        valorizationReaisDiv.textContent = "Erro ao carregar";
+    }
+}
+
+/**
+ * Calcula e renderiza o resumo da carteira de ETFs.
+ * @param {object} carteira - O objeto da carteira consolidada.
+ * @param {object} precosAtuais - Objeto com os preços atuais dos ativos.
+ */
+function renderEtfSummary(carteira, precosAtuais) {
+    let totalInvestido = 0;
+    let patrimonioAtual = 0;
+    let totalProventos = 0; // ETFs raramente pagam proventos no BR, mas mantemos a lógica
+
+    Object.values(carteira).forEach(ativo => {
+        if (ativo.quantidade > 0) {
+            const precoAtual = precosAtuais[ativo.ativo] || 0;
+            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+            
+            totalInvestido += precoMedio * ativo.quantidade;
+            patrimonioAtual += precoAtual * ativo.quantidade;
+            totalProventos += ativo.proventos;
+        }
+    });
+
+    const rentabilidadeReais = patrimonioAtual - totalInvestido + totalProventos;
+    const rentabilidadePercent = totalInvestido > 0 ? (rentabilidadeReais / totalInvestido) * 100 : 0;
+
+    const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatPercent = (value) => `${value.toFixed(2)}%`;
+
+    const updateField = (id, value, isCurrency = true, addSign = false) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const formattedValue = isCurrency ? formatCurrency(value) : formatPercent(value);
+            const sinal = value >= 0 ? '+' : '';
+            element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
+            element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
+            if (id.includes('total-investido') || id.includes('patrimonio-atual')) {
+                element.style.color = '#e0e0e0';
+            }
+        }
+    };
+    
+    updateField('etf-total-investido', totalInvestido);
+    updateField('etf-patrimonio-atual', patrimonioAtual);
+    updateField('etf-rentabilidade-reais', rentabilidadeReais, true, true);
+    updateField('etf-rentabilidade-percent', rentabilidadePercent, false, true);
+}
+
 
 /**
  * Renderiza os cards da carteira de ETFs.
@@ -9,18 +121,23 @@ export async function renderEtfCarteira(lancamentos, proventos) {
     const etfListaDiv = document.getElementById("etf-lista");
     if (!etfListaDiv) return;
 
-    etfListaDiv.innerHTML = `<p>Calculando e buscando cotações, isso pode levar alguns segundos...</p>`;
+    etfListaDiv.innerHTML = `<p>Calculando e buscando cotações...</p>`;
 
     const etfLancamentos = lancamentos.filter(l => l.tipoAtivo === 'ETF');
 
     if (etfLancamentos.length === 0) {
         etfListaDiv.innerHTML = `<p>Nenhum ETF lançado ainda.</p>`;
+        document.getElementById("etf-valorization-reais").textContent = "N/A";
+        document.getElementById("etf-valorization-percent").innerHTML = "";
+        document.getElementById("etf-total-investido").textContent = "R$ 0,00";
+        document.getElementById("etf-patrimonio-atual").textContent = "R$ 0,00";
+        document.getElementById("etf-rentabilidade-reais").textContent = "R$ 0,00";
+        document.getElementById("etf-rentabilidade-percent").textContent = "0,00%";
         return;
     }
 
     const carteira = {};
 
-    // 1. Consolida os lançamentos
     etfLancamentos.forEach(l => {
         if (!carteira[l.ativo]) {
             carteira[l.ativo] = {
@@ -40,47 +157,51 @@ export async function renderEtfCarteira(lancamentos, proventos) {
         }
     });
 
-    // 2. Adiciona os proventos (raro para ETFs, mas a lógica está aqui)
     proventos.forEach(p => {
         if (p.tipoAtivo === 'ETF' && carteira[p.ativo]) {
             carteira[p.ativo].proventos += p.valor;
         }
     });
 
-    // 3. Filtra os tickers com posição em carteira
     const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
     if (tickers.length === 0) {
         etfListaDiv.innerHTML = `<p>Nenhum ETF com posição em carteira.</p>`;
         return;
     }
 
-    try {
-        // 4. Busca os preços
-        const precosAtuais = await fetchCurrentPrices(tickers);
+    renderEtfDayValorization(tickers, carteira);
 
-        // 5. Gera o HTML dos cards
+    try {
+        const precosAtuais = await fetchCurrentPrices(tickers);
+        renderEtfSummary(carteira, precosAtuais);
+
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker] || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
-            const resultado = valorPosicaoAtual - valorInvestido;
-            const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
+            
+            const variacaoReais = valorPosicaoAtual - valorInvestido;
+            const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
+            const rentabilidadeReais = variacaoReais + ativo.proventos;
+            const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="ETF">
                     <div class="fii-card-ticker">${ativo.ativo}</div>
-                    
                     <div class="fii-card-metric-main">
                         <div class="label">Valor Atual da Posição</div>
                         <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                     </div>
-                    
-                    <div class="fii-card-result ${resultado >= 0 ? 'positive-change' : 'negative-change'}">
-                        ${resultado >= 0 ? '+' : ''}${resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacao.toFixed(2)}%)
+                    <div class="fii-card-results-container">
+                        <div class="fii-card-result ${variacaoReais >= 0 ? 'positive-change' : 'negative-change'}">
+                            Variação: ${variacaoReais >= 0 ? '+' : ''}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoPercent.toFixed(2)}%) ${variacaoReais >= 0 ? '↑' : '↓'}
+                        </div>
+                        <div class="fii-card-result ${rentabilidadeReais >= 0 ? 'positive-change' : 'negative-change'}">
+                            Rentabilidade: ${rentabilidadeReais >= 0 ? '+' : ''}${rentabilidadeReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercent.toFixed(2)}%) ${rentabilidadeReais >= 0 ? '↑' : '↓'}
+                        </div>
                     </div>
-
                     <div class="fii-card-details">
                         <div class="detail-item">
                             <span>Valor Investido</span>
@@ -115,7 +236,6 @@ export async function renderEtfCarteira(lancamentos, proventos) {
     }
 }
 
-// Event listener para abrir o modal de detalhes quando um card for clicado.
 document.getElementById("etf-lista").addEventListener("click", (e) => {
     const card = e.target.closest(".fii-card");
     if (card && card.dataset.ticker && window.openAtivoDetalhesModal) {

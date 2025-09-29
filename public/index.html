@@ -456,28 +456,103 @@
                 </div>
             </div>
             <div class="tab-pane" id="etf-cripto">
-                <div class="content-container" style="max-width: none;">
-                    <div class="content-header">
-                        <h3>Carteira de ETFs</h3>
-                        <button id="btn-novo-lancamento-etf" class="btn-adicionar">
-                            <i class="fas fa-plus"></i> Novo Lançamento
-                        </button>
-                    </div>
-                    <div id="etf-lista" class="fiis-grid-container">
-                        <p>Nenhum ETF lançado ainda.</p>
-                    </div>
+    <div class="content-container" style="max-width: none;">
 
-                    <div class="content-header" style="margin-top: 40px;">
-                        <h3>Carteira de Criptomoedas</h3>
-                        <button id="btn-novo-lancamento-cripto" class="btn-adicionar">
-                            <i class="fas fa-plus"></i> Novo Lançamento
-                        </button>
+        <div class="valorization-header">
+            <div id="etf-valorization-card" class="valorization-card">
+                <div class="valorization-title">
+                    <i class="fas fa-arrow-trend-up"></i>
+                    <span>Valorização do dia (ETFs)</span>
+                </div>
+                <div class="valorization-main">
+                    <span id="etf-valorization-reais" class="valorization-value">Calculando...</span>
+                    <span id="etf-valorization-percent" class="valorization-pill"></span>
+                </div>
+            </div>
+            <div id="etf-summary-card" class="valorization-card summary-card-details">
+                <div class="valorization-title">
+                    <i class="fas fa-wallet"></i>
+                    <span>Resumo da Carteira (ETFs)</span>
+                </div>
+                <div class="summary-details-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Investido</span>
+                        <span id="etf-total-investido" class="summary-value">R$ 0,00</span>
                     </div>
-                     <div id="cripto-lista" class="fiis-grid-container">
-                        <p>Nenhuma Criptomoeda lançada ainda.</p>
+                    <div class="summary-item">
+                        <span class="summary-label">Patrimônio Atual</span>
+                        <span id="etf-patrimonio-atual" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Rentabilidade Total</span>
+                        <span id="etf-rentabilidade-reais" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Rentabilidade</span>
+                        <span id="etf-rentabilidade-percent" class="summary-value">0,00%</span>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="content-header">
+            <h3>Carteira de ETFs</h3>
+            <button id="btn-novo-lancamento-etf" class="btn-adicionar">
+                <i class="fas fa-plus"></i> Novo Lançamento
+            </button>
+        </div>
+        <div id="etf-lista" class="fiis-grid-container">
+            <p>Nenhum ETF lançado ainda.</p>
+        </div>
+
+        <div class="valorization-header" style="margin-top: 40px;">
+             <div id="cripto-valorization-card" class="valorization-card">
+                <div class="valorization-title">
+                    <i class="fas fa-arrow-trend-up"></i>
+                    <span>Valorização do dia (Cripto)</span>
+                </div>
+                <div class="valorization-main">
+                    <span id="cripto-valorization-reais" class="valorization-value">Indisponível</span>
+                    <span id="cripto-valorization-percent" class="valorization-pill"></span>
+                </div>
+            </div>
+             <div id="cripto-summary-card" class="valorization-card summary-card-details">
+                <div class="valorization-title">
+                    <i class="fas fa-wallet"></i>
+                    <span>Resumo da Carteira (Cripto)</span>
+                </div>
+                <div class="summary-details-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Investido</span>
+                        <span id="cripto-total-investido" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Patrimônio Atual</span>
+                        <span id="cripto-patrimonio-atual" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Rentabilidade Total</span>
+                        <span id="cripto-rentabilidade-reais" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Rentabilidade</span>
+                        <span id="cripto-rentabilidade-percent" class="summary-value">0,00%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-header" style="margin-top: 20px;">
+            <h3>Carteira de Criptomoedas</h3>
+            <button id="btn-novo-lancamento-cripto" class="btn-adicionar">
+                <i class="fas fa-plus"></i> Novo Lançamento
+            </button>
+        </div>
+         <div id="cripto-lista" class="fiis-grid-container">
+            <p>Nenhuma Criptomoeda lançada ainda.</p>
+        </div>
+    </div>
+</div>
             <div class="tab-pane" id="renda-fixa">
                 <div class="content-container" style="max-width: none">
                     <div class="content-header">
