@@ -13,6 +13,7 @@ import { renderHistorico } from './tabs/lancamentos.js';
 import { renderClassificacao } from './tabs/classificacao.js';
 import { updateProventosTab } from './tabs/proventos.js';
 import { renderMovimentacaoChart } from './charts.js';
+import { updateMainSummaryHeader } from './summary.js';
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 let currentUserID = null;
@@ -42,12 +43,16 @@ const onLogout = () => {
 };
 
 // --- OUVINTES DE DADOS (LISTENERS) ---
+// --- OUVINTES DE DADOS (LISTENERS) ---
 function initializeDataListeners(userID) {
     // Listener para Lançamentos
     const qLancamentos = query(collection(db, "lancamentos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
     onSnapshot(qLancamentos, (snapshot) => {
         allLancamentos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        window.allLancamentos = allLancamentos;
+        window.allLancamentos = allLancamentos; // Disponibiliza para outros módulos
+
+        // CHAMA A ATUALIZAÇÃO DO CABEÇALHO
+        updateMainSummaryHeader(allLancamentos, allProventos);
 
         renderHistorico(allLancamentos);
         renderMovimentacaoChart(allLancamentos);
@@ -63,7 +68,10 @@ function initializeDataListeners(userID) {
     const qProventos = query(collection(db, "proventos"), where("userID", "==", userID), orderBy("dataPagamento", "desc"));
     onSnapshot(qProventos, (snapshot) => {
         allProventos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        window.allProventos = allProventos;
+        window.allProventos = allProventos; // Disponibiliza para outros módulos
+
+        // CHAMA A ATUALIZAÇÃO DO CABEÇALHO
+        updateMainSummaryHeader(allLancamentos, allProventos);
 
         updateProventosTab(allProventos, currentProventosMeta);
         renderAcoesCarteira(allLancamentos, allProventos);

@@ -7,8 +7,8 @@ const proventosListaDiv = document.getElementById("proventos-lista");
 const filtroAtivoSelect = document.getElementById("ativo-filter");
 
 /**
- * Renderiza a lista de proventos recebidos.
- * @param {Array<object>} proventos - A lista de proventos a ser exibida.
+ * Renderiza la lista de proventos recebidos.
+ * @param {Array<object>} proventos - La lista de proventos a ser exibida.
  */
 const renderProventosList = (proventos) => {
     if (!proventosListaDiv) return;
@@ -21,7 +21,7 @@ const renderProventosList = (proventos) => {
             <div class="lista-item-valor">${p.ativo}</div>
             <div><span class="tipo-ativo-badge">${p.tipoAtivo}</span></div>
             <div class="lista-item-valor provento-recebido">${p.tipoProvento}</div>
-            <div class="lista-item-valor">${p.dataPagamento}</div>
+            <div class="lista-item-valor">${new Date(p.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
             <div class="lista-item-valor">${p.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
             <div class="lista-acoes">
                 <button class="btn-crud btn-excluir-provento" data-id="${p.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
@@ -66,6 +66,7 @@ const renderSummary = (proventos, meta) => {
  */
 const populateAssetFilter = (proventos) => {
     const tickersUnicos = [...new Set(proventos.map((p) => p.ativo))].sort();
+    const valorAtual = filtroAtivoSelect.value;
     filtroAtivoSelect.innerHTML = '<option value="Todos">Todos os Ativos</option>';
     tickersUnicos.forEach((ticker) => {
         const option = document.createElement("option");
@@ -73,6 +74,7 @@ const populateAssetFilter = (proventos) => {
         option.textContent = ticker;
         filtroAtivoSelect.appendChild(option);
     });
+    filtroAtivoSelect.value = valorAtual;
 };
 
 /**
@@ -102,20 +104,24 @@ proventosListaDiv.addEventListener("click", async (e) => {
     }
 });
 
+// **CÓDIGO CORRIGIDO**
 // Listeners para os filtros do gráfico de evolução
-document.querySelectorAll(".filter-select, .filter-btn").forEach((el) => {
-    el.addEventListener("click", (e) => { // Usando 'click' para botões e 'change' para selects
-        if (e.currentTarget.classList.contains('filter-btn')) {
-            document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+const evolutionFilters = document.querySelectorAll(".filter-select, #intervalo-filter-group .filter-btn");
+
+evolutionFilters.forEach((el) => {
+    const eventType = el.tagName === 'BUTTON' ? 'click' : 'change';
+
+    el.addEventListener(eventType, (e) => {
+        // Lógica para dar a classe 'active' para os botões (Mensal/Anual)
+        if (el.tagName === 'BUTTON') {
+            document.querySelectorAll("#intervalo-filter-group .filter-btn").forEach((b) => b.classList.remove("active"));
             e.currentTarget.classList.add("active");
         }
-        // A atualização dos dados (chamada no main.js) vai pegar os valores atuais dos filtros
-        // e chamar a updateProventosTab, que por sua vez chama renderEvolutionChart.
-    });
-    el.addEventListener("change", (e) => {
-        if (e.currentTarget.classList.contains('filter-select')) {
-            document.querySelectorAll(".filter-select").forEach((b) => b.classList.remove("active"));
-            e.currentTarget.classList.add("active");
+
+        // Se os dados de proventos estiverem disponíveis, re-renderiza o gráfico
+        // A variável window.allProventos é definida no main.js
+        if (window.allProventos) {
+            renderEvolutionChart(window.allProventos);
         }
     });
 });

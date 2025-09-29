@@ -1294,3 +1294,97 @@ body {
     width: 100%;
     text-align: center;
 }
+/* --- ESTILOS PARA O CABEÇALHO DE RESUMO PRINCIPAL --- */
+.main-summary-header {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 15px;
+    padding: 0 25px 25px 25px;
+    border-bottom: 1px solid #2a2c30;
+}
+
+.summary-card-item {
+    background-color: #1a1b1e;
+    border-radius: 12px;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #a0a7b3;
+}
+
+.summary-main-value {
+    font-size: 1.75rem;
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+.summary-sub-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #888;
+    gap: 10px;
+}
+
+.summary-sub-line .sub-value {
+    font-weight: 500;
+    color: #a0a7b3;
+}
+
+.summary-sub-line.multiple {
+    gap: 15px;
+}
+.summary-sub-line.multiple > div {
+    flex: 1;
+}
+
+.summary-pill {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    color: #1f2937;
+}
+
+.summary-pill.positive {
+    background-color: #00d9c3;
+}
+
+.summary-pill.negative {
+    background-color: #ef4444;
+}
+
+/* Estilos para o último card (Variação/Rentabilidade) */
+.summary-title-group, .summary-main-value-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.summary-title.small {
+    font-size: 0.8rem;
+    gap: 4px;
+}
+
+.summary-title.small i {
+    cursor: help;
+}
+
+.summary-main-value-group > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-main-value.small {
+    font-size: 1.25rem;
+    font-weight: 600;
+}

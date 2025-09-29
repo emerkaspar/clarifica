@@ -121,6 +121,71 @@
 
       <div id="app-content">
         <div class="main-content-wrapper">
+          <div class="main-summary-header">
+    <div class="summary-card-item">
+        <div class="summary-title">
+            <i class="fas fa-wallet"></i>
+            <span>Patrimônio total</span>
+        </div>
+        <div class="summary-main-value" id="summary-patrimonio-total">R$ 0,00</div>
+        <div class="summary-sub-line">
+            <span id="summary-valor-investido">Valor investido: R$ 0,00</span>
+            <span class="summary-pill" id="summary-patrimonio-percent">0,00%</span>
+        </div>
+    </div>
+
+    <div class="summary-card-item">
+        <div class="summary-title">
+            <i class="fas fa-chart-pie"></i>
+            <span>Lucro total</span>
+        </div>
+        <div class="summary-main-value" id="summary-lucro-total">R$ 0,00</div>
+        <div class="summary-sub-line multiple">
+            <div>
+                <span>Ganho de Capital</span>
+                <span class="sub-value" id="summary-ganho-capital">R$ 0,00</span>
+            </div>
+            <div>
+                <span>Dividendos recebidos</span>
+                <span class="sub-value" id="summary-dividendos-recebidos">R$ 0,00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="summary-card-item">
+        <div class="summary-title">
+            <i class="fas fa-hand-holding-usd"></i>
+            <span>Proventos recebidos (12M)</span>
+        </div>
+        <div class="summary-main-value" id="summary-proventos-12m">R$ 0,00</div>
+        <div class="summary-sub-line">
+            <span id="summary-proventos-total">Total: R$ 0,00</span>
+        </div>
+    </div>
+
+    <div class="summary-card-item">
+        <div class="summary-title-group">
+            <div class="summary-title small">
+                <span>Variação</span>
+                <i class="fas fa-info-circle" title="Variação do patrimônio sem contar os proventos."></i>
+            </div>
+            <div class="summary-title small">
+                <span>Rentabilidade</span>
+                <i class="fas fa-info-circle" title="Variação do patrimônio somada a todos os proventos recebidos."></i>
+            </div>
+        </div>
+        <div class="summary-main-value-group">
+            <div>
+                <span class="summary-main-value small positive" id="summary-variacao-percent">0,00%</span>
+                <span class="sub-value" id="summary-variacao-valor">+ R$ 0,00</span>
+            </div>
+            <div>
+                <span class="summary-main-value small positive" id="summary-rentabilidade-percent">0,00%</span>
+            </div>
+        </div>
+    </div>
+</div>
+          
           <div class="nav-tabs-wrapper">
             <ul class="nav-tabs" id="myTab">
               <li>
