@@ -17,7 +17,6 @@ async function renderFiisDayValorization(tickers, carteira) {
     valorizationPercentDiv.innerHTML = "";
     valorizationPercentDiv.className = 'valorization-pill';
 
-
     try {
         const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
         const results = await Promise.all(promises);
@@ -139,7 +138,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         document.getElementById("fiis-valorization-percent").innerHTML = "";
         document.getElementById("fiis-valorization-percent").className = 'valorization-pill';
         
-        // Limpa também o card de resumo
         document.getElementById("fiis-total-investido").textContent = "R$ 0,00";
         document.getElementById("fiis-patrimonio-atual").textContent = "R$ 0,00";
         document.getElementById("fiis-rentabilidade-reais").textContent = "R$ 0,00";
@@ -187,7 +185,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
 
-        // Renderiza o card de resumo
         renderFiisSummary(carteira, precosAtuais);
 
         let totalValorFiis = 0;
@@ -198,12 +195,26 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             especiePapel: { 'Atrelado ao CDI': 0, 'Atrelado ao IPCA': 0 }
         };
 
-        tickers.forEach(ticker => {
+        const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker] || 0;
+            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
-            totalValorFiis += valorPosicaoAtual;
+            const valorInvestido = precoMedio * ativo.quantidade;
+            
+            const variacaoReais = valorPosicaoAtual - valorInvestido;
+            const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
+            const rentabilidadeReais = variacaoReais + ativo.proventos;
+            const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
+            
+            const variacaoSinal = variacaoReais >= 0 ? '+' : '';
+            const variacaoClasse = variacaoReais >= 0 ? 'positive-change' : 'negative-change';
+            const variacaoIcone = variacaoReais >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+            const rentabilidadeSinal = rentabilidadeReais >= 0 ? '+' : '';
+            const rentabilidadeClasse = rentabilidadeReais >= 0 ? 'positive-change' : 'negative-change';
+            const rentabilidadeIcone = rentabilidadeReais >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
 
+            totalValorFiis += valorPosicaoAtual;
             const classif = classificacoes[ticker]?.classificacoes;
             if (classif) {
                 if (classif['Tipo FII'] === 'Tijolo') valoresAtuais.tipo.Tijolo += valorPosicaoAtual;
@@ -224,16 +235,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                     }
                 }
             }
-        });
-
-        const html = tickers.map(ticker => {
-            const ativo = carteira[ticker];
-            const precoAtual = precosAtuais[ticker] || 0;
-            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
-            const valorPosicaoAtual = precoAtual * ativo.quantidade;
-            const valorInvestido = precoMedio * ativo.quantidade;
-            const resultado = valorPosicaoAtual - valorInvestido;
-            const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="FIIs">
@@ -242,8 +243,19 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                         <div class="label">Valor Atual da Posição</div>
                         <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                     </div>
-                    <div class="fii-card-result ${resultado >= 0 ? 'positive-change' : 'negative-change'}">
-                        ${resultado >= 0 ? '+' : ''}${resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacao.toFixed(2)}%)
+                     <div class="card-results-container">
+                        <div class="card-result-item ${variacaoClasse}">
+                            <span class="result-label">Variação:</span>
+                            <span class="result-value">
+                                ${variacaoSinal}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoPercent.toFixed(2)}%) ${variacaoIcone}
+                            </span>
+                        </div>
+                        <div class="card-result-item ${rentabilidadeClasse}">
+                            <span class="result-label">Rentabilidade:</span>
+                            <span class="result-value">
+                                ${rentabilidadeSinal}${rentabilidadeReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercent.toFixed(2)}%) ${rentabilidadeIcone}
+                            </span>
+                        </div>
                     </div>
                     <div class="fii-card-details">
                         <div class="detail-item"><span>Valor Investido</span><span>${valorInvestido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>

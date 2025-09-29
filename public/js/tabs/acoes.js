@@ -101,7 +101,7 @@ function renderAcoesSummary(carteira, precosAtuais) {
             element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
             element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
             if (id === 'acoes-total-investido' || id === 'acoes-patrimonio-atual') {
-                element.style.color = '#e0e0e0'; // Cor padrão para valores não-indicativos
+                element.style.color = '#e0e0e0';
             }
         }
     };
@@ -136,7 +136,6 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
             percentDiv.innerHTML = "";
             percentDiv.className = 'valorization-pill';
         }
-        // Limpa também o card de resumo
         document.getElementById("acoes-total-investido").textContent = "R$ 0,00";
         document.getElementById("acoes-patrimonio-atual").textContent = "R$ 0,00";
         document.getElementById("acoes-rentabilidade-reais").textContent = "R$ 0,00";
@@ -147,7 +146,6 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
 
     const carteira = {};
 
-    // 1. Consolida os lançamentos
     acoesLancamentos.forEach(l => {
         if (!carteira[l.ativo]) {
             carteira[l.ativo] = {
@@ -167,14 +165,12 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         }
     });
 
-    // 2. Adiciona os proventos
     proventos.forEach(p => {
         if (p.tipoAtivo === 'Ações' && carteira[p.ativo]) {
             carteira[p.ativo].proventos += p.valor;
         }
     });
 
-    // 3. Filtra os tickers com posição
     const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
     if (tickers.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
@@ -186,7 +182,6 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
 
-        // Renderiza o card de resumo
         renderAcoesSummary(carteira, precosAtuais);
 
         const html = tickers.map(ticker => {
@@ -195,22 +190,38 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
-            const resultado = valorPosicaoAtual - valorInvestido;
-            const variacao = precoAtual && precoMedio ? ((precoAtual / precoMedio) - 1) * 100 : 0;
+            const variacaoReais = valorPosicaoAtual - valorInvestido;
+            const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
+            const rentabilidadeReais = variacaoReais + ativo.proventos;
+            const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
+            const variacaoSinal = variacaoReais >= 0 ? '+' : '';
+            const variacaoClasse = variacaoReais >= 0 ? 'positive-change' : 'negative-change';
+            const variacaoIcone = variacaoReais >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+            const rentabilidadeSinal = rentabilidadeReais >= 0 ? '+' : '';
+            const rentabilidadeClasse = rentabilidadeReais >= 0 ? 'positive-change' : 'negative-change';
+            const rentabilidadeIcone = rentabilidadeReais >= 0 ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações">
                     <div class="fii-card-ticker">${ativo.ativo}</div>
-                    
                     <div class="fii-card-metric-main">
                         <div class="label">Valor Atual da Posição</div>
                         <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                     </div>
-                    
-                    <div class="fii-card-result ${resultado >= 0 ? 'positive-change' : 'negative-change'}">
-                        ${resultado >= 0 ? '+' : ''}${resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacao.toFixed(2)}%)
+                    <div class="card-results-container">
+                        <div class="card-result-item ${variacaoClasse}">
+                            <span class="result-label">Variação:</span>
+                            <span class="result-value">
+                                ${variacaoSinal}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoPercent.toFixed(2)}%) ${variacaoIcone}
+                            </span>
+                        </div>
+                        <div class="card-result-item ${rentabilidadeClasse}">
+                            <span class="result-label">Rentabilidade:</span>
+                            <span class="result-value">
+                                ${rentabilidadeSinal}${rentabilidadeReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercent.toFixed(2)}%) ${rentabilidadeIcone}
+                            </span>
+                        </div>
                     </div>
-
                     <div class="fii-card-details">
                         <div class="detail-item">
                             <span>Valor Investido</span>
@@ -245,7 +256,6 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
     }
 }
 
-// Event listener para abrir o modal de detalhes quando um card for clicado.
 document.getElementById("acoes-lista").addEventListener("click", (e) => {
     const card = e.target.closest(".fii-card");
     if (card && card.dataset.ticker && window.openAtivoDetalhesModal) {
