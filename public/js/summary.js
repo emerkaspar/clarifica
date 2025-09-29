@@ -10,7 +10,7 @@ const updateField = (id, value, isCurrency = true, addSign = false, defaultColor
 
     const formattedValue = isCurrency ? formatCurrency(value) : `${value.toFixed(2)}%`;
     const sinal = value > 0 ? '+' : '';
-    
+
     element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
     element.style.color = value === 0 ? defaultColor : (value > 0 ? '#00d9c3' : '#ef4444');
 };
@@ -41,15 +41,20 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
                 ativo: l.ativo,
                 tipoAtivo: l.tipoAtivo,
                 quantidade: 0,
+                quantidadeComprada: 0, // Adicionado para calcular PM correto
                 valorTotalInvestido: 0,
             };
         }
         if (l.tipoOperacao === 'compra') {
             carteira[l.ativo].quantidade += l.quantidade;
+            carteira[l.ativo].quantidadeComprada += l.quantidade;
             carteira[l.ativo].valorTotalInvestido += l.valorTotal;
         } else if (l.tipoOperacao === 'venda') {
-            const precoMedio = carteira[l.ativo].valorTotalInvestido / carteira[l.ativo].quantidade;
-            carteira[l.ativo].valorTotalInvestido -= l.quantidade * precoMedio;
+            // LÓGICA DE VENDA CORRIGIDA
+            if (carteira[l.ativo].quantidadeComprada > 0) {
+                const precoMedio = carteira[l.ativo].valorTotalInvestido / carteira[l.ativo].quantidadeComprada;
+                carteira[l.ativo].valorTotalInvestido -= l.quantidade * precoMedio;
+            }
             carteira[l.ativo].quantidade -= l.quantidade;
         }
     });
@@ -71,9 +76,7 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
     Object.values(carteira).forEach(ativo => {
         if (ativo.quantidade > 0) {
             const precoAtual = precosAtuais[ativo.ativo] || (ativo.valorTotalInvestido / ativo.quantidade); // Usa PM se o preço não for encontrado
-            const precoMedio = ativo.valorTotalInvestido / ativo.quantidade;
-            
-            valorInvestidoTotal += precoMedio * ativo.quantidade;
+            valorInvestidoTotal += ativo.valorTotalInvestido;
             patrimonioTotal += precoAtual * ativo.quantidade;
         }
     });
@@ -90,14 +93,16 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
 
     const variacaoPercent = valorInvestidoTotal > 0 ? (ganhoCapital / valorInvestidoTotal) * 100 : 0;
     const rentabilidadePercent = valorInvestidoTotal > 0 ? (lucroTotal / valorInvestidoTotal) * 100 : 0;
+    const patrimonioPercent = valorInvestidoTotal > 0 ? ((patrimonioTotal / valorInvestidoTotal) - 1) * 100 : 0;
+
 
     // 4. Atualiza a UI
     // Card 1: Patrimônio
     updateField('summary-patrimonio-total', patrimonioTotal);
     document.getElementById('summary-valor-investido').textContent = `Valor investido: ${formatCurrency(valorInvestidoTotal)}`;
-    const patrimonioArrow = variacaoPercent >= 0 ? '↑' : '↓';
-    document.getElementById('summary-patrimonio-percent').innerHTML = `${variacaoPercent.toFixed(2)}% ${patrimonioArrow}`;
-    document.getElementById('summary-patrimonio-percent').className = variacaoPercent >= 0 ? 'summary-pill positive' : 'summary-pill negative';
+    const patrimonioArrow = patrimonioPercent >= 0 ? '↑' : '↓';
+    document.getElementById('summary-patrimonio-percent').innerHTML = `${patrimonioPercent.toFixed(2)}% ${patrimonioArrow}`;
+    document.getElementById('summary-patrimonio-percent').className = patrimonioPercent >= 0 ? 'summary-pill positive' : 'summary-pill negative';
 
     // Card 2: Lucro Total
     updateField('summary-lucro-total', lucroTotal, true, false, '#e0e0e0');
@@ -113,7 +118,7 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
     const rentabilidadeArrow = rentabilidadePercent >= 0 ? '↗' : '↘';
     updateField('summary-variacao-valor', ganhoCapital, true, true);
     document.getElementById('summary-variacao-percent').innerHTML = `${variacaoPercent.toFixed(2)}% ${variacaoArrow}`;
-    document.getElementById('summary-variacao-percent').className = variacaoPercent >= 0 ? 'positive' : 'negative';
+    document.getElementById('summary-variacao-percent').className = variacaoPercent >= 0 ? 'summary-main-value small positive' : 'summary-main-value small negative';
     document.getElementById('summary-rentabilidade-percent').innerHTML = `${rentabilidadePercent.toFixed(2)}% ${rentabilidadeArrow}`;
-    document.getElementById('summary-rentabilidade-percent').className = rentabilidadePercent >= 0 ? 'positive' : 'negative';
+    document.getElementById('summary-rentabilidade-percent').className = rentabilidadePercent >= 0 ? 'summary-main-value small positive' : 'summary-main-value small negative';
 }
