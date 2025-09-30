@@ -5,8 +5,7 @@ let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
 let performanceChart = null;
-// A variável global para o gráfico consolidado não é mais necessária com a nova abordagem
-// let consolidatedPerformanceChart = null;
+
 
 // ... (as funções renderMovimentacaoChart, renderPieCharts, renderEvolutionChart, renderPerformanceChart permanecem inalteradas) ...
 
@@ -131,7 +130,9 @@ export function renderEvolutionChart(proventos) {
     const hoje = new Date();
     let dataInicio;
     if (periodo === "12m") { dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1) } else if (periodo === "current_year") { dataInicio = new Date(hoje.getFullYear(), 0, 1) } else if (periodo === "5y") { dataInicio = new Date(hoje.getFullYear() - 4, 0, 1) }
-    proventosFiltrados = proventosFiltrados.filter((p) => new Date(p.dataPagamento) >= dataInicio);
+    proventosFiltrados = proventosFiltrados.filter(
+        (p) => new Date(p.dataPagamento) >= dataInicio
+    );
     const aggregatedData = {};
     proventosFiltrados.forEach((p) => { const dataPag = new Date(p.dataPagamento + "T00:00:00"); let key; if (intervalo === "Mensal") { key = `${dataPag.getFullYear()}-${String(dataPag.getMonth() + 1).padStart(2, "0")}` } else { key = dataPag.getFullYear().toString() } aggregatedData[key] = (aggregatedData[key] || 0) + p.valor });
     const sortedKeys = Object.keys(aggregatedData).sort();
@@ -256,7 +257,6 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
     if (!canvas) return;
     const container = canvas.parentElement;
 
-    // --- FIX: Robustamente destrói qualquer gráfico existente no canvas ---
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
         existingChart.destroy();
@@ -346,25 +346,42 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         const costBasisArray = [];
         const proventosArray = [];
         const carteiraDiaria = {};
-        let valorInvestidoAcumulado = 0;
+        let custoBaseAcumulado = 0;
         let proventosAcumulados = 0;
+
+        const lancamentosAntes = lancamentosOrdenados.filter(l => new Date(l.data) < dataInicio);
+        lancamentosAntes.forEach(l => {
+            if (!carteiraDiaria[l.ativo]) carteiraDiaria[l.ativo] = { quantidade: 0, custoTotal: 0 };
+            const ativo = carteiraDiaria[l.ativo];
+            if (l.tipoOperacao === 'compra') {
+                ativo.quantidade += l.quantidade;
+                ativo.custoTotal += l.valorTotal;
+            } else {
+                const precoMedio = ativo.quantidade > 0 ? ativo.custoTotal / ativo.quantidade : 0;
+                ativo.custoTotal -= l.quantidade * precoMedio;
+                ativo.quantidade -= l.quantidade;
+            }
+        });
+        custoBaseAcumulado = Object.values(carteiraDiaria).reduce((acc, ativo) => acc + ativo.custoTotal, 0);
+        proventosAcumulados = proventos.filter(p => new Date(p.dataPagamento) < dataInicio).reduce((acc, p) => acc + p.valor, 0);
 
         for (let d = new Date(dataInicio); d <= hoje; d.setDate(d.getDate() + 1)) {
             const dataAtualStr = d.toISOString().split('T')[0];
             labels.push(dataAtualStr);
 
             lancamentosOrdenados.filter(l => l.data === dataAtualStr).forEach(l => {
-                if (!carteiraDiaria[l.ativo]) carteiraDiaria[l.ativo] = { quantidade: 0, valorTotalInvestido: 0 };
+                if (!carteiraDiaria[l.ativo]) carteiraDiaria[l.ativo] = { quantidade: 0, custoTotal: 0 };
                 const ativo = carteiraDiaria[l.ativo];
                 if (l.tipoOperacao === 'compra') {
                     ativo.quantidade += l.quantidade;
-                    ativo.valorTotalInvestido += l.valorTotal;
-                    valorInvestidoAcumulado += l.valorTotal;
+                    ativo.custoTotal += l.valorTotal;
+                    custoBaseAcumulado += l.valorTotal;
                 } else {
-                    const precoMedioVenda = (ativo.quantidade > 0 ? (ativo.valorTotalInvestido / ativo.quantidade) : 0);
+                    const precoMedio = ativo.quantidade > 0 ? ativo.custoTotal / ativo.quantidade : 0;
+                    const custoDaVenda = l.quantidade * precoMedio;
+                    ativo.custoTotal -= custoDaVenda;
                     ativo.quantidade -= l.quantidade;
-                    ativo.valorTotalInvestido -= l.quantidade * precoMedioVenda;
-                    valorInvestidoAcumulado -= l.valorTotal;
+                    custoBaseAcumulado -= custoDaVenda;
                 }
             });
 
@@ -372,29 +389,32 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
 
             let patrimonioDoDia = 0;
             for (const ticker in carteiraDiaria) {
-                const precoDoDia = historicoPrecos[ticker]?.[dataAtualStr] || historicoPrecos[ticker]?.[labels[labels.length - 2]];
-                if (precoDoDia) {
-                    patrimonioDoDia += carteiraDiaria[ticker].quantidade * precoDoDia;
+                const ativo = carteiraDiaria[ticker];
+                if (ativo.quantidade > 0) {
+                    const precoDoDia = historicoPrecos[ticker]?.[dataAtualStr] || historicoPrecos[ticker]?.[labels[labels.length - 2]];
+                    if (precoDoDia) {
+                        patrimonioDoDia += ativo.quantidade * precoDoDia;
+                    } else {
+                        patrimonioDoDia += ativo.custoTotal;
+                    }
                 }
             }
 
             dataCarteira.push(patrimonioDoDia);
-            costBasisArray.push(valorInvestidoAcumulado);
+            costBasisArray.push(custoBaseAcumulado);
             proventosArray.push(proventosAcumulados);
         }
 
+        // --- FIX: Fórmula de performance corrigida ---
         const dataCarteiraNormalizada = dataCarteira.map((v, i) => {
-            const cost = costBasisArray[i];
+            const custo = costBasisArray[i];
             const proventos = proventosArray[i];
-            const patrimonioInicial = costBasisArray[0];
-            const fluxoCaixa = cost - patrimonioInicial;
-            if ((patrimonioInicial + fluxoCaixa) > 0) {
-                return (((v + proventos) - cost) / (patrimonioInicial + fluxoCaixa)) * 100;
+            if (custo > 0.01) { // Evita divisão por zero ou valores muito pequenos
+                return (((v + proventos) / custo) - 1) * 100;
             }
             return 0;
         });
 
-        // --- FIX: Lógica de preenchimento de dados corrigida ---
         const dataCDI = [];
         labels.forEach(l => {
             const idx = historicoCDIIndex[l];
@@ -455,6 +475,7 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         });
     } catch (error) {
         console.error("Erro ao renderizar gráfico de performance consolidado:", error);
+        const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
         ctx.textAlign = 'center';

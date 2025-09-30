@@ -143,7 +143,8 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
 
         const tickersNormais = Object.keys(carteiraInicialRV).filter(t => carteiraInicialRV[t].quantidade > 0 && carteiraInicialRV[t].tipoAtivo !== 'Cripto');
         if (tickersNormais.length > 0) {
-            const historicalDataPromises = tickersNormais.map(t => fetchHistoricalData(t, '1y'));
+            // --- FIX: Alterado de '1y' para '3mo' para respeitar o limite do plano da API ---
+            const historicalDataPromises = tickersNormais.map(t => fetchHistoricalData(t, '3mo'));
             const historicalDataResults = await Promise.all(historicalDataPromises);
             historicalDataResults.forEach((data, index) => {
                 const ticker = tickersNormais[index];
