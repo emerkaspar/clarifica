@@ -1,6 +1,6 @@
 // public/js/portfolio.js
 
-import { fetchCurrentPrices, fetchCryptoPrices } from './api/brapi.js';
+import { fetchCurrentPrices } from './api/brapi.js'; // REMOVIDO: fetchCryptoPrices
 
 /**
  * Função central que recebe dados brutos e retorna o estado completo e calculado da carteira.
@@ -50,14 +50,10 @@ export async function calculatePortfolioState(lancamentos, proventos) {
     });
 
     // 3. Separa tickers e busca preços UMA ÚNICA VEZ
-    const tickersNormais = Object.values(carteira).filter(a => a.quantidade > 0 && ['Ações', 'FIIs', 'ETF'].includes(a.tipoAtivo)).map(a => a.ativo);
-    const tickersCripto = Object.values(carteira).filter(a => a.quantidade > 0 && a.tipoAtivo === 'Cripto').map(a => a.ativo);
-
-    const [precosNormais, precosCripto] = await Promise.all([
-        fetchCurrentPrices(tickersNormais),
-        fetchCryptoPrices(tickersCripto)
-    ]);
-    const precosAtuais = { ...precosNormais, ...precosCripto };
+    const tickersAtivos = Object.values(carteira).filter(a => a.quantidade > 0 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo)).map(a => a.ativo);
+    
+    // Busca todos os preços (RV e Cripto) usando a função unificada (CACHE-FIRST)
+    const precosAtuais = await fetchCurrentPrices(tickersAtivos);
 
     // 4. Calcula métricas finais para cada ativo e os totais
     let patrimonioTotal = 0;

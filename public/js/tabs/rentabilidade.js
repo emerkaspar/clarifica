@@ -1,6 +1,6 @@
 // public/js/tabs/rentabilidade.js
 
-import { fetchCurrentPrices, fetchCryptoPrices, fetchHistoricalData } from '../api/brapi.js';
+import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js'; // REMOVIDO: fetchCryptoPrices
 import { fetchIndexers } from '../api/bcb.js';
 import { renderConsolidatedPerformanceChart } from '../charts.js';
 
@@ -141,30 +141,29 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
                 }
             });
 
-        const tickersNormais = Object.keys(carteiraInicialRV).filter(t => carteiraInicialRV[t].quantidade > 0 && carteiraInicialRV[t].tipoAtivo !== 'Cripto');
-        if (tickersNormais.length > 0) {
-            // --- FIX: Alterado de '1y' para '3mo' para respeitar o limite do plano da API ---
-            const historicalDataPromises = tickersNormais.map(t => fetchHistoricalData(t, '3mo'));
+        const tickersRV = Object.keys(carteiraInicialRV).filter(t => carteiraInicialRV[t].quantidade > 0);
+        
+        if (tickersRV.length > 0) {
+            // FIX: Alterado de '1y' para '3mo' para respeitar o limite do plano da API (Mesmo que o cache resolva isso)
+            // Tenta buscar o histórico dos últimos 3 meses para a data inicial
+            const historicalDataPromises = tickersRV.map(t => fetchHistoricalData(t, '3mo'));
             const historicalDataResults = await Promise.all(historicalDataPromises);
+            
             historicalDataResults.forEach((data, index) => {
-                const ticker = tickersNormais[index];
+                const ticker = tickersRV[index];
                 const price = getPriceOnDate(data, startDate);
                 const ativo = carteiraInicialRV[ticker];
+                
                 if (price) {
                     patrimonioInicial += ativo.quantidade * price;
                 } else {
+                    // Se não encontrou preço histórico, usa o preço médio de custo
                     const precoMedio = ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0;
                     patrimonioInicial += ativo.quantidade * precoMedio;
                 }
             });
         }
-        const tickersCripto = Object.keys(carteiraInicialRV).filter(t => carteiraInicialRV[t].quantidade > 0 && carteiraInicialRV[t].tipoAtivo === 'Cripto');
-        tickersCripto.forEach(ticker => {
-            const ativo = carteiraInicialRV[ticker];
-            const precoMedio = ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0;
-            patrimonioInicial += ativo.quantidade * precoMedio;
-        });
-
+        
         // --- 3.3 Cálculo Final da Rentabilidade do Período ---
         const lancamentosPeriodo = lancamentos.filter(l => new Date(l.data) >= startDate);
         const aportesLiquidosPeriodo = lancamentosPeriodo.reduce((acc, l) => acc + (l.tipoOperacao === 'compra' ? l.valorTotal : -l.valorTotal), 0);

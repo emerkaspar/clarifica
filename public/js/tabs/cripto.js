@@ -1,4 +1,4 @@
-import { fetchCryptoPrices } from '../api/brapi.js';
+import { fetchCurrentPrices } from '../api/brapi.js';
 
 /**
  * Calcula e renderiza o resumo da carteira de Criptomoedas.
@@ -8,7 +8,7 @@ import { fetchCryptoPrices } from '../api/brapi.js';
 function renderCriptoSummary(carteira, precosAtuais) {
     let totalInvestido = 0;
     let patrimonioAtual = 0;
-    let totalProventos = 0; // Raro para cripto, mas mantém a estrutura
+    let totalProventos = 0; 
 
     Object.values(carteira).forEach(ativo => {
         if (ativo.quantidade > 0) {
@@ -49,8 +49,6 @@ function renderCriptoSummary(carteira, precosAtuais) {
 
 /**
  * Renderiza os cards da carteira de Criptomoedas.
- * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
- * @param {Array<object>} proventos - A lista completa de todos os proventos.
  */
 export async function renderCriptoCarteira(lancamentos, proventos) {
     const criptoListaDiv = document.getElementById("cripto-lista");
@@ -104,7 +102,7 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
     }
 
     try {
-        const precosAtuais = await fetchCryptoPrices(tickers);
+        const precosAtuais = await fetchCurrentPrices(tickers);
         renderCriptoSummary(carteira, precosAtuais);
 
         const html = tickers.map(ticker => {
@@ -116,7 +114,7 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
             const variacaoReais = valorPosicaoAtual - valorInvestido;
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
-            const rentabilidadeReais = variacaoReais + ativo.proventos; // Proventos são raros mas a estrutura se mantém
+            const rentabilidadeReais = variacaoReais + ativo.proventos;
             const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
 
             return `

@@ -1,4 +1,4 @@
-import { fetchCurrentPrices, fetchCryptoPrices } from './api/brapi.js';
+import { fetchCurrentPrices } from './api/brapi.js'; // REMOVIDO: fetchCryptoPrices
 import { fetchIndexers } from './api/bcb.js';
 
 // Função para formatar valores monetários
@@ -140,14 +140,13 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
         }
     });
 
-    const tickersNormais = Object.values(carteiraOutros).filter(a => a.quantidade > 0 && a.tipoAtivo !== 'Cripto').map(a => a.ativo);
-    const tickersCripto = Object.values(carteiraOutros).filter(a => a.quantidade > 0 && a.tipoAtivo === 'Cripto').map(a => a.ativo);
+    // Filtra todos os tickers de RV/Cripto/ETF que precisam de cotação
+    const tickersAtivos = Object.values(carteiraOutros)
+        .filter(a => a.quantidade > 0)
+        .map(a => a.ativo);
 
-    const [precosNormais, precosCripto] = await Promise.all([
-        fetchCurrentPrices(tickersNormais),
-        fetchCryptoPrices(tickersCripto)
-    ]);
-    const precosAtuais = { ...precosNormais, ...precosCripto };
+    // Busca todos os preços usando a função unificada (CACHE-FIRST)
+    const precosAtuais = await fetchCurrentPrices(tickersAtivos);
 
     Object.values(carteiraOutros).forEach(ativo => {
         if (ativo.quantidade > 0) {

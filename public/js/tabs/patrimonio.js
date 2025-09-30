@@ -1,4 +1,4 @@
-import { fetchCurrentPrices, fetchCryptoPrices } from '../api/brapi.js';
+import { fetchCurrentPrices } from '../api/brapi.js'; // REMOVIDO: fetchCryptoPrices
 
 let patrimonioEvolutionChart = null;
 let assetAllocationChart = null;
@@ -126,12 +126,12 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosAtuais) {
             maintainAspectRatio: false,
             scales: {
                 x: {
-                    // stacked: false, // <-- CORRIGIDO: Removida propriedade 'stacked'
+                    // stacked: false, 
                     grid: { display: false },
                     ticks: { color: "#a0a7b3" }
                 },
                 y: {
-                    // stacked: false, // <-- CORRIGIDO: Removida propriedade 'stacked'
+                    // stacked: false, 
                     grid: { color: "#2a2c30" },
                     ticks: {
                         color: "#a0a7b3",
@@ -357,14 +357,9 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
         }
     });
 
-    const tickersNormais = Object.values(carteira).filter(a => a.quantidade > 0 && a.tipoAtivo !== 'Cripto' && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo)).map(a => a.ativo);
-    const tickersCripto = Object.values(carteira).filter(a => a.quantidade > 0 && a.tipoAtivo === 'Cripto').map(a => a.ativo);
+    const tickersAtivos = Object.values(carteira).filter(a => a.quantidade > 0 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo)).map(a => a.ativo);
 
-    const [precosNormais, precosCripto] = await Promise.all([
-        fetchCurrentPrices(tickersNormais),
-        fetchCryptoPrices(tickersCripto)
-    ]);
-    const precosAtuais = { ...precosNormais, ...precosCripto };
+    const precosAtuais = await fetchCurrentPrices(tickersAtivos);
 
     renderPatrimonioEvolutionChart(lancamentos, precosAtuais);
     renderAssetAllocationChart(carteira, precosAtuais);
