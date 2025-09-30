@@ -144,8 +144,7 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
         const tickersRV = Object.keys(carteiraInicialRV).filter(t => carteiraInicialRV[t].quantidade > 0);
         
         if (tickersRV.length > 0) {
-            // FIX: Alterado de '1y' para '3mo' para respeitar o limite do plano da API (Mesmo que o cache resolva isso)
-            // Tenta buscar o histórico dos últimos 3 meses para a data inicial
+            // FIX: Usamos fetchHistoricalData (que agora tem cache e fallback) para todos os ativos de RV/Cripto/ETF.
             const historicalDataPromises = tickersRV.map(t => fetchHistoricalData(t, '3mo'));
             const historicalDataResults = await Promise.all(historicalDataPromises);
             

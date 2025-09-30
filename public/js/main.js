@@ -16,15 +16,16 @@ import { renderMovimentacaoChart } from './charts.js';
 import { updateMainSummaryHeader } from './summary.js';
 import { renderPatrimonioTab } from './tabs/patrimonio.js';
 import { renderRentabilidadeTab } from './tabs/rentabilidade.js';
+import { fetchCurrentPrices } from './api/brapi.js'; // NOVO: Traz a busca de preços para o main.js
 
-// --- ESTADO GLOBAL DA APLICAÇÃO ---
+// --- ESTADO GLOBAL DA APLicação ---
 let currentUserID = null;
 let allLancamentos = [];
 let allProventos = [];
 let allClassificacoes = {};
 let currentProventosMeta = null;
 let allValoresManuaisTD = {};
-let userConfig = {}; // Novo estado para configurações do usuário
+let userConfig = {}; 
 
 // Função que será chamada quando o usuário fizer login
 const onLogin = (userID) => {
@@ -51,19 +52,27 @@ function initializeDataListeners(userID) {
     onSnapshot(qLancamentos, async (snapshot) => {
         allLancamentos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         window.allLancamentos = allLancamentos;
+        
+        // 1. Identifica todos os ativos que precisam de preço (RV/Cripto/ETF)
+        const tickersAtivos = allLancamentos
+            .filter(a => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
+            .map(a => a.ativo);
 
-        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos);
+        // 2. BUSCA OS PREÇOS AGORA (CACHE-FIRST)
+        const precosAtuais = await fetchCurrentPrices(tickersAtivos);
+
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosAtuais);
 
         renderHistorico(allLancamentos);
         renderMovimentacaoChart(allLancamentos);
-        renderAcoesCarteira(allLancamentos, allProventos);
-        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
-        renderEtfCarteira(allLancamentos, allProventos);
-        renderCriptoCarteira(allLancamentos, allProventos);
+        renderAcoesCarteira(allLancamentos, allProventos); // Estes módulos usam fetchCurrentPrices internamente.
+        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs); // Estes módulos usam fetchCurrentPrices internamente.
+        renderEtfCarteira(allLancamentos, allProventos); // Estes módulos usam fetchCurrentPrices internamente.
+        renderCriptoCarteira(allLancamentos, allProventos); // Estes módulos usam fetchCurrentPrices internamente.
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
         renderPatrimonioTab(allLancamentos, allProventos);
-        renderRentabilidadeTab(allLancamentos, allProventos, summaryData); // Passa os dados consolidados
+        renderRentabilidadeTab(allLancamentos, allProventos, summaryData); 
     });
 
     // Listener para Proventos
@@ -72,7 +81,13 @@ function initializeDataListeners(userID) {
         allProventos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         window.allProventos = allProventos;
 
-        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos);
+        // Re-executa o fluxo de preços para atualizar o resumo
+        const tickersAtivos = allLancamentos
+            .filter(a => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
+            .map(a => a.ativo);
+        const precosAtuais = await fetchCurrentPrices(tickersAtivos);
+
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosAtuais);
 
         updateProventosTab(allProventos, currentProventosMeta);
         renderAcoesCarteira(allLancamentos, allProventos);
@@ -80,7 +95,7 @@ function initializeDataListeners(userID) {
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
         renderPatrimonioTab(allLancamentos, allProventos);
-        renderRentabilidadeTab(allLancamentos, allProventos, summaryData); // Passa os dados consolidados
+        renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
     });
 
     // Listener para Classificações
