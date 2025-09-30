@@ -1,8 +1,13 @@
+import { fetchHistoricalData } from './api/brapi.js';
+import { fetchIndexers } from './api/bcb.js';
+
 let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
 let performanceChart = null;
+let consolidatedPerformanceChart = null; // Variável para o novo gráfico
 
+// ... (todas as outras funções de gráfico: renderMovimentacaoChart, renderPieCharts, etc. permanecem aqui sem alterações) ...
 // Gráfico de Movimentação (aba Lançamentos)
 export function renderMovimentacaoChart(lancamentos) {
     const chartCanvas = document.getElementById("movimentacao-chart");
@@ -645,5 +650,128 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
     } catch (error) {
         console.error("Erro ao buscar dados para o gráfico de performance:", error);
         container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Não foi possível carregar os dados de performance.<br><small>${error.message}</small></p>`;
+    }
+}
+
+
+// --- NOVO GRÁFICO DE PERFORMANCE CONSOLIDADO ---
+export async function renderConsolidatedPerformanceChart(performanceData) {
+    const canvas = document.getElementById('consolidated-performance-chart');
+    if (!canvas) return;
+    const container = canvas.parentElement;
+
+    // Garante que a instância anterior do gráfico seja destruída
+    if (consolidatedPerformanceChart instanceof Chart) {
+        consolidatedPerformanceChart.destroy();
+    }
+
+    // Se não houver dados, exibe uma mensagem
+    if (!performanceData) {
+        container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Sem dados suficientes para gerar o gráfico.</p>`;
+        // Garante que o canvas não seja removido permanentemente em caso de erro
+        if (!container.querySelector('canvas')) {
+            container.appendChild(canvas);
+        }
+        return;
+    };
+
+    try {
+        const hoje = new Date();
+        const tresMesesAtras = new Date(hoje);
+        tresMesesAtras.setMonth(hoje.getMonth() - 3);
+        const dataInicialStr = tresMesesAtras.toISOString().split('T')[0];
+        const dataFinalStr = hoje.toISOString().split('T')[0];
+
+        // Fetch sequencial para evitar rate limit da API
+        const ibovData = await fetchHistoricalData('^BVSP', '3mo');
+        await new Promise(resolve => setTimeout(resolve, 250)); // Delay
+        const ivvb11Data = await fetchHistoricalData('IVVB11', '3mo');
+        const { historicoCDI } = await fetchIndexers(dataInicialStr, dataFinalStr);
+
+        const calculateBenchmarkMonthlyReturns = (data) => {
+            if (!data || !data.results?.[0]?.historicalDataPrice) return [0, 0, 0];
+            const prices = data.results[0].historicalDataPrice.sort((a, b) => a.date - b.date);
+
+            const monthlyReturns = [0, 0, 0];
+            for (let i = 0; i < 3; i++) {
+                const monthOffset = 2 - i;
+                const startDate = new Date(hoje.getFullYear(), hoje.getMonth() - monthOffset, 1);
+                const endDate = new Date(hoje.getFullYear(), hoje.getMonth() - monthOffset + 1, 1);
+
+                const startPriceObj = prices.find(p => new Date(p.date * 1000) >= startDate);
+                const endPriceObj = prices.find(p => new Date(p.date * 1000) >= endDate);
+
+                if (startPriceObj && endPriceObj) {
+                    monthlyReturns[i] = ((endPriceObj.close / startPriceObj.close) - 1) * 100;
+                }
+            }
+            return monthlyReturns;
+        };
+
+        const calculateCdiMonthlyReturns = (data) => {
+            const monthlyReturns = [0, 0, 0];
+            for (let i = 0; i < 3; i++) {
+                const monthOffset = 2 - i;
+                const startDate = new Date(hoje.getFullYear(), hoje.getMonth() - monthOffset, 1);
+                const endDate = new Date(hoje.getFullYear(), hoje.getMonth() - monthOffset + 1, 1);
+
+                let accumulated = 1;
+                data.filter(item => {
+                    const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
+                    return itemDate >= startDate && itemDate < endDate;
+                }).forEach(item => {
+                    accumulated *= (1 + (parseFloat(item.valor) / 100));
+                });
+                monthlyReturns[i] = (accumulated - 1) * 100;
+            }
+            return monthlyReturns;
+        };
+
+        const dataIBOV = calculateBenchmarkMonthlyReturns(ibovData);
+        const dataIVVB11 = calculateBenchmarkMonthlyReturns(ivvb11Data);
+        const dataCDI = calculateCdiMonthlyReturns(historicoCDI);
+
+        const labels = Array.from({ length: 3 }, (_, i) => {
+            const date = new Date(hoje.getFullYear(), hoje.getMonth() - (2 - i), 1);
+            return date.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+        });
+
+        consolidatedPerformanceChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Carteira', data: performanceData.map(d => d.percent), backgroundColor: '#00d9c3', borderRadius: 4 },
+                    { label: 'IBOV', data: dataIBOV, backgroundColor: '#ECC94B', borderRadius: 4 },
+                    { label: 'IVVB11', data: dataIVVB11, backgroundColor: '#5A67D8', borderRadius: 4 },
+                    { label: 'CDI', data: dataCDI, backgroundColor: '#3a404d', borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        ticks: { color: '#a0a7b3', callback: (value) => `${value.toFixed(1)}%` },
+                        grid: { color: '#2a2c30' }
+                    },
+                    x: { ticks: { color: '#a0a7b3' }, grid: { display: false } }
+                },
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8 } },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`
+                        }
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Erro ao renderizar gráfico de performance consolidado:", error);
+        container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Erro ao carregar dados de performance.<br><small>${error.message}</small></p>`;
     }
 }

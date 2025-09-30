@@ -41,7 +41,7 @@ const getPriceOnDate = (historicalData, targetDate) => {
 /**
  * Função principal que calcula e renderiza todos os cards da aba de Rentabilidade.
  */
-export async function renderRentabilidadeTab(lancamentos, proventos) {
+export async function renderRentabilidadeTab(lancamentos, proventos, summaryData) {
     const rentabilidadePane = document.getElementById('rentabilidade');
     if (!rentabilidadePane) return;
 
@@ -55,95 +55,121 @@ export async function renderRentabilidadeTab(lancamentos, proventos) {
     if (realStatusEl) realStatusEl.textContent = '...';
 
 
-    if (!lancamentos || lancamentos.length === 0) {
+    if (!lancamentos || lancamentos.length === 0 || !summaryData) {
         return;
     }
 
-    // --- 1. Consolidação da Carteira e Cálculo do Patrimônio Atual ---
-    const carteira = {};
-    lancamentos.forEach(l => {
-        if (!carteira[l.ativo]) {
-            carteira[l.ativo] = {
-                ativo: l.ativo,
-                tipoAtivo: l.tipoAtivo,
-                quantidade: 0,
-                valorTotalInvestido: 0,
-                quantidadeComprada: 0,
-            };
-        }
-        if (l.tipoOperacao === 'compra') {
-            carteira[l.ativo].quantidade += l.quantidade;
-            carteira[l.ativo].quantidadeComprada += l.quantidade;
-            carteira[l.ativo].valorTotalInvestido += l.valorTotal;
-        } else if (l.tipoOperacao === 'venda') {
-            if (carteira[l.ativo].quantidadeComprada > 0) {
-                const precoMedio = carteira[l.ativo].valorTotalInvestido / carteira[l.ativo].quantidadeComprada;
-                carteira[l.ativo].valorTotalInvestido -= l.quantidade * precoMedio;
-            }
-            carteira[l.ativo].quantidade -= l.quantidade;
-        }
-    });
-
-    const tickersNormais = Object.values(carteira).filter(a => a.quantidade > 0 && a.tipoAtivo !== 'Cripto' && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo)).map(a => a.ativo);
-    const tickersCripto = Object.values(carteira).filter(a => a.quantidade > 0 && a.tipoAtivo === 'Cripto').map(a => a.ativo);
-
-    const [precosNormais, precosCripto] = await Promise.all([fetchCurrentPrices(tickersNormais), fetchCryptoPrices(tickersCripto)]);
-    const precosAtuais = { ...precosNormais, ...precosCripto };
-
-    let patrimonioAtual = 0;
-    let valorInvestidoTotal = 0;
-
-    Object.values(carteira).forEach(ativo => {
-        if (ativo.quantidade > 0) {
-            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
-            const precoAtual = precosAtuais[ativo.ativo] || precoMedio;
-            patrimonioAtual += precoAtual * ativo.quantidade;
-            valorInvestidoTotal += ativo.valorTotalInvestido;
-        }
-    });
-
-    const totalProventos = proventos.reduce((acc, p) => acc + p.valor, 0);
+    // --- 1. Utiliza os dados já consolidados do summary ---
+    const { patrimonioTotal, valorInvestidoTotal, lucroTotal } = summaryData;
+    const patrimonioAtual = patrimonioTotal;
 
     // --- 2. Cálculo da Rentabilidade Acumulada ---
-    const rentabilidadeAcumuladaReais = patrimonioAtual - valorInvestidoTotal + totalProventos;
-    const rentabilidadeAcumuladaPercent = valorInvestidoTotal > 0 ? (rentabilidadeAcumuladaReais / valorInvestidoTotal) * 100 : 0;
+    const rentabilidadeAcumuladaReais = lucroTotal;
+    const rentabilidadeAcumuladaPercent = valorInvestidoTotal > 0 ? (lucroTotal / valorInvestidoTotal) * 100 : 0;
     updateRentabilidadeField('rentabilidade-acumulada-percent', 'rentabilidade-acumulada-reais', rentabilidadeAcumuladaPercent, rentabilidadeAcumuladaReais);
+
 
     // --- 3. Função Auxiliar para Rentabilidade de Período ---
     const calculatePeriodRentability = async (startDate) => {
         let patrimonioInicial = 0;
-        const carteiraInicial = {};
         const lancamentosAntes = lancamentos.filter(l => new Date(l.data) < startDate);
 
-        lancamentosAntes.forEach(l => {
-            if (!carteiraInicial[l.ativo]) {
-                carteiraInicial[l.ativo] = { quantidade: 0, tipoAtivo: l.tipoAtivo };
+        // --- 3.1 Renda Fixa (RF) Patrimônio Inicial ---
+        const rfLancamentosAntes = lancamentosAntes.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
+        if (rfLancamentosAntes.length > 0) {
+            const dataMaisAntigaRF = rfLancamentosAntes.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, rfLancamentosAntes[0].data);
+            const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntigaRF, startDate.toISOString().split('T')[0]);
+
+            for (const ativo of rfLancamentosAntes) {
+                let valorBase = ativo.valorAplicado;
+                const dataAplicacao = new Date(ativo.data + 'T00:00:00');
+                let valorBruto = valorBase;
+                const diasCorridos = Math.max(0, Math.floor((startDate - dataAplicacao) / (1000 * 60 * 60 * 24)));
+
+                if (ativo.tipoRentabilidade === 'Pós-Fixado') {
+                    let acumuladorCDI = 1;
+                    const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
+                    historicoCDI
+                        .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataAplicacao)
+                        .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
+                    valorBruto = valorBase * acumuladorCDI;
+                } else if (ativo.tipoRentabilidade === 'Prefixado') {
+                    const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
+                    const diasUteis = diasCorridos * (252 / 365.25);
+                    valorBruto = valorBase * Math.pow(1 + taxaAnual, diasUteis / 252);
+                } else if (ativo.tipoRentabilidade === 'Híbrido') {
+                    let acumuladorIPCA = 1;
+                    const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
+                    const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
+                    historicoIPCA
+                        .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataAplicacao)
+                        .forEach(item => { acumuladorIPCA *= (1 + parseFloat(item.valor) / 100); });
+                    const valorCorrigido = valorBase * acumuladorIPCA;
+                    const diasUteis = diasCorridos * (252 / 365.25);
+                    valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+                }
+
+                const lucro = valorBruto - ativo.valorAplicado;
+                let aliquotaIR = 0;
+                if (lucro > 0 && !['LCI', 'LCA'].includes(ativo.tipoAtivo)) {
+                    if (diasCorridos <= 180) aliquotaIR = 0.225;
+                    else if (diasCorridos <= 360) aliquotaIR = 0.20;
+                    else if (diasCorridos <= 720) aliquotaIR = 0.175;
+                    else aliquotaIR = 0.15;
+                }
+                patrimonioInicial += (valorBruto - (lucro * aliquotaIR));
             }
-            carteiraInicial[l.ativo].quantidade += (l.tipoOperacao === 'compra' ? l.quantidade : -l.quantidade);
-        });
+        }
 
-        const tickersIniciais = Object.keys(carteiraInicial).filter(t => carteiraInicial[t].quantidade > 0 && carteiraInicial[t].tipoAtivo !== 'Cripto' && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(carteiraInicial[t].tipoAtivo));
+        // --- 3.2 Renda Variável (RV) Patrimônio Inicial ---
+        const carteiraInicialRV = {};
+        lancamentosAntes
+            .filter(l => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo))
+            .forEach(l => {
+                if (!carteiraInicialRV[l.ativo]) {
+                    carteiraInicialRV[l.ativo] = { quantidade: 0, tipoAtivo: l.tipoAtivo, _valorTotalComprado: 0, _quantidadeComprada: 0 };
+                }
+                const ativo = carteiraInicialRV[l.ativo];
+                if (l.tipoOperacao === 'compra') {
+                    ativo.quantidade += l.quantidade;
+                    ativo._quantidadeComprada += l.quantidade;
+                    ativo._valorTotalComprado += l.valorTotal;
+                } else if (l.tipoOperacao === 'venda') {
+                    ativo.quantidade -= l.quantidade;
+                }
+            });
 
-        if (tickersIniciais.length > 0) {
-            const historicalDataPromises = tickersIniciais.map(t => fetchHistoricalData(t, '1y'));
+        const tickersNormais = Object.keys(carteiraInicialRV).filter(t => carteiraInicialRV[t].quantidade > 0 && carteiraInicialRV[t].tipoAtivo !== 'Cripto');
+        if (tickersNormais.length > 0) {
+            const historicalDataPromises = tickersNormais.map(t => fetchHistoricalData(t, '1y'));
             const historicalDataResults = await Promise.all(historicalDataPromises);
-
             historicalDataResults.forEach((data, index) => {
-                const ticker = tickersIniciais[index];
+                const ticker = tickersNormais[index];
                 const price = getPriceOnDate(data, startDate);
+                const ativo = carteiraInicialRV[ticker];
                 if (price) {
-                    patrimonioInicial += carteiraInicial[ticker].quantidade * price;
+                    patrimonioInicial += ativo.quantidade * price;
+                } else {
+                    const precoMedio = ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0;
+                    patrimonioInicial += ativo.quantidade * precoMedio;
                 }
             });
         }
+        const tickersCripto = Object.keys(carteiraInicialRV).filter(t => carteiraInicialRV[t].quantidade > 0 && carteiraInicialRV[t].tipoAtivo === 'Cripto');
+        tickersCripto.forEach(ticker => {
+            const ativo = carteiraInicialRV[ticker];
+            const precoMedio = ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0;
+            patrimonioInicial += ativo.quantidade * precoMedio;
+        });
 
+        // --- 3.3 Cálculo Final da Rentabilidade do Período ---
         const lancamentosPeriodo = lancamentos.filter(l => new Date(l.data) >= startDate);
         const aportesLiquidosPeriodo = lancamentosPeriodo.reduce((acc, l) => acc + (l.tipoOperacao === 'compra' ? l.valorTotal : -l.valorTotal), 0);
         const proventosPeriodo = proventos.filter(p => new Date(p.dataPagamento) >= startDate).reduce((acc, p) => acc + p.valor, 0);
 
         const rentabilidadeReais = (patrimonioAtual - patrimonioInicial - aportesLiquidosPeriodo) + proventosPeriodo;
         const baseCalculo = patrimonioInicial + aportesLiquidosPeriodo;
-        const rentabilidadePercent = baseCalculo !== 0 ? (rentabilidadeReais / baseCalculo) * 100 : 0;
+        const rentabilidadePercent = Math.abs(baseCalculo) < 0.01 ? 0 : (rentabilidadeReais / baseCalculo) * 100;
 
         return { reais: rentabilidadeReais, percent: rentabilidadePercent };
     };

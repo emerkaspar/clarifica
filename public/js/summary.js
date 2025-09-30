@@ -106,7 +106,7 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
         document.getElementById('summary-variacao-valor').textContent = formatCurrency(0);
         document.getElementById('summary-variacao-percent').innerHTML = `0.00%`;
         document.getElementById('summary-rentabilidade-percent').innerHTML = `0.00%`;
-        return;
+        return { patrimonioTotal: 0, valorInvestidoTotal: 0, lucroTotal: 0 };
     }
 
     // 1. Separa lançamentos de Renda Fixa dos demais
@@ -193,4 +193,7 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
     document.getElementById('summary-variacao-percent').className = variacaoPercent >= 0 ? 'summary-main-value small positive' : 'summary-main-value small negative';
     document.getElementById('summary-rentabilidade-percent').innerHTML = `${rentabilidadePercent.toFixed(2)}% ${rentabilidadeArrow}`;
     document.getElementById('summary-rentabilidade-percent').className = rentabilidadePercent >= 0 ? 'summary-main-value small positive' : 'summary-main-value small negative';
+
+    // 6. Retorna os valores consolidados
+    return { patrimonioTotal, valorInvestidoTotal, lucroTotal };
 }

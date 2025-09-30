@@ -39,7 +39,7 @@ async function renderFiisDayValorization(tickers, carteira) {
                 if (ontem > 0) {
                     const variacaoPercentual = ((hoje / ontem) - 1) * 100;
                     const variacaoReais = (hoje - ontem) * quantidade;
-                    
+
                     totalValorizacaoReais += variacaoReais;
                     totalInvestidoPonderado += valorPosicaoAtual;
                     variacaoPonderadaTotal += variacaoPercentual * (valorPosicaoAtual / 100);
@@ -51,7 +51,7 @@ async function renderFiisDayValorization(tickers, carteira) {
         });
 
         const variacaoPercentualFinal = totalInvestidoPonderado > 0 ? (variacaoPonderadaTotal / totalInvestidoPonderado) * 100 : 0;
-        
+
         const isPositive = totalValorizacaoReais >= 0;
         const sinal = isPositive ? '+' : '';
         const corClasse = isPositive ? 'positive' : 'negative';
@@ -59,7 +59,7 @@ async function renderFiisDayValorization(tickers, carteira) {
 
         const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
-        
+
         valorizationReaisDiv.textContent = `${sinal}${valorizacaoReaisFormatada}`;
         valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
 
@@ -89,7 +89,7 @@ function renderFiisSummary(carteira, precosAtuais) {
         if (ativo.quantidade > 0) {
             const precoAtual = precosAtuais[ativo.ativo] || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
-            
+
             totalInvestido += precoMedio * ativo.quantidade;
             patrimonioAtual += precoAtual * ativo.quantidade;
             totalProventos += ativo.proventos;
@@ -115,7 +115,7 @@ function renderFiisSummary(carteira, precosAtuais) {
             }
         }
     };
-    
+
     updateField('fiis-total-investido', totalInvestido);
     updateField('fiis-patrimonio-atual', patrimonioAtual);
     updateField('fiis-rentabilidade-reais', rentabilidadeReais, true, true);
@@ -191,7 +191,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         document.getElementById("fiis-valorization-reais").textContent = "N/A";
         document.getElementById("fiis-valorization-percent").innerHTML = "";
         document.getElementById("fiis-valorization-percent").className = 'valorization-pill';
-        
+
         document.getElementById("fiis-total-investido").textContent = "R$ 0,00";
         document.getElementById("fiis-patrimonio-atual").textContent = "R$ 0,00";
         document.getElementById("fiis-rentabilidade-reais").textContent = "R$ 0,00";
@@ -258,7 +258,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
-            
+
             // --- CÁLCULOS RESTAURADOS E NOVOS ---
             const variacaoReais = valorPosicaoAtual - valorInvestido;
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;

@@ -1471,3 +1471,24 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- NOVOS ESTILOS PARA O GRÁFICO DE PERFORMANCE --- */
+.performance-box {
+  background-color: #1a1b1e;
+  border: 1px solid #2a2c30;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.performance-box h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.performance-chart-container {
+  height: 350px;
+  width: 100%;
+}

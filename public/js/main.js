@@ -15,7 +15,7 @@ import { updateProventosTab } from './tabs/proventos.js';
 import { renderMovimentacaoChart } from './charts.js';
 import { updateMainSummaryHeader } from './summary.js';
 import { renderPatrimonioTab } from './tabs/patrimonio.js';
-import { renderRentabilidadeTab } from './tabs/rentabilidade.js'; // <-- ADICIONADO AQUI
+import { renderRentabilidadeTab } from './tabs/rentabilidade.js';
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 let currentUserID = null;
@@ -48,12 +48,11 @@ const onLogout = () => {
 function initializeDataListeners(userID) {
     // Listener para Lançamentos
     const qLancamentos = query(collection(db, "lancamentos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
-    onSnapshot(qLancamentos, (snapshot) => {
+    onSnapshot(qLancamentos, async (snapshot) => {
         allLancamentos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        window.allLancamentos = allLancamentos; // Disponibiliza para outros módulos
+        window.allLancamentos = allLancamentos;
 
-        // CHAMA A ATUALIZAÇÃO DO CABEÇALHO
-        updateMainSummaryHeader(allLancamentos, allProventos);
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos);
 
         renderHistorico(allLancamentos);
         renderMovimentacaoChart(allLancamentos);
@@ -64,17 +63,16 @@ function initializeDataListeners(userID) {
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
         renderPatrimonioTab(allLancamentos, allProventos);
-        renderRentabilidadeTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
+        renderRentabilidadeTab(allLancamentos, allProventos, summaryData); // Passa os dados consolidados
     });
 
     // Listener para Proventos
     const qProventos = query(collection(db, "proventos"), where("userID", "==", userID), orderBy("dataPagamento", "desc"));
-    onSnapshot(qProventos, (snapshot) => {
+    onSnapshot(qProventos, async (snapshot) => {
         allProventos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        window.allProventos = allProventos; // Disponibiliza para outros módulos
+        window.allProventos = allProventos;
 
-        // CHAMA A ATUALIZAÇÃO DO CABEÇALHO
-        updateMainSummaryHeader(allLancamentos, allProventos);
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos);
 
         updateProventosTab(allProventos, currentProventosMeta);
         renderAcoesCarteira(allLancamentos, allProventos);
@@ -82,7 +80,7 @@ function initializeDataListeners(userID) {
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
         renderPatrimonioTab(allLancamentos, allProventos);
-        renderRentabilidadeTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
+        renderRentabilidadeTab(allLancamentos, allProventos, summaryData); // Passa os dados consolidados
     });
 
     // Listener para Classificações
