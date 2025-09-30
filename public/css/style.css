@@ -153,13 +153,22 @@ body {
 
 @media (max-width: 768px) {
   .main-summary-header {
-    display: none; /* Esconde os cards em telas muito pequenas */
+    display: flex;
+    order: 3;
+    width: 100%;
+    justify-content: center;
   }
   .top-menu-container {
     justify-content: space-between;
   }
   .logo img {
     height: 50px;
+  }
+  #user-info #user-name {
+    display: none;
+  }
+  #user-info {
+    padding: 4px;
   }
 }
 

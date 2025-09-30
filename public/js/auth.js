@@ -15,7 +15,6 @@ const updateUIForLoggedInUser = (user) => {
     userInfoDiv.style.display = "flex";
     btnHeaderLoginGoogle.style.display = "none";
     document.getElementById("user-photo").src = user.photoURL;
-    document.getElementById("user-name").textContent = user.displayName;
     document.getElementById("dropdown-user-name").textContent = user.displayName;
     document.getElementById("dropdown-user-email").textContent = user.email;
 };
