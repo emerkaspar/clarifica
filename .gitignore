@@ -1,3 +1,30 @@
+# --------------------------------------------------------
+# DEPENDÊNCIAS DE SISTEMA, NODE.JS E FIREBASE/GCP
+# --------------------------------------------------------
+
+# Node.js / npm / Yarn
+/node_modules
+/functions/node_modules
+
+# Arquivos de logs e debug do Node
+npm-debug.log*
+yarn-error.log*
+yarn.lock
+
+# Cache do Firebase CLI, emuladores e logs
+.firebase/
+firebase-debug.log
+firebase-debug.log.*
+.runtimeconfig.json
+
+# Arquivos de configuração e cache do VS Code
+.vscode/
+.DS_Store
+
+# --------------------------------------------------------
+# REGRAS EXISTENTES (Android / IntelliJ / Gradle)
+# --------------------------------------------------------
+
 # Gradle files
 .gradle/
 build/
