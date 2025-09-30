@@ -2,6 +2,7 @@
 
 import { fetchCurrentPrices, fetchCryptoPrices, fetchHistoricalData } from '../api/brapi.js';
 import { fetchIndexers } from '../api/bcb.js';
+import { renderConsolidatedPerformanceChart } from '../charts.js';
 
 // Função auxiliar para formatar valores monetários
 const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -56,6 +57,7 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
 
 
     if (!lancamentos || lancamentos.length === 0 || !summaryData) {
+        renderConsolidatedPerformanceChart(lancamentos, proventos); // Chama com dados vazios para limpar o gráfico
         return;
     }
 
@@ -205,4 +207,7 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
             realStatusEl.style.color = rentabilidadeRealPercent >= 0 ? '#00d9c3' : '#ef4444';
         }
     }
+
+    // --- 6. Renderiza o Gráfico de Performance Consolidado ---
+    renderConsolidatedPerformanceChart(lancamentos, proventos);
 }
