@@ -5,7 +5,8 @@ let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
 let performanceChart = null;
-
+let consolidatedPerformanceChart = null; // Variável para controlar a instância do gráfico
+let isChartRendering = false; // Variável de "trava" para evitar race condition
 
 // ... (as funções renderMovimentacaoChart, renderPieCharts, renderEvolutionChart, renderPerformanceChart permanecem inalteradas) ...
 
@@ -252,14 +253,22 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
  * Renderiza um gráfico de LINHA comparando a performance da carteira vs. benchmarks.
  */
 export async function renderConsolidatedPerformanceChart(lancamentos, proventos) {
-    const canvasId = 'consolidated-performance-chart';
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    // --- FIX: Trava para evitar renderização duplicada ---
+    if (isChartRendering) {
+        return;
+    }
+    isChartRendering = true;
+
+    const canvas = document.getElementById('consolidated-performance-chart');
+    if (!canvas) {
+        isChartRendering = false;
+        return;
+    }
     const container = canvas.parentElement;
 
-    const existingChart = Chart.getChart(canvas);
-    if (existingChart) {
-        existingChart.destroy();
+    // --- FIX: Garante que a instância anterior seja destruída ---
+    if (consolidatedPerformanceChart) {
+        consolidatedPerformanceChart.destroy();
     }
 
     if (!lancamentos || lancamentos.length === 0) {
@@ -272,6 +281,7 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         ctx.font = '16px "Open Sans"';
         ctx.fillText('Sem dados suficientes para gerar o gráfico.', canvas.width / 2, canvas.height / 2);
         ctx.restore();
+        isChartRendering = false;
         return;
     }
 
@@ -329,25 +339,24 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
 
         dadosCDI.forEach(item => {
             const data = item.data.split('/').reverse().join('-');
-            if (data >= dataInicioStr) {
-                if (!cdiStarted) {
-                    cdiIndexStartFactor = cdiAcumulado;
-                    cdiStarted = true;
-                }
-                cdiAcumulado *= (1 + (parseFloat(item.valor) / 100));
+            cdiAcumulado *= (1 + (parseFloat(item.valor) / 100));
+            if (data >= dataInicioStr && !cdiStarted) {
+                cdiIndexStartFactor = cdiAcumulado;
+                cdiStarted = true;
+            }
+            if (cdiStarted) {
                 historicoCDIIndex[data] = cdiAcumulado;
-            } else {
-                cdiAcumulado *= (1 + (parseFloat(item.valor) / 100));
             }
         });
 
         const labels = [];
         const dataCarteira = [];
         const costBasisArray = [];
-        const proventosArray = [];
+        const proventosArray = []; // <<< FIX
         const carteiraDiaria = {};
         let custoBaseAcumulado = 0;
-        let proventosAcumulados = 0;
+        let proventosAcumulados = 0; // <<< FIX
+        let patrimonioDiaAnterior = {};
 
         const lancamentosAntes = lancamentosOrdenados.filter(l => new Date(l.data) < dataInicio);
         lancamentosAntes.forEach(l => {
@@ -364,6 +373,7 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         });
         custoBaseAcumulado = Object.values(carteiraDiaria).reduce((acc, ativo) => acc + ativo.custoTotal, 0);
         proventosAcumulados = proventos.filter(p => new Date(p.dataPagamento) < dataInicio).reduce((acc, p) => acc + p.valor, 0);
+
 
         for (let d = new Date(dataInicio); d <= hoje; d.setDate(d.getDate() + 1)) {
             const dataAtualStr = d.toISOString().split('T')[0];
@@ -385,31 +395,31 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
                 }
             });
 
+            // --- FIX: Acumula proventos ---
             proventos.filter(p => p.dataPagamento === dataAtualStr).forEach(p => proventosAcumulados += p.valor);
+            proventosArray.push(proventosAcumulados);
 
             let patrimonioDoDia = 0;
             for (const ticker in carteiraDiaria) {
                 const ativo = carteiraDiaria[ticker];
-                if (ativo.quantidade > 0) {
-                    const precoDoDia = historicoPrecos[ticker]?.[dataAtualStr] || historicoPrecos[ticker]?.[labels[labels.length - 2]];
+                if (ativo.quantidade > 0.000001) { // Evita poeira de ativos vendidos
+                    const precoDoDia = historicoPrecos[ticker]?.[dataAtualStr]
                     if (precoDoDia) {
-                        patrimonioDoDia += ativo.quantidade * precoDoDia;
-                    } else {
-                        patrimonioDoDia += ativo.custoTotal;
+                        patrimonioDiaAnterior[ticker] = ativo.quantidade * precoDoDia;
                     }
+                    patrimonioDoDia += patrimonioDiaAnterior[ticker] || ativo.custoTotal;
                 }
             }
 
             dataCarteira.push(patrimonioDoDia);
             costBasisArray.push(custoBaseAcumulado);
-            proventosArray.push(proventosAcumulados);
         }
 
-        // --- FIX: Fórmula de performance corrigida ---
+        // --- FIX: Fórmula de performance corrigida para incluir proventos ---
         const dataCarteiraNormalizada = dataCarteira.map((v, i) => {
             const custo = costBasisArray[i];
             const proventos = proventosArray[i];
-            if (custo > 0.01) { // Evita divisão por zero ou valores muito pequenos
+            if (custo > 0.01) {
                 return (((v + proventos) / custo) - 1) * 100;
             }
             return 0;
@@ -434,7 +444,7 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
             dataIVVB11.push(historicoIVVB11[l] ?? lastValue);
         });
 
-        new Chart(ctx, {
+        consolidatedPerformanceChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
@@ -487,5 +497,7 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         ctx.font = '12px "Open Sans"';
         ctx.fillText(error.message, canvas.width / 2, canvas.height / 2 + 10);
         ctx.restore();
+    } finally {
+        isChartRendering = false; // --- FIX: Libera a trava ---
     }
 }
