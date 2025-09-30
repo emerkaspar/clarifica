@@ -14,7 +14,8 @@ import { renderClassificacao } from './tabs/classificacao.js';
 import { updateProventosTab } from './tabs/proventos.js';
 import { renderMovimentacaoChart } from './charts.js';
 import { updateMainSummaryHeader } from './summary.js';
-import { renderPatrimonioTab } from './tabs/patrimonio.js'; // <-- ADICIONADO AQUI
+import { renderPatrimonioTab } from './tabs/patrimonio.js';
+import { renderRentabilidadeTab } from './tabs/rentabilidade.js'; // <-- ADICIONADO AQUI
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 let currentUserID = null;
@@ -62,7 +63,8 @@ function initializeDataListeners(userID) {
         renderCriptoCarteira(allLancamentos, allProventos);
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
-        renderPatrimonioTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
+        renderPatrimonioTab(allLancamentos, allProventos);
+        renderRentabilidadeTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
     });
 
     // Listener para Proventos
@@ -79,7 +81,8 @@ function initializeDataListeners(userID) {
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
-        renderPatrimonioTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
+        renderPatrimonioTab(allLancamentos, allProventos);
+        renderRentabilidadeTab(allLancamentos, allProventos); // <-- ADICIONADO AQUI
     });
 
     // Listener para Classificações
