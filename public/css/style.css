@@ -1377,7 +1377,8 @@ body {
 
 .patrimonio-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  /* AJUSTE: Usamos minmax(0, Xfr) para permitir que as colunas encolham adequadamente. */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -1387,6 +1388,8 @@ body {
   border: 1px solid #2a2c30;
   border-radius: 12px;
   padding: 20px;
+  /* Adicionado para garantir que o conteúdo interno não cause overflow */
+  overflow: hidden;
 }
 
 .patrimonio-card h3 {
