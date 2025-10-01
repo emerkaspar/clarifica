@@ -20,30 +20,26 @@ async function renderEtfDayValorization(tickers, carteira) {
         const results = await Promise.all(promises);
 
         let totalValorizacaoReais = 0;
-        let totalInvestidoPonderado = 0;
-        let variacaoPonderadaTotal = 0;
+        let patrimonioTotalOntem = 0;
 
         results.forEach((data, index) => {
-            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
+            if (data?.results?.[0]?.historicalDataPrice?.length >= 1) {
                 const ticker = tickers[index];
-                const prices = data.results[0].historicalDataPrice.reverse();
-                const hoje = prices[0].close;
-                const ontem = prices[1].close;
-                const quantidade = carteira[ticker].quantidade;
-                const valorPosicaoAtual = hoje * quantidade;
-
-                if (ontem > 0) {
-                    const variacaoPercentual = ((hoje / ontem) - 1);
+                const hojeData = data.results[0].historicalDataPrice[0];
+                const hoje = hojeData.close;
+                const ontem = data.results[0].historicalDataPrice[1]?.close || hoje; // Fallback para o mesmo dia se não houver anterior
+                
+                if (carteira[ticker] && ontem > 0 && hoje) {
+                    const quantidade = carteira[ticker].quantidade;
                     const variacaoReais = (hoje - ontem) * quantidade;
                     
                     totalValorizacaoReais += variacaoReais;
-                    totalInvestidoPonderado += valorPosicaoAtual;
-                    variacaoPonderadaTotal += variacaoPercentual * valorPosicaoAtual;
+                    patrimonioTotalOntem += ontem * quantidade;
                 }
             }
         });
 
-        const variacaoPercentualFinal = totalInvestidoPonderado > 0 ? (variacaoPonderadaTotal / totalInvestidoPonderado) * 100 : 0;
+        const variacaoPercentualFinal = patrimonioTotalOntem > 0 ? (totalValorizacaoReais / patrimonioTotalOntem) * 100 : 0;
         
         const isPositive = totalValorizacaoReais >= 0;
         const sinal = isPositive ? '+' : '';
@@ -77,7 +73,7 @@ function renderEtfSummary(carteira, precosAtuais) {
 
     Object.values(carteira).forEach(ativo => {
         if (ativo.quantidade > 0) {
-            const precoAtual = precosAtuais[ativo.ativo] || 0;
+            const precoAtual = precosAtuais[ativo.ativo]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             
             totalInvestido += precoMedio * ativo.quantidade;
@@ -177,7 +173,7 @@ export async function renderEtfCarteira(lancamentos, proventos) {
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
-            const precoAtual = precosAtuais[ticker] || 0;
+            const precoAtual = precosAtuais[ticker]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;

@@ -12,7 +12,7 @@ function renderCriptoSummary(carteira, precosAtuais) {
 
     Object.values(carteira).forEach(ativo => {
         if (ativo.quantidade > 0) {
-            const precoAtual = precosAtuais[ativo.ativo] || 0;
+            const precoAtual = precosAtuais[ativo.ativo]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             
             totalInvestido += precoMedio * ativo.quantidade;
@@ -56,7 +56,6 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
     criptoListaDiv.innerHTML = `<p>Calculando e buscando cotações...</p>`;
 
-    // Limpa a valorização do dia, que não é calculada para cripto
     const valorizationReaisDiv = document.getElementById("cripto-valorization-reais");
     const valorizationPercentDiv = document.getElementById("cripto-valorization-percent");
     if (valorizationReaisDiv) valorizationReaisDiv.textContent = "Indisponível";
@@ -107,7 +106,7 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
-            const precoAtual = precosAtuais[ticker] || 0;
+            const precoAtual = precosAtuais[ticker]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;

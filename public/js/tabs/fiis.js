@@ -20,7 +20,6 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
     valorizationPercentDiv.className = 'valorization-pill';
 
     try {
-        // Busca o histórico apenas para obter o preço de fechamento do dia anterior
         const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
         const results = await Promise.all(promises);
 
@@ -30,21 +29,18 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
 
         results.forEach((data, index) => {
             const ticker = tickers[index];
-            // Garante que temos os dados históricos e o preço atual para o ticker
-            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice && data.results[0].historicalDataPrice.length >= 1 && precosAtuais[ticker]) {
+            if (data?.results?.[0]?.historicalDataPrice?.length >= 1 && precosAtuais[ticker]) {
                 
-                // --- LÓGICA CORRIGIDA ---
-                const hoje = precosAtuais[ticker]; // Preço atual (intraday) vindo de fetchCurrentPrices
-                const ontem = data.results[0].historicalDataPrice[0].close; // Último fechamento vindo do histórico
+                const hoje = precosAtuais[ticker]?.price; 
+                const ontem = data.results[0].historicalDataPrice[0].close;
                 
-                if (carteira[ticker] && ontem > 0) {
+                if (carteira[ticker] && ontem > 0 && hoje) {
                     const quantidade = carteira[ticker].quantidade;
                     const variacaoPercentual = ((hoje / ontem) - 1) * 100;
                     const variacaoReais = (hoje - ontem) * quantidade;
 
                     totalValorizacaoReais += variacaoReais;
 
-                    // A base para o cálculo percentual ponderado é o patrimônio do dia anterior
                     const patrimonioOntem = ontem * quantidade;
                     patrimonioTotalOntem += patrimonioOntem;
                     
@@ -53,7 +49,6 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
             }
         });
 
-        // Calcula a variação percentual ponderada sobre o patrimônio total do dia anterior
         const variacaoPercentualFinal = patrimonioTotalOntem > 0 ? (totalValorizacaoReais / patrimonioTotalOntem) * 100 : 0;
 
         const isPositive = totalValorizacaoReais >= 0;
@@ -91,7 +86,7 @@ function renderFiisSummary(carteira, precosAtuais) {
 
     Object.values(carteira).forEach(ativo => {
         if (ativo.quantidade > 0) {
-            const precoAtual = precosAtuais[ativo.ativo] || 0;
+            const precoAtual = precosAtuais[ativo.ativo]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
 
             totalInvestido += precoMedio * ativo.quantidade;
@@ -242,7 +237,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
     }
 
     try {
-        // --- ORDEM DE CHAMADA CORRIGIDA ---
         const precosAtuais = await fetchCurrentPrices(tickers);
         const dailyPerformance = await renderFiisDayValorization(tickers, carteira, precosAtuais);
         const historicalPerformance = [];
@@ -259,7 +253,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
-            const precoAtual = precosAtuais[ticker] || 0;
+            const precoAtual = precosAtuais[ticker]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;

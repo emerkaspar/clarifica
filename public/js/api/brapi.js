@@ -14,7 +14,6 @@ async function getFromBrapi(url) {
     try {
         const response = await fetch(fullUrl);
         
-        // Detecta erro permanente (401 ou 403)
         if (response.status === 401 || response.status === 403) {
             BRAAPI_IS_PERMANENTLY_DOWN = true;
             console.error(`[BRAPI] Chave inválida ou limite atingido permanentemente (Status ${response.status}). Parando chamadas automáticas.`);
@@ -38,77 +37,89 @@ async function getFromBrapi(url) {
 }
 
 /**
- * Busca os preços atuais para uma lista de tickers, priorizando o cache do Firestore.
- * Esta função é a principal fonte de dados para AÇÕES, FIIs, ETFs e CRIPTOMOEDAS.
+ * Busca os preços atuais e informações (como logo) para uma lista de tickers.
+ * Retorna um objeto no formato: { "TICKER": { price: 123.45, logoUrl: "url.svg" } }
  */
 export async function fetchCurrentPrices(tickers) {
     if (!tickers || tickers.length === 0) {
         return {};
     }
 
-    const precosAtuais = {};
+    const precosEInfos = {};
     let tickersToFetch = [];
     const cacheResults = await Promise.all(tickers.map(ticker => getFromFirestore(ticker)));
     
     // 1. Consulta Cache
     cacheResults.forEach((result, index) => {
         const ticker = tickers[index];
-        if (result.isRecent) {
-            precosAtuais[ticker] = result.data.results[0].regularMarketPrice;
+        const priceData = result.data?.results?.[0];
+        if (result.isRecent && priceData) {
+            precosEInfos[ticker] = {
+                price: priceData.regularMarketPrice,
+                logoUrl: priceData.logourl
+            };
         } else {
             if (!BRAAPI_IS_PERMANENTLY_DOWN) {
                  tickersToFetch.push(ticker);
             }
-            if (result.data) {
-                precosAtuais[ticker] = result.data.results[0].regularMarketPrice;
+            if (priceData) { // Usa dado antigo se disponível
+                precosEInfos[ticker] = {
+                    price: priceData.regularMarketPrice,
+                    logoUrl: priceData.logourl
+                };
             }
         }
     });
 
-    // Se a BRAPI estiver bloqueada, usa o último dado disponível no cache.
     if (BRAAPI_IS_PERMANENTLY_DOWN) {
         console.warn("[BRAPI - MODO FALHA] Utilizando dados do Firestore como única fonte (fallback).");
-        
         for(const ticker of tickers) {
-            if (!precosAtuais[ticker]) {
+            if (!precosEInfos[ticker]) {
                 const fallbackData = await getFallbackFromFirestore(ticker);
-                precosAtuais[ticker] = fallbackData ? fallbackData.results[0].regularMarketPrice : 0;
+                const priceData = fallbackData?.results?.[0];
+                precosEInfos[ticker] = {
+                    price: priceData?.regularMarketPrice || 0,
+                    logoUrl: priceData?.logourl || null
+                };
             }
         }
-        return precosAtuais;
+        return precosEInfos;
     }
 
     // 2. Chama a BRAPI (só para os que precisam)
-    const apiPromises = tickersToFetch.map(ticker => {
-        const url = `https://brapi.dev/api/quote/${ticker}?token=`;
-        return getFromBrapi(url).then(apiData => ({ ticker, apiData }));
-    });
+    if (tickersToFetch.length > 0) {
+        const url = `https://brapi.dev/api/quote/${tickersToFetch.join(',')}`;
+        const apiData = await getFromBrapi(url);
 
-    const apiResults = await Promise.all(apiPromises);
-
-    // 3. Processa e salva o resultado
-    for (const { ticker, apiData } of apiResults) {
-        if (apiData) {
-            const priceData = apiData.results[0];
-            if (priceData && priceData.regularMarketPrice) {
-                precosAtuais[ticker] = priceData.regularMarketPrice;
-                saveToFirestore(ticker, apiData); 
-            } else {
-                if (!precosAtuais[ticker]) {
-                    const fallbackData = await getFallbackFromFirestore(ticker);
-                    if (fallbackData) precosAtuais[ticker] = fallbackData.results[0].regularMarketPrice;
+        if (apiData && apiData.results) {
+            apiData.results.forEach(priceData => {
+                const ticker = priceData.symbol;
+                if (priceData.regularMarketPrice) {
+                    precosEInfos[ticker] = {
+                        price: priceData.regularMarketPrice,
+                        logoUrl: priceData.logourl
+                    };
+                    saveToFirestore(ticker, { results: [priceData] });
                 }
-            }
-        } else {
-            if (!precosAtuais[ticker]) {
-                 const fallbackData = await getFallbackFromFirestore(ticker);
-                if (fallbackData) precosAtuais[ticker] = fallbackData.results[0].regularMarketPrice;
-            }
+            });
         }
     }
     
-    return precosAtuais;
+    // 4. Garante que todos os tickers tenham um objeto, mesmo que a API falhe
+    for (const ticker of tickers) {
+        if (!precosEInfos[ticker]) {
+            const fallbackData = await getFallbackFromFirestore(ticker);
+            const fallbackPriceData = fallbackData?.results?.[0];
+            precosEInfos[ticker] = {
+                price: fallbackPriceData?.regularMarketPrice || 0,
+                logoUrl: fallbackPriceData?.logourl || null
+            };
+        }
+    }
+    
+    return precosEInfos;
 }
+
 
 /**
  * Busca dados históricos para o gráfico de performance (com fallback).
@@ -141,11 +152,6 @@ export async function fetchHistoricalData(ticker, range = '1mo') {
     console.error(`Erro ao buscar dados históricos de ${ticker}: Nenhuma fonte disponível.`);
     return null;
 }
-
-/**
- * REMOVIDO: fetchCryptoPrices não é mais usada, pois o Front-End agora usa fetchCurrentPrices
- * e depende da Cloud Function para alimentar o cache de criptomoedas.
- */
 
 /**
  * Busca sugestões de ativos com base em um termo de pesquisa.

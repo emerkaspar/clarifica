@@ -50,20 +50,22 @@ const onLogout = () => {
 
 // --- OUVINTES DE DADOS (LISTENERS) ---
 function initializeDataListeners(userID) {
-    // Listener para Lançamentos
     const qLancamentos = query(collection(db, "lancamentos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
     onSnapshot(qLancamentos, async (snapshot) => {
         allLancamentos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         window.allLancamentos = allLancamentos;
 
-        const tickersAtivos = allLancamentos
+        const tickersAtivos = [...new Set(allLancamentos
             .filter(a => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
-            .map(a => a.ativo);
+            .map(a => a.ativo)
+        )];
 
-        const precosAtuais = await fetchCurrentPrices(tickersAtivos);
-        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosAtuais);
+        const precosEInfos = await fetchCurrentPrices(tickersAtivos);
+        window.precosEInfos = precosEInfos;
 
-        renderHistorico(allLancamentos);
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos);
+        
+        renderHistorico(allLancamentos, precosEInfos);
         renderMovimentacaoChart(allLancamentos);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
@@ -76,18 +78,19 @@ function initializeDataListeners(userID) {
         renderAnalisesTab(allLancamentos, allProventos);
     });
 
-    // Listener para Proventos
     const qProventos = query(collection(db, "proventos"), where("userID", "==", userID), orderBy("dataPagamento", "desc"));
     onSnapshot(qProventos, async (snapshot) => {
         allProventos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         window.allProventos = allProventos;
 
-        const tickersAtivos = allLancamentos
+        const tickersAtivos = [...new Set(allLancamentos
             .filter(a => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
-            .map(a => a.ativo);
-        const precosAtuais = await fetchCurrentPrices(tickersAtivos);
+            .map(a => a.ativo)
+        )];
+        const precosEInfos = await fetchCurrentPrices(tickersAtivos);
+        window.precosEInfos = precosEInfos;
 
-        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosAtuais);
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos);
 
         updateProventosTab(allProventos, currentProventosMeta);
         renderAcoesCarteira(allLancamentos, allProventos);
@@ -98,8 +101,7 @@ function initializeDataListeners(userID) {
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
         renderAnalisesTab(allLancamentos, allProventos);
     });
-
-    // Listener para Classificações
+    
     const qClassificacoes = query(collection(db, "ativosClassificados"), where("userID", "==", userID));
     onSnapshot(qClassificacoes, (snapshot) => {
         allClassificacoes = {};
@@ -108,14 +110,12 @@ function initializeDataListeners(userID) {
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
     });
 
-    // Listener para Metas
     const metaDocRef = doc(db, "metas", userID);
     onSnapshot(metaDocRef, (doc) => {
         currentProventosMeta = doc.exists() ? doc.data() : null;
         updateProventosTab(allProventos, currentProventosMeta);
     });
 
-    // Listener para Valores Manuais do Tesouro Direto
     const qValoresManuais = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID));
     onSnapshot(qValoresManuais, (snapshot) => {
         allValoresManuaisTD = {};
@@ -126,7 +126,6 @@ function initializeDataListeners(userID) {
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
     });
 
-    // Listener para Configurações Gerais do Usuário
     const configDocRef = doc(db, "configuracoes", userID);
     onSnapshot(configDocRef, (doc) => {
         userConfig = doc.exists() ? doc.data() : {};

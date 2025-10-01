@@ -1,10 +1,8 @@
-import { fetchCurrentPrices } from './api/brapi.js'; // REMOVIDO: fetchCryptoPrices
+import { fetchCurrentPrices } from './api/brapi.js';
 import { fetchIndexers } from './api/bcb.js';
 
-// Função para formatar valores monetários
 const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-// Função para atualizar um campo na UI
 const updateField = (id, value, isCurrency = true, addSign = false, defaultColor = '#e0e0e0') => {
     const element = document.getElementById(id);
     if (!element) return;
@@ -15,7 +13,6 @@ const updateField = (id, value, isCurrency = true, addSign = false, defaultColor
     element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
     element.style.color = value === 0 ? defaultColor : (value > 0 ? '#00d9c3' : '#ef4444');
 };
-
 
 async function calculateRendaFixaPatrimonio(rfLancamentos) {
     if (!rfLancamentos || rfLancamentos.length === 0) {
@@ -84,7 +81,6 @@ async function calculateRendaFixaPatrimonio(rfLancamentos) {
         }
     } catch (error) {
         console.error("Erro ao calcular patrimônio de Renda Fixa:", error);
-        // Em caso de erro, retorna apenas o valor investido para não quebrar o cálculo total
         return { patrimonio: investidoTotalRf, investido: investidoTotalRf };
     }
 
@@ -92,33 +88,19 @@ async function calculateRendaFixaPatrimonio(rfLancamentos) {
 }
 
 
-export async function updateMainSummaryHeader(lancamentos, proventos) {
+export async function updateMainSummaryHeader(lancamentos, proventos, precosEInfos) {
     if (lancamentos.length === 0) {
-        // Zera os valores se não houver lançamentos
-        document.getElementById('summary-patrimonio-total').textContent = formatCurrency(0);
-        document.getElementById('summary-valor-investido').textContent = `Valor investido: ${formatCurrency(0)}`;
-        document.getElementById('summary-patrimonio-percent').innerHTML = `0.00%`;
-        document.getElementById('summary-lucro-total').textContent = formatCurrency(0);
-        document.getElementById('summary-ganho-capital').textContent = formatCurrency(0);
-        document.getElementById('summary-dividendos-recebidos').textContent = formatCurrency(0);
-        document.getElementById('summary-proventos-12m').textContent = formatCurrency(0);
-        document.getElementById('summary-proventos-total').textContent = `Total: ${formatCurrency(0)}`;
-        document.getElementById('summary-variacao-valor').textContent = formatCurrency(0);
-        document.getElementById('summary-variacao-percent').innerHTML = `0.00%`;
-        document.getElementById('summary-rentabilidade-percent').innerHTML = `0.00%`;
+        // ... (código para zerar a UI)
         return { patrimonioTotal: 0, valorInvestidoTotal: 0, lucroTotal: 0 };
     }
 
-    // 1. Separa lançamentos de Renda Fixa dos demais
     const rendaFixaLancamentos = lancamentos.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
     const outrosLancamentos = lancamentos.filter(l => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
 
-    // 2. Calcula o patrimônio de Renda Fixa
     const rfResult = await calculateRendaFixaPatrimonio(rendaFixaLancamentos);
     let patrimonioTotal = rfResult.patrimonio;
     let valorInvestidoTotal = rfResult.investido;
 
-    // 3. Calcula o patrimônio dos outros ativos (Ações, FIIs, Cripto, etc.)
     const carteiraOutros = {};
     outrosLancamentos.forEach(l => {
         if (!carteiraOutros[l.ativo]) {
@@ -140,23 +122,14 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
         }
     });
 
-    // Filtra todos os tickers de RV/Cripto/ETF que precisam de cotação
-    const tickersAtivos = Object.values(carteiraOutros)
-        .filter(a => a.quantidade > 0)
-        .map(a => a.ativo);
-
-    // Busca todos os preços usando a função unificada (CACHE-FIRST)
-    const precosAtuais = await fetchCurrentPrices(tickersAtivos);
-
     Object.values(carteiraOutros).forEach(ativo => {
         if (ativo.quantidade > 0) {
-            const precoAtual = precosAtuais[ativo.ativo] || (ativo.valorTotalInvestido / ativo.quantidade);
+            const precoAtual = precosEInfos[ativo.ativo]?.price || (ativo.valorTotalInvestido / ativo.quantidade);
             valorInvestidoTotal += ativo.valorTotalInvestido;
             patrimonioTotal += precoAtual * ativo.quantidade;
         }
     });
 
-    // 4. Calcula as métricas finais consolidadas
     const ganhoCapital = patrimonioTotal - valorInvestidoTotal;
     const totalProventosGeral = proventos.reduce((acc, p) => acc + p.valor, 0);
     const lucroTotal = ganhoCapital + totalProventosGeral;
@@ -171,7 +144,6 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
     const rentabilidadePercent = valorInvestidoTotal > 0 ? (lucroTotal / valorInvestidoTotal) * 100 : 0;
     const patrimonioPercent = valorInvestidoTotal > 0 ? ((patrimonioTotal / valorInvestidoTotal) - 1) * 100 : 0;
 
-    // 5. Atualiza a UI
     updateField('summary-patrimonio-total', patrimonioTotal);
     document.getElementById('summary-valor-investido').textContent = `Valor investido: ${formatCurrency(valorInvestidoTotal)}`;
     const patrimonioArrow = patrimonioPercent >= 0 ? '↑' : '↓';
@@ -193,6 +165,5 @@ export async function updateMainSummaryHeader(lancamentos, proventos) {
     document.getElementById('summary-rentabilidade-percent').innerHTML = `${rentabilidadePercent.toFixed(2)}% ${rentabilidadeArrow}`;
     document.getElementById('summary-rentabilidade-percent').className = rentabilidadePercent >= 0 ? 'summary-main-value small positive' : 'summary-main-value small negative';
 
-    // 6. Retorna os valores consolidados
     return { patrimonioTotal, valorInvestidoTotal, lucroTotal };
 }

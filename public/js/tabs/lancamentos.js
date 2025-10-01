@@ -7,8 +7,9 @@ const searchInput = document.getElementById("search-ativo");
 /**
  * Renderiza a tabela com o histórico de todos os lançamentos.
  * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
+ * @param {object} precosEInfos - Objeto com preços e URLs de logos dos ativos.
  */
-export function renderHistorico(lancamentos) {
+export function renderHistorico(lancamentos, precosEInfos = {}) {
     if (!historicoListaDiv) return;
 
     const searchTerm = searchInput.value.toUpperCase();
@@ -27,9 +28,20 @@ export function renderHistorico(lancamentos) {
         const quantidade = l.quantidade || '-';
         const preco = l.preco;
 
+        // Lógica para obter a logomarca ou o ícone padrão
+        const ativoInfo = precosEInfos[l.ativo];
+        const logoUrl = ativoInfo?.logoUrl;
+        const logoHtml = logoUrl 
+            ? `<img src="${logoUrl}" alt="${l.ativo}" class="ativo-logo">`
+            : `<div class="ativo-logo-fallback"><i class="fas fa-dollar-sign"></i></div>`;
+
+
         return `
             <div class="lista-item" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
-                <div class="lista-item-valor">${l.ativo}</div>
+                <div class="lista-item-valor ativo-com-logo">
+                    ${logoHtml}
+                    <span>${l.ativo}</span>
+                </div>
                 <div><span class="tipo-ativo-badge">${l.tipoAtivo}</span></div>
                 <div class="lista-item-valor ${l.tipoOperacao === "compra" ? "operacao-compra" : "operacao-venda"}">
                   ${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)}
@@ -79,10 +91,7 @@ historicoListaDiv.addEventListener("click", async (e) => {
 // Event listener para a barra de pesquisa
 searchInput.addEventListener("input", () => {
     // Re-renderiza a lista com o filtro aplicado.
-    // Precisamos garantir que a variável `allLancamentos` esteja acessível.
-    // A melhor forma é passá-la como argumento quando o listener do main.js for acionado.
-    // Por enquanto, esta chamada funcionará se `allLancamentos` for atualizada no escopo global do main.js.
-    if (window.allLancamentos) {
-        renderHistorico(window.allLancamentos);
+    if (window.allLancamentos && window.precosEInfos) {
+        renderHistorico(window.allLancamentos, window.precosEInfos);
     }
 });

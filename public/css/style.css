@@ -1693,3 +1693,31 @@ body {
   transform: translateY(-2px);
   opacity: 1;
 }
+
+/* --- ESTILOS PARA LOGO DO ATIVO --- */
+.ativo-com-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ativo-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: contain;
+  background-color: #fff; /* Fundo branco para logos com transparência */
+}
+
+.ativo-logo-fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #3a404d;
+  color: #a0a7b3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0; /* Impede que o ícone encolha */
+}
