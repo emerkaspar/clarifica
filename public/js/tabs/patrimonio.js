@@ -295,8 +295,8 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
 
 
 function renderPosicaoConsolidada(carteira, precosEInfos) {
-    const tableBody = document.getElementById('posicao-consolidada-body');
-    if (!tableBody) return;
+    const tableContainer = document.querySelector('#patrimonio .table-wrapper');
+    if (!tableContainer) return;
 
     let patrimonioTotal = 0;
     const carteiraArray = Object.values(carteira).map(ativo => {
@@ -323,7 +323,7 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
         return acc;
     }, {});
 
-    let html = '';
+    let tableHtml = '';
     const groupOrder = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
 
     for (const tipo of groupOrder) {
@@ -352,8 +352,8 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
             return 0;
         });
 
-        html += `<tbody class="collapsible-group ${isExpanded ? 'is-expanded' : ''}" id="${groupId}">`;
-        html += `
+        tableHtml += `<tbody class="collapsible-group ${isExpanded ? 'is-expanded' : ''}" id="${groupId}">`;
+        tableHtml += `
             <tr class="group-header">
                 <td colspan="2">
                     <div class="group-header-title">
@@ -361,8 +361,11 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
                         ${tipo} (${assets.length})
                     </div>
                 </td>
-                <td colspan="3">${formatCurrency(groupTotal)}</td>
-                <td colspan="2" style="text-align: right;">${groupPercent.toFixed(2)}%</td>
+                <td></td>
+                <td></td>
+                <td>${formatCurrency(groupTotal)}</td>
+                <td></td>
+                <td style="text-align: right;">${groupPercent.toFixed(2)}%</td>
             </tr>
         `;
 
@@ -374,7 +377,7 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
                 ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">`
                 : `<div class="ativo-logo-fallback">${firstLetter}</div>`;
 
-            html += `
+            tableHtml += `
                 <tr class="asset-row">
                     <td><div class="ativo-com-logo">${logoHtml}<span>${ativo.ativo}</span></div></td>
                     <td><span class="tipo-ativo-badge">${ativo.tipoAtivo}</span></td>
@@ -382,16 +385,29 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
                     <td>${formatCurrency(ativo.precoMedio)}</td>
                     <td>${formatCurrency(ativo.valorAtual)}</td>
                     <td class="${ativo.rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${ativo.rentabilidade.toFixed(2)}%</td>
-                    <td>${ativo.pesoCarteira.toFixed(2)}%</td>
+                    <td style="text-align: right;">${ativo.pesoCarteira.toFixed(2)}%</td>
                 </tr>
             `;
         });
-        html += `</tbody>`;
+        tableHtml += `</tbody>`;
     }
 
-    tableBody.innerHTML = html;
+    const headerHtml = `
+      <div class="table-header-row">
+        <div data-sort="ativo">Ativo</div>
+        <div data-sort="tipoAtivo">Tipo</div>
+        <div data-sort="quantidade">Quantidade</div>
+        <div data-sort="precoMedio">Preço Médio</div>
+        <div data-sort="valorAtual">Valor Atual</div>
+        <div data-sort="rentabilidade">Rentabilidade</div>
+        <div data-sort="pesoCarteira" style="text-align: right;">% Carteira</div>
+      </div>
+    `;
 
-    document.querySelectorAll('#patrimonio .table-card table thead th').forEach(th => {
+    tableContainer.innerHTML = headerHtml + `<table>${tableHtml}</table>`;
+
+    // Atualiza os indicadores de ordenação no cabeçalho
+    tableContainer.querySelectorAll('.table-header-row div[data-sort]').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
         if (th.dataset.sort === sortColumn) {
             th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
@@ -449,12 +465,12 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const tableHeader = document.querySelector('#patrimonio .table-card table thead');
-    const tableBody = document.getElementById('posicao-consolidada-body');
+    const tableContainer = document.querySelector('#patrimonio .table-card');
 
-    if (tableHeader) {
-        tableHeader.addEventListener('click', (e) => {
-            const th = e.target.closest('th[data-sort]');
+    if (tableContainer) {
+        tableContainer.addEventListener('click', (e) => {
+            // Lógica para Ordenação
+            const th = e.target.closest('div[data-sort]');
             if (th) {
                 const newSortColumn = th.dataset.sort;
                 if (sortColumn === newSortColumn) {
@@ -467,20 +483,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderPatrimonioTab(window.allLancamentos, window.allProventos);
                 }
             }
-        });
-    }
 
-    if (tableBody) {
-        tableBody.addEventListener('click', (e) => {
+            // Lógica para Expandir/Recolher
             const header = e.target.closest('.group-header');
             if (header) {
                 const parentTbody = header.closest('tbody.collapsible-group');
                 const groupId = parentTbody.id;
                 
-                // Alterna o estado de recolhimento para este grupo específico
                 groupCollapseState[groupId] = !parentTbody.classList.contains('is-expanded');
                 
-                // Aplica a classe ao tbody para controlar a visibilidade via CSS
                 parentTbody.classList.toggle('is-expanded');
             }
         });

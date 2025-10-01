@@ -11,7 +11,7 @@ body {
   padding: 20px;
 }
 
-/* --- CABEÇALHO SUPERIOR - CORREÇÕES --- */
+/* --- CABEÇALHO SUPERIOR --- */
 .top-menu-container {
   background-color: #1a1b1e;
   padding: 10px 20px;
@@ -19,8 +19,8 @@ body {
   margin-bottom: 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Garante espaçamento entre os blocos */
-  flex-wrap: wrap; /* Permite que os itens quebrem para a próxima linha */
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 20px;
   border: 1px solid #2a2c30;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -32,7 +32,7 @@ body {
 }
 
 .logo img {
-  height: 64px; /* Tamanho da logo reduzido */
+  height: 64px;
   width: auto;
 }
 
@@ -42,13 +42,13 @@ body {
   gap: 10px;
 }
 
-/* --- CABEÇALHO DE RESUMO (CARDS) - NOVO DESIGN --- */
+/* --- CABEÇALHO DE RESUMO (CARDS) --- */
 .main-summary-header {
   flex-grow: 1;
   display: flex;
-  justify-content: center; /* Centraliza os cards no espaço disponível */
+  justify-content: center;
   gap: 15px;
-  flex-wrap: wrap; /* Permite que os cards também quebrem a linha */
+  flex-wrap: wrap;
 }
 
 .summary-card-item {
@@ -59,8 +59,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 170px; /* Largura mínima para cada card */
-  flex-basis: 180px; /* Base de tamanho para cada card */
+  min-width: 170px;
+  flex-basis: 180px;
   flex-grow: 1;
 }
 
@@ -68,13 +68,13 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.7rem; /* Fonte menor */
+  font-size: 0.7rem;
   color: #a0a7b3;
   font-weight: 500;
 }
 
 .summary-main-value {
-  font-size: 1.1rem; /* Fonte menor */
+  font-size: 1.1rem;
   font-weight: 600;
   color: #e0e0e0;
 }
@@ -83,12 +83,12 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.65rem; /* Fonte menor */
+  font-size: 0.65rem;
   color: #a0a7b3;
 }
 
 .summary-pill {
-  font-size: 0.65rem; /* Fonte menor */
+  font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 10px;
   font-weight: 600;
@@ -142,40 +142,8 @@ body {
   align-items: center;
 }
 
-/* --- Responsividade --- */
-@media (max-width: 1200px) {
-  .main-summary-header {
-    order: 3; /* Faz os cards irem para a próxima linha */
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 768px) {
-  .main-summary-header {
-    display: flex;
-    order: 3;
-    width: 100%;
-    justify-content: center;
-  }
-  .top-menu-container {
-    justify-content: space-between;
-  }
-  .logo img {
-    height: 50px;
-  }
-  #user-info #user-name {
-    display: none;
-  }
-  #user-info {
-    padding: 4px;
-  }
-}
-
-/* --- RESTANTE DO SEU CSS (SEM ALTERAÇÕES) --- */
-
 .header-nav {
-  display: none; /* Escondido por padrão */
+  display: none;
   gap: 25px;
 }
 .header-nav a {
@@ -999,9 +967,7 @@ body {
 .fii-detalhes-tab-content.active {
   display: block;
 }
-.performance-chart-container {
-  height: 350px;
-}
+
 .detalhes-lista-header {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -1373,118 +1339,7 @@ body {
   width: 100%;
   text-align: center;
 }
-/* --- ESTILOS PARA A ABA PATRIMÔNIO --- */
 
-.patrimonio-grid {
-  display: grid;
-  /* AJUSTE: Usamos minmax(0, Xfr) para permitir que as colunas encolham adequadamente. */
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.patrimonio-card {
-  background-color: #1a1b1e;
-  border: 1px solid #2a2c30;
-  border-radius: 12px;
-  padding: 20px;
-  /* Adicionado para garantir que o conteúdo interno não cause overflow */
-  overflow: hidden;
-}
-
-.patrimonio-card h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-weight: 600;
-  color: #e0e0e0;
-}
-
-.chart-container-large {
-  height: 350px;
-}
-
-.chart-container-donut {
-  height: 200px;
-  margin-bottom: 20px;
-}
-
-.allocation-details {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 0.85rem;
-}
-
-.allocation-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 15px;
-  align-items: center;
-}
-
-.allocation-label {
-  color: #a0a7b3;
-}
-.allocation-value {
-  color: #e0e0e0;
-  font-weight: 600;
-  text-align: right;
-}
-.allocation-percent {
-  background-color: #2a2c30;
-  color: #e0e0e0;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  width: 60px;
-  text-align: center;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-}
-
-.patrimonio-card table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.patrimonio-card th,
-.patrimonio-card td {
-  padding: 12px 15px;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.patrimonio-card thead {
-  border-bottom: 2px solid #2a2c30;
-}
-
-.patrimonio-card th {
-  color: #a0a7b3;
-  font-weight: 600;
-}
-
-.patrimonio-card tbody tr {
-  border-bottom: 1px solid #2a2c30;
-}
-
-.patrimonio-card tbody tr:last-child {
-  border-bottom: none;
-}
-
-.patrimonio-card td {
-  color: #e0e0e0;
-}
-
-@media (max-width: 992px) {
-  .patrimonio-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* --- NOVOS ESTILOS PARA O GRÁFICO DE PERFORMANCE --- */
 .performance-box {
   background-color: #1a1b1e;
   border: 1px solid #2a2c30;
@@ -1504,7 +1359,6 @@ body {
   height: 350px;
   width: 100%;
 }
-/* --- ESTILOS PARA A CALCULADORA PEG RATIO --- */
 .calculator-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1578,16 +1432,9 @@ body {
 }
 .interpretation-text.highlight {
   font-weight: bold;
-  color: #ecc94b; /* Amarelo/Dourado para destaque */
+  color: #ecc94b;
 }
 
-@media (max-width: 768px) {
-  .calculator-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
-}
-/* --- ESTILOS ADICIONAIS PARA CALCULADORA E CÁLCULOS SALVOS --- */
 .saved-calculations-section {
   margin-top: 40px;
 }
@@ -1643,16 +1490,6 @@ body {
   padding: 8px 15px;
 }
 
-@media (max-width: 600px) {
-  .saved-calc-card {
-    grid-template-columns: 1fr;
-  }
-  .saved-calc-actions {
-    flex-direction: row;
-    margin-top: 15px;
-  }
-}
-/* --- ESTILOS PARA MODAL DE CÁLCULOS SALVOS --- */
 .saved-calc-search-wrapper {
   margin-bottom: 20px;
 }
@@ -1660,41 +1497,9 @@ body {
 #calculos-salvos-lista {
   max-height: 60vh;
   overflow-y: auto;
-  padding-right: 10px; /* Espaço para a barra de rolagem */
-}
-/* --- ESTILOS PARA ORDENAÇÃO DA TABELA --- */
-.patrimonio-card table thead th[data-sort] {
-  cursor: pointer;
-  position: relative;
-  padding-right: 20px; /* Espaço para a seta */
+  padding-right: 10px;
 }
 
-.patrimonio-card table thead th[data-sort]::after {
-  content: ' ';
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  border: 4px solid transparent;
-  opacity: 0.3;
-}
-
-.patrimonio-card table thead th[data-sort]:hover::after {
-  opacity: 0.7;
-}
-
-.patrimonio-card table thead th.sort-asc::after {
-  border-bottom-color: #e0e0e0;
-  transform: translateY(-7px);
-  opacity: 1;
-}
-
-.patrimonio-card table thead th.sort-desc::after {
-  border-top-color: #e0e0e0;
-  transform: translateY(-2px);
-  opacity: 1;
-}
-
-/* --- ESTILOS PARA LOGO DO ATIVO --- */
 .ativo-com-logo {
   display: flex;
   align-items: center;
@@ -1706,7 +1511,7 @@ body {
   height: 24px;
   border-radius: 50%;
   object-fit: contain;
-  background-color: #fff; /* Fundo branco para logos com transparência */
+  background-color: #fff;
 }
 
 .ativo-logo-fallback {
@@ -1719,51 +1524,102 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  flex-shrink: 0; /* Impede que o ícone encolha */
+  flex-shrink: 0;
 }
 
 
-/* --- ESTILOS MODERNOS PARA A TABELA DE PATRIMÔNIO --- */
+/* --- ESTILOS MODERNOS PARA A TABELA DE PATRIMÔNIO (VERSÃO AGRUPADA) --- */
+.patrimonio-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.patrimonio-card {
+  background-color: #1a1b1e;
+  border: 1px solid #2a2c30;
+  border-radius: 12px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.patrimonio-card h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.chart-container-large {
+  height: 350px;
+}
+
+.chart-container-donut {
+  height: 200px;
+  margin-bottom: 20px;
+}
+
+.allocation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.allocation-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 15px;
+  align-items: center;
+}
+
+.allocation-label {
+  color: #a0a7b3;
+}
+.allocation-value {
+  color: #e0e0e0;
+  font-weight: 600;
+  text-align: right;
+}
+.allocation-percent {
+  background-color: #2a2c30;
+  color: #e0e0e0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  width: 60px;
+  text-align: center;
+}
 
 .patrimonio-card .table-wrapper {
   margin-top: 10px;
+  border: none;
+  overflow: visible;
 }
 
 .patrimonio-card table {
-  border-collapse: separate; /* Essencial para usar border-spacing */
-  border-spacing: 0 8px;   /* Cria um espaçamento vertical de 8px entre as linhas */
-  margin-top: -8px;        /* Compensa o espaçamento da primeira linha */
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  width: 100%;
 }
 
 .patrimonio-card thead {
-  border-bottom: none; /* Remove a borda do cabeçalho */
-}
-
-.patrimonio-card th {
-  padding: 12px 20px;
-  color: #a0a7b3;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.8rem;
+   display: none;
 }
 
 .patrimonio-card tbody tr {
   background-color: #1a1b1e;
   border: 1px solid #2a2c30;
-  border-radius: 8px; /* Cantos arredondados para cada linha */
+  border-radius: 8px;
   transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, transform 0.2s ease-in-out;
-}
-
-.patrimonio-card tbody tr:hover {
-  background-color: #21252e; /* Cor de fundo mais clara ao passar o mouse */
-  border-color: #3a404d;
-  transform: translateY(-2px); /* Efeito sutil de elevação */
 }
 
 .patrimonio-card td {
   padding: 16px 20px;
-  vertical-align: middle; /* Alinha o conteúdo verticalmente */
-  border: none; /* Remove todas as bordas internas das células */
+  vertical-align: middle;
+  border: none;
 }
 
 .patrimonio-card td:first-child {
@@ -1776,115 +1632,127 @@ body {
   border-bottom-right-radius: 8px;
 }
 
-.patrimonio-card .ativo-com-logo span {
-    font-weight: 600; /* Deixa o ticker em negrito para melhor hierarquia */
-    color: #e0e0e0;
-}
-
-.patrimonio-card .ativo-logo-fallback {
-    font-weight: 600;
-    font-size: 12px;
-}
-
-/* --- ESTILOS MODERNOS PARA A TABELA DE PATRIMÔNIO (VERSÃO AGRUPADA) --- */
-
-.patrimonio-card .table-wrapper {
-  margin-top: 10px;
-  border: 1px solid #2a2c30;
-  border-radius: 8px;
-  overflow: hidden; /* Garante que os cantos arredondados funcionem */
-}
-
-.patrimonio-card table {
-  border-collapse: collapse; /* Revertido para o padrão */
-  border-spacing: 0;
-}
-
-/* Remove estilos de hover e borda de <tr>, pois o tbody agora controla isso */
-.patrimonio-card tbody tr,
-.patrimonio-card tbody tr:hover {
-  background-color: transparent;
-  border: none;
-  border-radius: 0;
-  transform: none;
-}
-
-/* Remove os cantos arredondados das células individuais */
-.patrimonio-card td:first-child, .patrimonio-card td:last-child {
-  border-radius: 0;
-}
-
-/* Estilo para cada grupo (tbody) */
-.patrimonio-card tbody.collapsible-group {
-    border-bottom: 1px solid #2a2c30;
-}
-.patrimonio-card tbody.collapsible-group:last-child {
-    border-bottom: none;
-}
-
-/* Cabeçalho do Grupo */
 .group-header {
-    cursor: pointer;
-    background-color: #21252e;
-    transition: background-color 0.2s ease;
+  cursor: pointer;
+  background-color: #21252e;
+  font-size: 1rem;
 }
 
 .group-header:hover {
-    background-color: #2a2c30;
+  background-color: #2a2c30;
 }
 
 .group-header td {
-    padding: 16px 20px;
     font-weight: 600;
     color: #e0e0e0;
-    font-size: 1rem;
-    border-bottom: 1px solid #2a2c30; /* Linha separadora do conteúdo */
 }
 
 .group-header-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .group-toggle-icon {
-    transition: transform 0.3s ease;
-    font-size: 0.8rem;
-    color: #a0a7b3;
+  transition: transform 0.3s ease;
+  font-size: 0.8rem;
+  color: #a0a7b3;
 }
 
-/* Rotação do ícone quando o grupo está expandido */
-tbody.is-expanded .group-toggle-icon {
-    transform: rotate(90deg);
-}
-
-/* Linhas dos ativos */
-.asset-row {
-    background-color: #1a1b1e;
-    border-top: 1px solid #2a2c30;
-}
 .asset-row:hover {
-    background-color: #21252e;
+  background-color: #252a33;
+  border-color: #3a404d;
+  transform: translateY(-2px);
 }
 
-/* Lógica para recolher: por padrão, as linhas de ativo ficam escondidas */
 .asset-row {
-    display: none;
+  display: none;
 }
 
-/* Quando o tbody tem a classe 'is-expanded', as linhas aparecem */
 tbody.is-expanded .asset-row {
-    display: table-row;
+  display: table-row;
+}
+
+tbody.is-expanded .group-toggle-icon {
+  transform: rotate(90deg);
 }
 
 .patrimonio-card .ativo-com-logo span {
-    font-weight: 600;
-    color: #e0e0e0;
+  font-weight: 600;
+  color: #e0e0e0;
 }
 
 .patrimonio-card .ativo-logo-fallback {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.patrimonio-card .table-header-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+    gap: 15px; /* Mesmo gap das colunas da tabela */
+    padding: 0 20px;
+    margin-bottom: 4px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.patrimonio-card .table-header-row div {
+    color: #a0a7b3;
     font-weight: 600;
-    font-size: 12px;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    text-align: left;
 }
+.patrimonio-card .table-header-row div[data-sort] {
+    cursor: pointer;
 }
-O comportamento segue o de expandir e recolher todos quando clica em algum seguem arquivos para conferencia
+
+
+@media (max-width: 1200px) {
+  .main-summary-header {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 992px) {
+  .patrimonio-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-summary-header {
+    display: flex;
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+  .top-menu-container {
+    justify-content: space-between;
+  }
+  .logo img {
+    height: 50px;
+  }
+  #user-info #user-name {
+    display: none;
+  }
+  #user-info {
+    padding: 4px;
+  }
+  .calculator-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .saved-calc-card {
+    grid-template-columns: 1fr;
+  }
+  .saved-calc-actions {
+    flex-direction: row;
+    margin-top: 15px;
+  }
+}
