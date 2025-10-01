@@ -936,245 +936,150 @@
               </div>
             </div>
             <div class="tab-pane" id="calculos">
-              <div class="content-container" style="max-width: 900px">
-                <div class="content-header" style="justify-content: space-between;">
-                    <h3>Cálculo do Teto Projetivo</h3>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="btn-reiniciar-teto" class="btn-adicionar btn-secondary"><i class="fas fa-eraser"></i> Reiniciar</button>
-                        <button id="btn-salvar-teto-projetivo" class="btn-adicionar btn-secondary"><i class="fas fa-save"></i> Salvar</button>
-                    </div>
+    <div class="content-container" style="max-width: 1100px;">
+
+        <div class="content-header" style="justify-content: space-between;">
+    <h3>Cálculo do Teto Projetivo</h3>
+    <div>
+        <button id="btn-reiniciar-teto" class="btn-adicionar btn-secondary"><i class="fas fa-eraser"></i> Reiniciar</button>
+        <button id="btn-salvar-teto-projetivo" class="btn-adicionar btn-secondary"><i class="fas fa-save"></i> Salvar</button>
+    </div>
+</div>
+
+<div class="calculator-card teto-calculator">
+    <form id="teto-projetivo-form" class="calculator-form-grid">
+        <div class="form-group-with-hint">
+            <label for="teto-ticker" class="form-label">Ticker da Ação</label>
+            <input type="text" id="teto-ticker" class="form-input" placeholder="Ex: BBAS3" autocomplete="off">
+            <div id="teto-ticker-sugestoes" class="sugestoes-lista"></div>
+            <i class="fas fa-info-circle hint-icon" title="Identificação da empresa (opcional)"></i>
+        </div>
+        <div class="form-group-with-hint">
+            <label for="teto-lucro-projetivo" class="form-label">Lucro Projetivo (R$)</label>
+            <input type="text" id="teto-lucro-projetivo" class="form-input" inputmode="numeric" placeholder="Ex: 27.873.000.000">
+            <i class="fas fa-info-circle hint-icon" title="Lucro líquido esperado"></i>
+        </div>
+        <div class="form-group-with-hint">
+            <label for="teto-quantidade-papeis" class="form-label">Quantidade de Papéis</label>
+            <input type="text" id="teto-quantidade-papeis" class="form-input" inputmode="numeric" placeholder="Ex: 4.539.008.000">
+            <i class="fas fa-info-circle hint-icon" title="Número total de ações emitidas"></i>
+        </div>
+        <div class="form-group-with-hint">
+            <label for="teto-payout" class="form-label">Payout (%)</label>
+            <input type="text" id="teto-payout" class="form-input" inputmode="decimal" placeholder="Ex: 50%">
+            <i class="fas fa-info-circle hint-icon" title="Percentual de lucro distribuído"></i>
+        </div>
+        <div class="form-group-with-hint">
+            <label for="teto-yield-minimo" class="form-label">Yield Mínimo Desejado (%)</label>
+            <input type="text" id="teto-yield-minimo" class="form-input" inputmode="decimal" placeholder="Ex: 6%">
+            <i class="fas fa-info-circle hint-icon" title="Yield mínimo exigido pelo investidor"></i>
+        </div>
+        <div class="form-group-with-hint">
+            <label for="teto-cotacao-atual" class="form-label">Cotação Atual (R$)</label>
+            <input type="text" id="teto-cotacao-atual" class="form-input" inputmode="decimal" placeholder="Ex: 57,58">
+            <i class="fas fa-info-circle hint-icon" title="Preço da ação"></i>
+        </div>
+    </form>
+
+    <div class="calculator-results-grid">
+        <div class="result-item primary-result">
+            <div class="result-label">Preço Teto (Justo)</div>
+            <div id="teto-preco-justo" class="result-value">R$ 0,00</div>
+        </div>
+        <div class="result-item primary-result">
+            <div class="result-label">Margem de Segurança</div>
+            <div id="teto-margem-seguranca" class="result-value">0,00%</div>
+        </div>
+
+        <div class="result-item secondary-result">
+            <div class="result-label">LPA Projetivo</div>
+            <div id="teto-lpa-projetivo" class="result-value">R$ 0,00</div>
+        </div>
+        <div class="result-item secondary-result">
+            <div class="result-label">DPA Projetivo</div>
+            <div id="teto-dpa-projetivo" class="result-value">R$ 0,00</div>
+        </div>
+         <div class="result-item secondary-result">
+            <div class="result-label">Yield Projetivo</div>
+            <div id="teto-yield-projetivo" class="result-value">0,00%</div>
+        </div>
+    </div>
+</div>
+
+
+
+        <div class="content-header" style="margin-top: 40px; justify-content: space-between">
+            <h3>Calculadora de PEG Ratio</h3>
+            <button id="btn-salvar-peg-ratio" class="btn-adicionar btn-secondary">
+                <i class="fas fa-save"></i> Salvar Cálculo
+            </button>
+        </div>
+
+        <div class="calculator-card peg-calculator">
+             <form id="peg-calculator-form" class="calculator-form-grid">
+                <div class="form-group-with-hint">
+                    <label for="ticker" class="form-label">Ticker da Empresa</label>
+                    <input type="text" id="ticker" class="form-input" placeholder="Ex: PETR4">
+                    <i class="fas fa-info-circle hint-icon" title="Opcional: para identificar o cálculo salvo"></i>
                 </div>
-
-                <div class="calculator-grid" style="margin-bottom: 40px;">
-                    <div class="calculator-inputs">
-                        <form id="teto-projetivo-form">
-                            <div class="form-group-with-hint input-wrapper">
-                                <label for="teto-ticker" class="form-label">Ticker da Ação</label>
-                                <input type="text" id="teto-ticker" name="teto-ticker" class="form-input" placeholder="Ex: PETR4, VALE3" autocomplete="off">
-                                <i class="fas fa-info-circle hint-icon" title="Identificação da empresa (opcional)"></i>
-                                <div id="teto-ativo-sugestoes" class="sugestoes-lista"></div>
-                            </div>
-                            <div class="form-group-with-hint">
-                                <label for="teto-payout" class="form-label">Payout (%)</label>
-                                <input type="text" id="teto-payout" class="form-input" inputmode="decimal" placeholder="Ex: 50">
-                                <i class="fas fa-info-circle hint-icon" title="Percentual de lucro distribuído"></i>
-                            </div>
-                            <div class="form-group-with-hint">
-                                <label for="teto-lucro-projetivo" class="form-label">Lucro Projetivo (R$)</label>
-                                <input type="text" id="teto-lucro-projetivo" class="form-input" inputmode="numeric" placeholder="Ex: 27.873.000.000">
-                                <i class="fas fa-info-circle hint-icon" title="Lucro líquido esperado"></i>
-                            </div>
-                            <div class="form-group-with-hint">
-                                <label for="teto-yield-minimo" class="form-label">Yield Mínimo Desejado (%)</label>
-                                <input type="text" id="teto-yield-minimo" class="form-input" inputmode="decimal" placeholder="Ex: 6">
-                                <i class="fas fa-info-circle hint-icon" title="Yield mínimo exigido pelo investidor"></i>
-                            </div>
-                            <div class="form-group-with-hint">
-                                <label for="teto-cotacao-atual" class="form-label">Cotação Atual (R$)</label>
-                                <input type="text" id="teto-cotacao-atual" class="form-input" inputmode="decimal" placeholder="Ex: 57,58">
-                                <i class="fas fa-info-circle hint-icon" title="Preço da ação"></i>
-                            </div>
-                             <div class="form-group-with-hint">
-                                <label for="teto-quantidade-papeis" class="form-label">Quantidade de Papéis</label>
-                                <input type="text" id="teto-quantidade-papeis" class="form-input" inputmode="numeric" placeholder="Ex: 4.539.008.000">
-                                <i class="fas fa-info-circle hint-icon" title="Número total de ações emitidas"></i>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="calculator-results">
-                        <div class="result-item">
-                            <div class="result-label"><span>LPA Projetivo</span></div>
-                            <div id="teto-lpa-projetivo" class="result-value">R$ 0,00</div>
-                        </div>
-                        <div class="result-item">
-                            <div class="result-label"><span>DPA Projetivo</span></div>
-                            <div id="teto-dpa-projetivo" class="result-value">R$ 0,00</div>
-                        </div>
-                        <div class="result-item">
-                            <div class="result-label"><span>Yield Projetivo</span></div>
-                            <div id="teto-yield-projetivo" class="result-value">0,00%</div>
-                        </div>
-                        <div class="result-item">
-                            <div class="result-label"><span>Preço Teto (Justo)</span></div>
-                            <div id="teto-preco-justo" class="result-value">R$ 0,00</div>
-                        </div>
-                        <div class="result-item">
-                            <div class="result-label"><span>Margem de Segurança</span></div>
-                            <div id="teto-margem-seguranca" class="result-value">0,00%</div>
-                        </div>
-                    </div>
+                <div class="form-group-with-hint">
+                    <label for="pl-atual" class="form-label">P/L Atual</label>
+                    <input type="number" id="pl-atual" class="form-input" step="0.01" placeholder="Ex: 8.5">
+                    <i class="fas fa-info-circle hint-icon" title="Preço ÷ Lucro por ação"></i>
                 </div>
-
-                <div
-                  class="content-header"
-                  style="justify-content: space-between"
-                >
-                  <h3>Calculadora de PEG Ratio</h3>
-                  <button id="btn-salvar-peg-ratio" class="btn-adicionar btn-secondary">
-                      <i class="fas fa-save"></i> Salvar Cálculo
-                  </button>
+                <div class="form-group-with-hint">
+                    <label for="roe-medio" class="form-label">ROE Médio (%)</label>
+                    <input type="number" id="roe-medio" class="form-input" step="0.1" placeholder="Ex: 15%">
+                    <i class="fas fa-info-circle hint-icon" title="Rentabilidade média sobre patrimônio líquido"></i>
                 </div>
-
-                <div class="calculator-grid">
-                  <div class="calculator-inputs">
-                    <form id="peg-calculator-form">
-                      <div class="form-group-with-hint input-wrapper">
-                        <label for="ticker" class="form-label">Ticker da Empresa</label>
-                        <input type="text" id="ticker" class="form-input" placeholder="Ex: PETR4" autocomplete="off"/>
-                        <div id="peg-ticker-sugestoes" class="sugestoes-lista"></div>
-                      </div>
-                      <div class="form-group-with-hint">
-                        <label for="pl-atual" class="form-label"
-                          >P/L Atual</label
-                        >
-                        <input
-                          type="number"
-                          id="pl-atual"
-                          class="form-input"
-                          step="0.01"
-                          placeholder="Ex: 8.5"
-                        />
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="Preço ÷ Lucro por ação"
-                        ></i>
-                      </div>
-                      <div class="form-group-with-hint">
-                        <label for="roe-medio" class="form-label"
-                          >ROE Médio (%)</label
-                        >
-                        <input
-                          type="number"
-                          id="roe-medio"
-                          class="form-input"
-                          step="0.1"
-                          placeholder="Ex: 15"
-                        />
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="Rentabilidade média sobre patrimônio líquido"
-                        ></i>
-                      </div>
-                      <div class="form-group-with-hint">
-                        <label for="payout-medio" class="form-label"
-                          >Payout Médio (%)</label
-                        >
-                        <input
-                          type="number"
-                          id="payout-medio"
-                          class="form-input"
-                          step="0.1"
-                          placeholder="Ex: 50"
-                        />
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="Percentual médio de lucro distribuído"
-                        ></i>
-                      </div>
-                      <div class="form-group-with-hint">
-                        <label for="inflacao" class="form-label"
-                          >Inflação (IPCA + spread)</label
-                        >
-                        <input
-                          type="number"
-                          id="inflacao"
-                          class="form-input"
-                          step="0.1"
-                          placeholder="Ex: 6.5"
-                        />
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="Índice usado para ajustar crescimento real"
-                        ></i>
-                      </div>
-                    </form>
-                  </div>
-
-                  <div class="calculator-results">
-                    <div class="result-item">
-                      <div class="result-label">
-                        <span>Crescimento Esperado (%)</span>
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="ROE Médio * (1 - Payout Médio)"
-                        ></i>
-                      </div>
-                      <div
-                        id="crescimento-esperado-result"
-                        class="result-value"
-                      >
-                        -
-                      </div>
-                      <div class="interpretation-text">
-                        Taxa de crescimento sustentável
-                      </div>
-                    </div>
-                    <div class="result-item">
-                      <div class="result-label">
-                        <span>PEG Ratio</span>
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="P/L dividido pelo crescimento nominal"
-                        ></i>
-                      </div>
-                      <div id="peg-result" class="result-value">-</div>
-                      <div
-                        id="peg-interpretation"
-                        class="interpretation-text"
-                      ></div>
-                    </div>
-                    <div class="result-item">
-                      <div class="result-label">
-                        <span>Crescimento Real</span>
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="Crescimento esperado descontando a inflação"
-                        ></i>
-                      </div>
-                      <div id="crescimento-real-result" class="result-value">
-                        -
-                      </div>
-                      <div
-                        id="crescimento-real-alert"
-                        class="interpretation-text"
-                      ></div>
-                    </div>
-                    <div class="result-item">
-                      <div class="result-label">
-                        <span>PEG Real</span>
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="P/L dividido pelo crescimento real"
-                        ></i>
-                      </div>
-                      <div id="peg-real-result" class="result-value">-</div>
-                    </div>
-                    <div class="result-item">
-                      <div class="result-label">
-                        <span>Desconto (%)</span>
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="Quanto o preço atual está abaixo do valor justo estimado pelo PEG Ratio"
-                        ></i>
-                      </div>
-                      <div id="desconto-result" class="result-value">-</div>
-                      <div
-                        id="desconto-alert"
-                        class="interpretation-text"
-                      ></div>
-                    </div>
-                  </div>
+                <div class="form-group-with-hint">
+                    <label for="payout-medio" class="form-label">Payout Médio (%)</label>
+                    <input type="number" id="payout-medio" class="form-input" step="0.1" placeholder="Ex: 50%">
+                    <i class="fas fa-info-circle hint-icon" title="Percentual médio de lucro distribuído"></i>
                 </div>
-
-                <div class="content-header" style="margin-top: 40px;">
-                    <h3>Meus Cálculos Salvos</h3>
-                     <button id="btn-ver-salvos" class="btn-adicionar btn-secondary">
-                      <i class="fas fa-list-alt"></i> Ver Todos
-                    </button>
+                <div class="form-group-with-hint">
+                    <label for="inflacao" class="form-label">Inflação (IPCA + spread)</label>
+                    <input type="number" id="inflacao" class="form-input" step="0.1" placeholder="Ex: 6.5%">
+                    <i class="fas fa-info-circle hint-icon" title="Índice usado para ajustar crescimento real"></i>
                 </div>
-              </div>
-            </div>
+             </form>
+
+             <div class="calculator-results-grid peg-results">
+                 <div class="result-item primary-result">
+                    <div class="result-label">PEG Ratio <i class="fas fa-info-circle hint-icon" title="P/L dividido pelo crescimento nominal"></i></div>
+                    <div id="peg-result" class="result-value">-</div>
+                    <div id="peg-interpretation" class="interpretation-text"></div>
+                 </div>
+                 <div class="result-item primary-result">
+                    <div class="result-label">Desconto (%) <i class="fas fa-info-circle hint-icon" title="Quanto o preço atual está abaixo do valor justo estimado pelo PEG Ratio"></i></div>
+                    <div id="desconto-result" class="result-value">-</div>
+                    <div id="desconto-alert" class="interpretation-text"></div>
+                 </div>
+
+                 <div class="result-item secondary-result">
+                    <div class="result-label">Crescimento Esperado (%) <i class="fas fa-info-circle hint-icon" title="ROE Médio * (1 - Payout Médio)"></i></div>
+                    <div id="crescimento-esperado-result" class="result-value">-</div>
+                </div>
+                 <div class="result-item secondary-result">
+                    <div class="result-label">Crescimento Real <i class="fas fa-info-circle hint-icon" title="Crescimento esperado descontando a inflação"></i></div>
+                    <div id="crescimento-real-result" class="result-value">-</div>
+                    <div id="crescimento-real-alert" class="interpretation-text"></div>
+                 </div>
+                 <div class="result-item secondary-result">
+                    <div class="result-label">PEG Real <i class="fas fa-info-circle hint-icon" title="P/L dividido pelo crescimento real"></i></div>
+                    <div id="peg-real-result" class="result-value">-</div>
+                 </div>
+             </div>
+        </div>
+
+        <div class="content-header" style="margin-top: 40px;">
+            <h3>Meus Cálculos Salvos</h3>
+            <button id="btn-ver-salvos" class="btn-adicionar btn-secondary">
+                <i class="fas fa-list-alt"></i> Ver Todos
+            </button>
+        </div>
+    </div>
+</div>
 
             <div id="salvar-calculo-modal" class="modal-overlay">
               <div class="modal-content" style="max-width: 500px">

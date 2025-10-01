@@ -1756,3 +1756,113 @@ tbody.is-expanded .group-toggle-icon {
     margin-top: 15px;
   }
 }
+
+/* --- NOVOS ESTILOS PARA CALCULADORAS (CLEAN LAYOUT) --- */
+.calculator-card {
+  background-color: #1a1b1e;
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid #2a2c30;
+  display: grid;
+  gap: 25px 35px;
+}
+
+/* Layout para a calculadora de Teto Projetivo */
+.teto-calculator {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+/* Layout para a calculadora PEG Ratio */
+.peg-calculator {
+   grid-template-columns: 1fr 1.2fr; /* Coluna de inputs menor que a de resultados */
+}
+
+.calculator-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px 20px;
+}
+
+/* Remove a margem de baixo do último input */
+.calculator-form-grid .form-group-with-hint {
+    margin-bottom: 0;
+}
+
+.calculator-results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    align-content: start;
+}
+
+/* Faz com que os resultados principais ocupem a linha toda */
+.calculator-results-grid .primary-result {
+    grid-column: 1 / -1;
+}
+
+/* Estilo unificado para os itens de resultado */
+.calculator-card .result-item {
+  background-color: #21252e;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid #2a2c30;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Resultados principais maiores e com mais destaque */
+.calculator-card .primary-result {
+    padding: 15px 20px;
+}
+
+.calculator-card .result-label {
+  color: #a0a7b3;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.calculator-card .result-label .hint-icon {
+    position: static; /* Reseta a posição absoluta */
+    transform: none;
+    font-size: 0.8rem;
+}
+
+.calculator-card .result-value {
+  font-size: 1.25rem; /* Fonte menor */
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.calculator-card .primary-result .result-value {
+    font-size: 1.7rem; /* Mantém a fonte um pouco maior para os principais */
+}
+
+/* Ajustes no grid da calculadora PEG para melhor encaixe */
+.peg-calculator .calculator-form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.peg-calculator .peg-results {
+    grid-template-columns: 1fr 1fr;
+}
+
+
+/* Remove a grid antiga que não será mais usada, substituída por .calculator-card */
+.calculator-grid {
+  display: none !important;
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+  .calculator-card {
+    grid-template-columns: 1fr; /* Coloca inputs e resultados um embaixo do outro */
+  }
+  .peg-calculator {
+    grid-template-columns: 1fr;
+  }
+}
