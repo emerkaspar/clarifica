@@ -325,17 +325,31 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
         return 0;
     });
 
-    tableBody.innerHTML = carteiraArray.map(ativo => `
-        <tr>
-            <td>${ativo.ativo}</td>
-            <td><span class="tipo-ativo-badge">${ativo.tipoAtivo}</span></td>
-            <td>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</td>
-            <td>${formatCurrency(ativo.precoMedio)}</td>
-            <td>${formatCurrency(ativo.valorAtual)}</td>
-            <td class="${ativo.rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${ativo.rentabilidade.toFixed(2)}%</td>
-            <td>${ativo.pesoCarteira.toFixed(2)}%</td>
-        </tr>
-    `).join('');
+    tableBody.innerHTML = carteiraArray.map(ativo => {
+        const ativoInfo = precosEInfos[ativo.ativo];
+        const logoUrl = ativoInfo?.logoUrl;
+        const firstLetter = ativo.ativo.charAt(0);
+        const logoHtml = logoUrl
+            ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">`
+            : `<div class="ativo-logo-fallback">${firstLetter}</div>`;
+
+        return `
+            <tr>
+                <td>
+                    <div class="ativo-com-logo">
+                        ${logoHtml}
+                        <span>${ativo.ativo}</span>
+                    </div>
+                </td>
+                <td><span class="tipo-ativo-badge">${ativo.tipoAtivo}</span></td>
+                <td>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</td>
+                <td>${formatCurrency(ativo.precoMedio)}</td>
+                <td>${formatCurrency(ativo.valorAtual)}</td>
+                <td class="${ativo.rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${ativo.rentabilidade.toFixed(2)}%</td>
+                <td>${ativo.pesoCarteira.toFixed(2)}%</td>
+            </tr>
+        `;
+    }).join('');
 
     document.querySelectorAll('#patrimonio .table-card table thead th').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
