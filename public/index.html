@@ -948,10 +948,11 @@
                 <div class="calculator-grid" style="margin-bottom: 40px;">
                     <div class="calculator-inputs">
                         <form id="teto-projetivo-form">
-                            <div class="form-group-with-hint">
+                            <div class="form-group-with-hint input-wrapper">
                                 <label for="teto-ticker" class="form-label">Ticker da Ação</label>
-                                <input type="text" id="teto-ticker" class="form-input" placeholder="Ex: PETR4, VALE3">
+                                <input type="text" id="teto-ticker" name="teto-ticker" class="form-input" placeholder="Ex: PETR4, VALE3" autocomplete="off">
                                 <i class="fas fa-info-circle hint-icon" title="Identificação da empresa (opcional)"></i>
+                                <div id="teto-ativo-sugestoes" class="sugestoes-lista"></div>
                             </div>
                             <div class="form-group-with-hint">
                                 <label for="teto-payout" class="form-label">Payout (%)</label>
@@ -1018,20 +1019,10 @@
                 <div class="calculator-grid">
                   <div class="calculator-inputs">
                     <form id="peg-calculator-form">
-                      <div class="form-group-with-hint">
-                        <label for="ticker" class="form-label"
-                          >Ticker da Empresa</label
-                        >
-                        <input
-                          type="text"
-                          id="ticker"
-                          class="form-input"
-                          placeholder="Ex: PETR4"
-                        />
-                        <i
-                          class="fas fa-info-circle hint-icon"
-                          title="Opcional: para identificar o cálculo salvo"
-                        ></i>
+                      <div class="form-group-with-hint input-wrapper">
+                        <label for="ticker" class="form-label">Ticker da Empresa</label>
+                        <input type="text" id="ticker" class="form-input" placeholder="Ex: PETR4" autocomplete="off"/>
+                        <div id="peg-ticker-sugestoes" class="sugestoes-lista"></div>
                       </div>
                       <div class="form-group-with-hint">
                         <label for="pl-atual" class="form-label"

@@ -1,6 +1,7 @@
 // public/js/tabs/calculos.js
 import { db } from '../firebase-config.js';
 import { collection, addDoc, doc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { fetchCurrentPrices, searchAssets } from '../api/brapi.js'; // ALTERAÇÃO: Importa fetchCurrentPrices E searchAssets
 
 // --- ELEMENTOS DO FORMULÁRIO E RESULTADOS (GERAL) ---
 const salvarCalculoModal = document.getElementById('salvar-calculo-modal');
@@ -17,6 +18,9 @@ let currentPegCalculations = {};
 let currentTetoCalculations = {};
 let allSavedCalculations = []; 
 let calculationTypeToSave = ''; // 'PEG_RATIO' ou 'TETO_PROJETIVO'
+
+// Variável para controle de timeout da busca de ativos
+let timeoutBuscaTeto;
 
 
 // --- CALCULADORA: TETO PROJETIVO ---
@@ -39,9 +43,14 @@ function initializeTetoProjetivoCalculator() {
     
     const btnReiniciar = document.getElementById('btn-reiniciar-teto');
     const btnSalvarTeto = document.getElementById('btn-salvar-teto-projetivo');
+    
+    // Referência ao novo elemento de sugestões
+    const sugestoesDiv = document.getElementById('teto-ativo-sugestoes');
+
 
     const parseValue = (value) => {
         if (!value || typeof value !== 'string') return 0;
+        // Permite remover 'R$', pontos de milhar e vírgula decimal para facilitar o parse
         return parseFloat(value.replace('R$', '').replace(/\./g, '').replace('%', '').replace(',', '.')) || 0;
     };
     const formatToCurrency = (value) => (typeof value === 'number' && !isNaN(value)) ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
@@ -128,21 +137,85 @@ function initializeTetoProjetivoCalculator() {
         margemSegurancaResultEl.textContent = formatToPercent(margemSeguranca);
         margemSegurancaResultEl.style.color = margemSeguranca >= 0 ? '#00d9c3' : '#ef4444';
     }
+    
+    // --- LÓGICA DE BUSCA DE COTAÇÃO ---
+    tickerTetoInput.addEventListener("input", (e) => {
+        const ticker = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        e.target.value = ticker;
+
+        clearTimeout(timeoutBuscaTeto);
+
+        if (ticker.length < 2) {
+            sugestoesDiv.style.display = "none";
+            return;
+        }
+
+        timeoutBuscaTeto = setTimeout(async () => {
+            // 1. Busca Sugestões
+            const suggestions = await searchAssets(ticker);
+            sugestoesDiv.innerHTML = "";
+            if (suggestions.length > 0) {
+                sugestoesDiv.style.display = "block";
+                suggestions.forEach((stock) => {
+                    const div = document.createElement("div");
+                    div.className = "sugestao-item";
+                    div.textContent = stock;
+                    div.onclick = async () => {
+                        tickerTetoInput.value = stock;
+                        sugestoesDiv.style.display = "none";
+                        // 2. Busca o preço após selecionar/completar
+                        await fetchAndFillPrice(stock);
+                    };
+                    sugestoesDiv.appendChild(div);
+                });
+            } else {
+                sugestoesDiv.style.display = "none";
+            }
+            
+            // 3. Se o texto digitado for um ticker com pelo menos 4 caracteres, tenta buscar o preço
+            if (ticker.length >= 4) {
+                 await fetchAndFillPrice(ticker);
+            }
+
+        }, 400);
+    });
+
+    async function fetchAndFillPrice(ticker) {
+        const prices = await fetchCurrentPrices([ticker]);
+        const price = prices[ticker]?.price;
+        
+        if (price) {
+            // Formata o preço com 2 casas decimais para o input
+            cotacaoAtualInput.value = price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            calculateTeto(); // Recalcula após preencher a cotação
+        } else {
+             // Se falhar, limpa o campo de cotação para evitar confusão.
+             console.warn(`Não foi possível buscar cotação atual para ${ticker}`);
+             calculateTeto(); 
+        }
+    }
+    // --- FIM LÓGICA DE BUSCA DE COTAÇÃO ---
+
 
     formTeto.addEventListener('input', (e) => {
         const id = e.target.id;
-        if (id === 'teto-ticker') {
-            e.target.value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        if (id !== 'teto-ticker') {
+             calculateTeto();
         }
-        calculateTeto();
     });
 
     lucroProjetivoInput.addEventListener('input', (e) => formatInteger(e.target));
     quantidadePapeisInput.addEventListener('input', (e) => formatInteger(e.target));
-    cotacaoAtualInput.addEventListener('input', (e) => formatCurrencyDecimal(e.target));
 
     payoutInput.addEventListener('blur', (e) => formatPercentage(e.target));
     yieldMinimoInput.addEventListener('blur', (e) => formatPercentage(e.target));
+    
+    // Novo listener para formatar a cotação se o usuário a digitar manualmente
+    cotacaoAtualInput.addEventListener('blur', (e) => {
+        formatCurrencyDecimal(e.target);
+        calculateTeto();
+    });
+
 
     btnReiniciar.addEventListener('click', resetTetoCalculator);
     btnSalvarTeto.addEventListener('click', () => {
@@ -270,11 +343,20 @@ function loadCalculation(calc) {
     } else if (calc.tipoCalculo === 'TETO_PROJETIVO') {
         const formTeto = document.getElementById('teto-projetivo-form');
         document.getElementById('teto-ticker').value = calc.inputs.ticker || '';
-        document.getElementById('teto-payout').value = calc.inputs.payout ? `${calc.inputs.payout.toLocaleString('pt-BR')}%` : '';
-        document.getElementById('teto-lucro-projetivo').value = calc.inputs.lucro_projetivo ? calc.inputs.lucro_projetivo.toLocaleString('pt-BR') : '';
-        document.getElementById('teto-yield-minimo').value = calc.inputs.yield_minimo ? `${calc.inputs.yield_minimo.toLocaleString('pt-BR')}%` : '';
-        document.getElementById('teto-cotacao-atual').value = calc.inputs.cotacao_atual ? calc.inputs.cotacao_atual.toLocaleString('pt-BR', {style:'currency', currency: 'BRL'}) : '';
-        document.getElementById('teto-quantidade-papeis').value = calc.inputs.quantidade_papeis ? calc.inputs.quantidade_papeis.toLocaleString('pt-BR') : '';
+        // Os valores são carregados sem formatação para serem re-formatados e calculados
+        document.getElementById('teto-payout').value = calc.inputs.payout || ''; 
+        document.getElementById('teto-lucro-projetivo').value = calc.inputs.lucro_projetivo || ''; 
+        document.getElementById('teto-yield-minimo').value = calc.inputs.yield_minimo || '';
+        document.getElementById('teto-cotacao-atual').value = calc.inputs.cotacao_atual || '';
+        document.getElementById('teto-quantidade-papeis').value = calc.inputs.quantidade_papeis || '';
+        
+        // Replicando a formatação que o usuário veria e garantindo que o valor seja setado corretamente
+        if (calc.inputs.payout) document.getElementById('teto-payout').value += '%';
+        if (calc.inputs.lucro_projetivo) document.getElementById('teto-lucro-projetivo').value = BigInt(calc.inputs.lucro_projetivo).toLocaleString('pt-BR');
+        if (calc.inputs.yield_minimo) document.getElementById('teto-yield-minimo').value += '%';
+        if (calc.inputs.cotacao_atual) document.getElementById('teto-cotacao-atual').value = calc.inputs.cotacao_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (calc.inputs.quantidade_papeis) document.getElementById('teto-quantidade-papeis').value = BigInt(calc.inputs.quantidade_papeis).toLocaleString('pt-BR');
+
         formTeto.dispatchEvent(new Event('input'));
     }
     
