@@ -941,7 +941,7 @@
                     <h3>Cálculo do Teto Projetivo</h3>
                     <div style="display: flex; gap: 10px;">
                         <button id="btn-reiniciar-teto" class="btn-adicionar btn-secondary"><i class="fas fa-eraser"></i> Reiniciar</button>
-                        <button id="btn-salvar-teto" class="btn-adicionar btn-secondary"><i class="fas fa-save"></i> Salvar</button>
+                        <button id="btn-salvar-teto-projetivo" class="btn-adicionar btn-secondary"><i class="fas fa-save"></i> Salvar</button>
                     </div>
                 </div>
 
@@ -949,28 +949,33 @@
                     <div class="calculator-inputs">
                         <form id="teto-projetivo-form">
                             <div class="form-group-with-hint">
+                                <label for="teto-ticker" class="form-label">Ticker da Ação</label>
+                                <input type="text" id="teto-ticker" class="form-input" placeholder="Ex: PETR4, VALE3">
+                                <i class="fas fa-info-circle hint-icon" title="Identificação da empresa (opcional)"></i>
+                            </div>
+                            <div class="form-group-with-hint">
                                 <label for="teto-payout" class="form-label">Payout (%)</label>
-                                <input type="number" id="teto-payout" class="form-input" step="0.1" placeholder="Ex: 50">
+                                <input type="text" id="teto-payout" class="form-input" inputmode="decimal" placeholder="Ex: 50">
                                 <i class="fas fa-info-circle hint-icon" title="Percentual de lucro distribuído"></i>
                             </div>
                             <div class="form-group-with-hint">
                                 <label for="teto-lucro-projetivo" class="form-label">Lucro Projetivo (R$)</label>
-                                <input type="number" id="teto-lucro-projetivo" class="form-input" step="1000" placeholder="Ex: 27873000000">
+                                <input type="text" id="teto-lucro-projetivo" class="form-input" inputmode="numeric" placeholder="Ex: 27.873.000.000">
                                 <i class="fas fa-info-circle hint-icon" title="Lucro líquido esperado"></i>
                             </div>
                             <div class="form-group-with-hint">
                                 <label for="teto-yield-minimo" class="form-label">Yield Mínimo Desejado (%)</label>
-                                <input type="number" id="teto-yield-minimo" class="form-input" step="0.1" placeholder="Ex: 6">
+                                <input type="text" id="teto-yield-minimo" class="form-input" inputmode="decimal" placeholder="Ex: 6">
                                 <i class="fas fa-info-circle hint-icon" title="Yield mínimo exigido pelo investidor"></i>
                             </div>
                             <div class="form-group-with-hint">
                                 <label for="teto-cotacao-atual" class="form-label">Cotação Atual (R$)</label>
-                                <input type="number" id="teto-cotacao-atual" class="form-input" step="0.01" placeholder="Ex: 57.58">
+                                <input type="text" id="teto-cotacao-atual" class="form-input" inputmode="decimal" placeholder="Ex: 57,58">
                                 <i class="fas fa-info-circle hint-icon" title="Preço da ação"></i>
                             </div>
                              <div class="form-group-with-hint">
                                 <label for="teto-quantidade-papeis" class="form-label">Quantidade de Papéis</label>
-                                <input type="number" id="teto-quantidade-papeis" class="form-input" step="1" placeholder="Ex: 4539008000">
+                                <input type="text" id="teto-quantidade-papeis" class="form-input" inputmode="numeric" placeholder="Ex: 4.539.008.000">
                                 <i class="fas fa-info-circle hint-icon" title="Número total de ações emitidas"></i>
                             </div>
                         </form>
@@ -1005,20 +1010,9 @@
                   style="justify-content: space-between"
                 >
                   <h3>Calculadora de PEG Ratio</h3>
-                  <div style="display: flex; gap: 10px">
-                    <button
-                      id="btn-ver-salvos"
-                      class="btn-adicionar btn-secondary"
-                    >
-                      <i class="fas fa-list-alt"></i> Cálculos Salvos
-                    </button>
-                    <button
-                      id="btn-salvar-calculo"
-                      class="btn-adicionar btn-secondary"
-                    >
+                  <button id="btn-salvar-peg-ratio" class="btn-adicionar btn-secondary">
                       <i class="fas fa-save"></i> Salvar Cálculo
-                    </button>
-                  </div>
+                  </button>
                 </div>
 
                 <div class="calculator-grid">
@@ -1180,6 +1174,13 @@
                       ></div>
                     </div>
                   </div>
+                </div>
+
+                <div class="content-header" style="margin-top: 40px;">
+                    <h3>Meus Cálculos Salvos</h3>
+                     <button id="btn-ver-salvos" class="btn-adicionar btn-secondary">
+                      <i class="fas fa-list-alt"></i> Ver Todos
+                    </button>
                 </div>
               </div>
             </div>
