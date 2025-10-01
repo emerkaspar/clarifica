@@ -6,9 +6,10 @@ import { renderDivisaoFiisCharts } from './fiisCharts.js';
  * Calcula e renderiza a valorização do dia para a carteira de FIIs.
  * @param {Array<string>} tickers - A lista de tickers de FIIs na carteira.
  * @param {object} carteira - O objeto da carteira consolidada.
+ * @param {object} precosAtuais - Objeto com os preços atuais para os tickers (intraday).
  * @returns {Promise<Array<object>>} - Retorna uma lista com a performance diária de cada FII.
  */
-async function renderFiisDayValorization(tickers, carteira) {
+async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
     const valorizationReaisDiv = document.getElementById("fiis-valorization-reais");
     const valorizationPercentDiv = document.getElementById("fiis-valorization-percent");
 
@@ -19,41 +20,41 @@ async function renderFiisDayValorization(tickers, carteira) {
     valorizationPercentDiv.className = 'valorization-pill';
 
     try {
+        // Busca o histórico apenas para obter o preço de fechamento do dia anterior
         const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
         const results = await Promise.all(promises);
 
         let totalValorizacaoReais = 0;
-        let totalInvestidoPonderado = 0;
-        let variacaoPonderadaTotal = 0;
+        let patrimonioTotalOntem = 0;
         const dailyPerformance = []; 
 
         results.forEach((data, index) => {
-            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice && data.results[0].historicalDataPrice.length >= 2) {
-                const ticker = tickers[index];
+            const ticker = tickers[index];
+            // Garante que temos os dados históricos e o preço atual para o ticker
+            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice && data.results[0].historicalDataPrice.length >= 1 && precosAtuais[ticker]) {
                 
-                // --- CORREÇÃO DEFINITIVA APLICADA AQUI ---
-                // A linha .reverse() foi removida para usar a ordem correta da API.
-                const prices = data.results[0].historicalDataPrice; 
-                const hoje = prices[0].close;
-                const ontem = prices[1].close;
+                // --- LÓGICA CORRIGIDA ---
+                const hoje = precosAtuais[ticker]; // Preço atual (intraday) vindo de fetchCurrentPrices
+                const ontem = data.results[0].historicalDataPrice[0].close; // Último fechamento vindo do histórico
                 
                 if (carteira[ticker] && ontem > 0) {
                     const quantidade = carteira[ticker].quantidade;
-                    const valorPosicaoAtual = hoje * quantidade;
-
                     const variacaoPercentual = ((hoje / ontem) - 1) * 100;
                     const variacaoReais = (hoje - ontem) * quantidade;
 
                     totalValorizacaoReais += variacaoReais;
-                    totalInvestidoPonderado += valorPosicaoAtual;
-                    variacaoPonderadaTotal += variacaoPercentual * (valorPosicaoAtual / 100);
+
+                    // A base para o cálculo percentual ponderado é o patrimônio do dia anterior
+                    const patrimonioOntem = ontem * quantidade;
+                    patrimonioTotalOntem += patrimonioOntem;
                     
                     dailyPerformance.push({ ticker, changePercent: variacaoPercentual });
                 }
             }
         });
 
-        const variacaoPercentualFinal = totalInvestidoPonderado > 0 ? (variacaoPonderadaTotal / totalInvestidoPonderado) * 100 : 0;
+        // Calcula a variação percentual ponderada sobre o patrimônio total do dia anterior
+        const variacaoPercentualFinal = patrimonioTotalOntem > 0 ? (totalValorizacaoReais / patrimonioTotalOntem) * 100 : 0;
 
         const isPositive = totalValorizacaoReais >= 0;
         const sinal = isPositive ? '+' : '';
@@ -240,10 +241,10 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         return;
     }
 
-    const dailyPerformance = await renderFiisDayValorization(tickers, carteira);
-
     try {
+        // --- ORDEM DE CHAMADA CORRIGIDA ---
         const precosAtuais = await fetchCurrentPrices(tickers);
+        const dailyPerformance = await renderFiisDayValorization(tickers, carteira, precosAtuais);
         const historicalPerformance = [];
 
         renderFiisSummary(carteira, precosAtuais);
@@ -326,9 +327,11 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         renderFiisHighlights(dailyPerformance, historicalPerformance);
 
         const divisaoAtualPercentual = JSON.parse(JSON.stringify(valoresAtuais));
-        for (const categoria in divisaoAtualPercentual) {
-            for (const subcat in divisaoAtualPercentual[categoria]) {
-                divisaoAtualPercentual[categoria][subcat] = totalValorFiis > 0 ? (valoresAtuais[categoria][subcat] / totalValorFiis) * 100 : 0;
+        if (totalValorFiis > 0) {
+            for (const categoria in divisaoAtualPercentual) {
+                for (const subcat in divisaoAtualPercentual[categoria]) {
+                    divisaoAtualPercentual[categoria][subcat] = (valoresAtuais[categoria][subcat] / totalValorFiis) * 100;
+                }
             }
         }
 

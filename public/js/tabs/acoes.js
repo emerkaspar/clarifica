@@ -4,9 +4,10 @@ import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
  * Calcula e renderiza a valorização do dia para a carteira de Ações.
  * @param {Array<string>} tickers - A lista de tickers de Ações na carteira.
  * @param {object} carteira - O objeto da carteira consolidada.
+ * @param {object} precosAtuais - Objeto com os preços atuais para os tickers (intraday).
  * @returns {Promise<Array<object>>} - Retorna a performance diária de cada ação.
  */
-async function renderAcoesDayValorization(tickers, carteira) {
+async function renderAcoesDayValorization(tickers, carteira, precosAtuais) {
     const valorizationReaisDiv = document.getElementById("acoes-valorization-reais");
     const valorizationPercentDiv = document.getElementById("acoes-valorization-percent");
 
@@ -17,44 +18,47 @@ async function renderAcoesDayValorization(tickers, carteira) {
     valorizationPercentDiv.className = 'valorization-pill';
 
     try {
+        // Busca o histórico apenas para obter o preço de fechamento do dia anterior
         const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
         const results = await Promise.all(promises);
 
         let totalValorizacaoReais = 0;
-        let totalInvestidoPonderado = 0;
-        let variacaoPonderadaTotal = 0;
+        let patrimonioTotalOntem = 0;
         const dailyPerformance = [];
 
         results.forEach((data, index) => {
-            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice && data.results[0].historicalDataPrice.length >= 2) {
-                const ticker = tickers[index];
-                // API da Brapi já retorna do mais recente para o mais antigo.
-                const prices = data.results[0].historicalDataPrice;
-                const hoje = prices[0].close;
-                const ontem = prices[1].close;
+            const ticker = tickers[index];
+            // Garante que temos os dados históricos e o preço atual para o ticker
+            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice && data.results[0].historicalDataPrice.length >= 1 && precosAtuais[ticker]) {
+                
+                // --- LÓGICA CORRIGIDA ---
+                const hoje = precosAtuais[ticker]; // Preço atual (intraday) vindo de fetchCurrentPrices
+                const ontem = data.results[0].historicalDataPrice[0].close; // Último fechamento vindo do histórico
                 
                 if (carteira[ticker] && ontem > 0) {
                     const quantidade = carteira[ticker].quantidade;
-                    const valorPosicaoAtual = hoje * quantidade;
                     const variacaoPercentual = ((hoje / ontem) - 1) * 100;
                     const variacaoReais = (hoje - ontem) * quantidade;
                     
                     totalValorizacaoReais += variacaoReais;
-                    totalInvestidoPonderado += valorPosicaoAtual;
-                    variacaoPonderadaTotal += variacaoPercentual * (valorPosicaoAtual / 100);
+                    
+                    // A base para o cálculo percentual ponderado é o patrimônio do dia anterior
+                    const patrimonioOntem = ontem * quantidade;
+                    patrimonioTotalOntem += patrimonioOntem; 
+                    
                     dailyPerformance.push({ ticker, changePercent: variacaoPercentual });
                 }
             }
         });
 
-        const variacaoPercentualFinal = totalInvestidoPonderado > 0 ? (variacaoPonderadaTotal / totalInvestidoPonderado) * 100 : 0;
+        // Calcula a variação percentual ponderada sobre o patrimônio total do dia anterior
+        const variacaoPercentualFinal = patrimonioTotalOntem > 0 ? (totalValorizacaoReais / patrimonioTotalOntem) * 100 : 0;
         
         const isPositive = totalValorizacaoReais >= 0;
         const sinal = isPositive ? '+' : '';
         const corClasse = isPositive ? 'positive' : 'negative';
         const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
 
-        // ** LINHAS CORRIGIDAS / RESTAURADAS **
         const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
         
@@ -232,12 +236,17 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         return;
     }
 
-    const dailyPerformance = await renderAcoesDayValorization(tickers, carteira);
-
     try {
+        // --- ORDEM DE CHAMADA CORRIGIDA ---
+        // 1. Busca os preços atuais (respeitando o cache do Firestore via fetchCurrentPrices)
         const precosAtuais = await fetchCurrentPrices(tickers);
+        
+        // 2. Calcula a valorização do dia, passando os preços atuais que acabaram de ser buscados
+        const dailyPerformance = await renderAcoesDayValorization(tickers, carteira, precosAtuais);
+        
         const historicalPerformance = [];
 
+        // 3. Renderiza o restante da UI com os preços já em mãos
         renderAcoesSummary(carteira, precosAtuais);
 
         const html = tickers.map(ticker => {

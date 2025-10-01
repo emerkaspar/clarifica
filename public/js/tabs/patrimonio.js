@@ -1,10 +1,107 @@
-import { fetchCurrentPrices } from '../api/brapi.js'; // REMOVIDO: fetchCryptoPrices
+import { fetchCurrentPrices } from '../api/brapi.js';
+import { fetchIndexers } from '../api/bcb.js';
 
 let patrimonioEvolutionChart = null;
 let assetAllocationChart = null;
+let sortColumn = 'valorAtual'; // Coluna padrão para ordenação
+let sortDirection = 'desc';   // Direção padrão
 
 // Função para formatar valores monetários
 const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+/**
+ * Calcula o valor líquido atual para cada ativo de Renda Fixa e retorna um objeto com os preços unitários.
+ * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
+ * @returns {Promise<object>} Um objeto mapeando o ticker do ativo ao seu preço atualizado.
+ */
+async function getPrecosAtuaisRendaFixa(lancamentos) {
+    const rfLancamentos = lancamentos.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
+    const precosAtuais = {};
+
+    if (rfLancamentos.length === 0) {
+        return precosAtuais;
+    }
+
+    // Agrupa os valores e quantidades por ativo para calcular o preço médio final
+    const rfValores = {};
+
+    try {
+        const hoje = new Date();
+        const dataMaisAntiga = rfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, rfLancamentos[0].data);
+        const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
+
+        for (const ativo of rfLancamentos) {
+            const valorAplicadoOriginal = ativo.valorAplicado;
+            let valorBruto = valorAplicadoOriginal;
+            const dataCalculo = new Date(ativo.data + 'T00:00:00');
+            const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
+
+            if (ativo.tipoRentabilidade === 'Pós-Fixado') {
+                let acumuladorCDI = 1;
+                const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
+                historicoCDI
+                    .filter(item => {
+                        const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
+                        return itemDate >= dataCalculo && itemDate <= hoje;
+                    })
+                    .forEach(item => {
+                        acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI);
+                    });
+                valorBruto = valorAplicadoOriginal * acumuladorCDI;
+            } else if (ativo.tipoRentabilidade === 'Prefixado') {
+                const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
+                const diasUteis = diasCorridosCalculo * (252 / 365.25);
+                valorBruto = valorAplicadoOriginal * Math.pow(1 + taxaAnual, diasUteis / 252);
+            } else if (ativo.tipoRentabilidade === 'Híbrido') {
+                let acumuladorIPCA = 1;
+                const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
+                const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
+                historicoIPCA
+                    .filter(item => {
+                        const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
+                        return itemDate.getFullYear() > dataCalculo.getFullYear() ||
+                            (itemDate.getFullYear() === dataCalculo.getFullYear() && itemDate.getMonth() >= dataCalculo.getMonth());
+                    })
+                    .forEach(item => {
+                        acumuladorIPCA *= (1 + parseFloat(item.valor) / 100);
+                    });
+                const valorCorrigido = valorAplicadoOriginal * acumuladorIPCA;
+                const diasUteis = diasCorridosCalculo * (252 / 365.25);
+                valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+            }
+
+            const lucro = valorBruto - ativo.valorAplicado;
+            let aliquotaIR = 0;
+            const isentoIR = ['LCI', 'LCA'].includes(ativo.tipoAtivo);
+            if (lucro > 0 && !isentoIR) {
+                const diasTotaisDesdeAplicacao = Math.floor((hoje - new Date(ativo.data + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+                if (diasTotaisDesdeAplicacao <= 180) aliquotaIR = 0.225;
+                else if (diasTotaisDesdeAplicacao <= 360) aliquotaIR = 0.20;
+                else if (diasTotaisDesdeAplicacao <= 720) aliquotaIR = 0.175;
+                else aliquotaIR = 0.15;
+            }
+            const impostoDevido = lucro * aliquotaIR;
+            const valorLiquido = valorBruto - impostoDevido;
+
+            if (!rfValores[ativo.ativo]) {
+                rfValores[ativo.ativo] = { valorTotal: 0, quantidadeTotal: 0 };
+            }
+            rfValores[ativo.ativo].valorTotal += valorLiquido;
+            rfValores[ativo.ativo].quantidadeTotal += ativo.quantidade;
+        }
+
+        for (const ticker in rfValores) {
+            const data = rfValores[ticker];
+            if (data.quantidadeTotal > 0) {
+                precosAtuais[ticker] = data.valorTotal / data.quantidadeTotal;
+            }
+        }
+    } catch (error) {
+        console.error("Erro ao calcular preços de Renda Fixa para a aba Patrimônio:", error);
+    }
+    return precosAtuais;
+}
+
 
 /**
  * Renderiza o Gráfico de Evolução do Patrimônio.
@@ -275,49 +372,81 @@ function renderAssetAllocationChart(carteira, precosAtuais) {
 }
 
 /**
- * Renderiza a tabela de Posição Consolidada.
+ * Renderiza a tabela de Posição Consolidada, agora com funcionalidade de ordenação.
  */
 function renderPosicaoConsolidada(carteira, precosAtuais) {
     const tableBody = document.getElementById('posicao-consolidada-body');
-    if (!tableBody) return;
+    const tableHead = document.querySelector('#patrimonio .table-card table thead');
+    if (!tableBody || !tableHead) return;
 
     let patrimonioTotal = 0;
-    Object.values(carteira).forEach(ativo => {
+    const carteiraArray = Object.values(carteira).map(ativo => {
         if (ativo.quantidade > 0) {
             const preco = precosAtuais[ativo.ativo] || (ativo.valorTotalInvestido / ativo.quantidadeComprada) || 0;
-            patrimonioTotal += ativo.quantidade * preco;
+            const valorAtual = ativo.quantidade * preco;
+            patrimonioTotal += valorAtual;
+            
+            const custoTotal = ativo.valorTotalInvestido < 0 ? 0 : ativo.valorTotalInvestido;
+            const rentabilidade = custoTotal > 0 ? ((valorAtual / custoTotal) - 1) * 100 : 0;
+
+            return {
+                ...ativo,
+                precoMedio: ativo.quantidade > 0 ? ativo.valorTotalInvestido / ativo.quantidade : 0,
+                valorAtual,
+                rentabilidade,
+                pesoCarteira: 0 // Será calculado depois do patrimonioTotal
+            };
         }
+        return null;
+    }).filter(Boolean); // Remove os nulos
+
+    // Calcula o peso na carteira após ter o patrimônio total
+    carteiraArray.forEach(ativo => {
+        ativo.pesoCarteira = patrimonioTotal > 0 ? (ativo.valorAtual / patrimonioTotal) * 100 : 0;
     });
 
-    const sortedCarteira = Object.values(carteira).sort((a, b) => {
-        const valorA = (a.quantidade * (precosAtuais[a.ativo] || 0));
-        const valorB = (b.quantidade * (precosAtuais[b.ativo] || 0));
-        return valorB - valorA;
+    // Lógica de Ordenação
+    carteiraArray.sort((a, b) => {
+        let valA = a[sortColumn];
+        let valB = b[sortColumn];
+
+        if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = valB.toLowerCase();
+        }
+
+        if (valA < valB) {
+            return sortDirection === 'asc' ? -1 : 1;
+        }
+        if (valA > valB) {
+            return sortDirection === 'asc' ? 1 : -1;
+        }
+        return 0;
     });
 
-    tableBody.innerHTML = sortedCarteira.map(ativo => {
-        if (ativo.quantidade <= 0) return '';
-
-        const precoMedio = ativo.quantidade > 0 ? ativo.valorTotalInvestido / ativo.quantidade : 0;
-        const custoTotal = ativo.valorTotalInvestido;
-        const precoAtual = precosAtuais[ativo.ativo] || precoMedio;
-        const valorAtual = ativo.quantidade * precoAtual;
-        const rentabilidade = custoTotal > 0 ? (valorAtual / custoTotal) - 1 : 0;
-        const pesoCarteira = patrimonioTotal > 0 ? (valorAtual / patrimonioTotal) * 100 : 0;
-        const rentabilidadeClass = rentabilidade >= 0 ? 'positive-change' : 'negative-change';
-
+    // Renderiza o corpo da tabela
+    tableBody.innerHTML = carteiraArray.map(ativo => {
+        const rentabilidadeClass = ativo.rentabilidade >= 0 ? 'positive-change' : 'negative-change';
         return `
             <tr>
                 <td>${ativo.ativo}</td>
                 <td><span class="tipo-ativo-badge">${ativo.tipoAtivo}</span></td>
                 <td>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</td>
-                <td>${formatCurrency(precoMedio)}</td>
-                <td>${formatCurrency(valorAtual)}</td>
-                <td class="${rentabilidadeClass}">${(rentabilidade * 100).toFixed(2)}%</td>
-                <td>${pesoCarteira.toFixed(2)}%</td>
+                <td>${formatCurrency(ativo.precoMedio)}</td>
+                <td>${formatCurrency(ativo.valorAtual)}</td>
+                <td class="${rentabilidadeClass}">${ativo.rentabilidade.toFixed(2)}%</td>
+                <td>${ativo.pesoCarteira.toFixed(2)}%</td>
             </tr>
         `;
     }).join('');
+
+    // Atualiza os cabeçalhos para mostrar o indicador de ordenação
+    tableHead.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === sortColumn) {
+            th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
 }
 
 
@@ -333,6 +462,7 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
         return;
     }
 
+    // 1. Consolida a carteira para ter as posições e custos totais
     const carteira = {};
     lancamentos.forEach(l => {
         if (!carteira[l.ativo]) {
@@ -357,11 +487,43 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
         }
     });
 
-    const tickersAtivos = Object.values(carteira).filter(a => a.quantidade > 0 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo)).map(a => a.ativo);
-
+    // 2. Busca os preços dos ativos de Renda Variável
+    const tickersAtivos = Object.values(carteira)
+        .filter(a => a.quantidade > 0 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
+        .map(a => a.ativo);
     const precosAtuais = await fetchCurrentPrices(tickersAtivos);
 
+    // 3. (CORREÇÃO) Calcula e adiciona os preços dos ativos de Renda Fixa
+    await getPrecosAtuaisRendaFixa(lancamentos).then(rfPrecos => {
+        Object.assign(precosAtuais, rfPrecos);
+    });
+
+    // 4. Renderiza os componentes da aba com os dados completos
     renderPatrimonioEvolutionChart(lancamentos, precosAtuais);
     renderAssetAllocationChart(carteira, precosAtuais);
     renderPosicaoConsolidada(carteira, precosAtuais);
 }
+
+// Adiciona o Event Listener para ordenação da tabela
+document.addEventListener('DOMContentLoaded', () => {
+    const tableHeader = document.querySelector('#patrimonio .table-card table thead');
+    if (tableHeader) {
+        tableHeader.addEventListener('click', (e) => {
+            const th = e.target.closest('th');
+            if (th && th.dataset.sort) {
+                const newSortColumn = th.dataset.sort;
+                if (sortColumn === newSortColumn) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = newSortColumn;
+                    sortDirection = 'desc'; // Padrão para nova coluna
+                }
+                // Re-renderiza a tabela (assumindo que 'carteira' e 'precosAtuais' estão disponíveis no escopo global ou são buscados novamente)
+                // A forma mais robusta é chamar a função principal que atualiza a aba
+                if (window.allLancamentos) {
+                    renderPatrimonioTab(window.allLancamentos, window.allProventos);
+                }
+            }
+        });
+    }
+});

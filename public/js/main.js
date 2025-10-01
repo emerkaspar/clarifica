@@ -18,6 +18,7 @@ import { renderPatrimonioTab } from './tabs/patrimonio.js';
 import { renderRentabilidadeTab } from './tabs/rentabilidade.js';
 import { fetchCurrentPrices } from './api/brapi.js';
 import { initializePegCalculator } from './tabs/calculos.js';
+import { renderAnalisesTab } from './tabs/analises.js';
 
 // --- ESTADO GLOBAL DA APLicação ---
 let currentUserID = null;
@@ -72,6 +73,7 @@ function initializeDataListeners(userID) {
         renderClassificacao(allLancamentos, allClassificacoes);
         renderPatrimonioTab(allLancamentos, allProventos);
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
+        renderAnalisesTab(allLancamentos, allProventos);
     });
 
     // Listener para Proventos
@@ -94,6 +96,7 @@ function initializeDataListeners(userID) {
         renderCriptoCarteira(allLancamentos, allProventos);
         renderPatrimonioTab(allLancamentos, allProventos);
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
+        renderAnalisesTab(allLancamentos, allProventos);
     });
 
     // Listener para Classificações

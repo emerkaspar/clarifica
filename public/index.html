@@ -260,16 +260,16 @@
                   <div class="table-wrapper">
                     <table>
                       <thead>
-                        <tr>
-                          <th>Ativo</th>
-                          <th>Tipo</th>
-                          <th>Quantidade</th>
-                          <th>Preço Médio</th>
-                          <th>Valor Atual</th>
-                          <th>Rentabilidade</th>
-                          <th>% Carteira</th>
-                        </tr>
-                      </thead>
+  <tr>
+    <th data-sort="ativo">Ativo</th>
+    <th data-sort="tipoAtivo">Tipo</th>
+    <th data-sort="quantidade">Quantidade</th>
+    <th data-sort="precoMedio">Preço Médio</th>
+    <th data-sort="valorAtual">Valor Atual</th>
+    <th data-sort="rentabilidade">Rentabilidade</th>
+    <th data-sort="pesoCarteira">% Carteira</th>
+  </tr>
+</thead>
                       <tbody id="posicao-consolidada-body"></tbody>
                     </table>
                   </div>
@@ -1177,8 +1177,14 @@
               </div>
             </div>
             <div class="tab-pane" id="analises">
-              <h2>Análises Detalhadas</h2>
-              <p>Em breve: análises detalhadas de seus investimentos.</p>
+              <div class="content-container" style="max-width: none;">
+                <h3 style="color: #e0e0e0; border-bottom: 1px solid #2a2c30; padding-bottom: 10px; margin-bottom: 20px;">
+                  Análise Comparativa de Rentabilidade
+                </h3>
+                <div id="analises-chart-container" style="position: relative; height: 500px; width: 100%;">
+                    <canvas id="rentabilidade-comparativa-chart"></canvas>
+                </div>
+              </div>
             </div>
 
             <div class="tab-pane" id="lancamentos">
