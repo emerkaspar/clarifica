@@ -26,15 +26,16 @@ async function renderAcoesDayValorization(tickers, carteira) {
         const dailyPerformance = [];
 
         results.forEach((data, index) => {
-            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
+            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice && data.results[0].historicalDataPrice.length >= 2) {
                 const ticker = tickers[index];
-                const prices = data.results[0].historicalDataPrice.reverse();
+                // API da Brapi já retorna do mais recente para o mais antigo.
+                const prices = data.results[0].historicalDataPrice;
                 const hoje = prices[0].close;
                 const ontem = prices[1].close;
-                const quantidade = carteira[ticker].quantidade;
-                const valorPosicaoAtual = hoje * quantidade;
-
-                if (ontem > 0) {
+                
+                if (carteira[ticker] && ontem > 0) {
+                    const quantidade = carteira[ticker].quantidade;
+                    const valorPosicaoAtual = hoje * quantidade;
                     const variacaoPercentual = ((hoje / ontem) - 1) * 100;
                     const variacaoReais = (hoje - ontem) * quantidade;
                     
@@ -53,6 +54,7 @@ async function renderAcoesDayValorization(tickers, carteira) {
         const corClasse = isPositive ? 'positive' : 'negative';
         const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
 
+        // ** LINHAS CORRIGIDAS / RESTAURADAS **
         const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
         
@@ -66,7 +68,7 @@ async function renderAcoesDayValorization(tickers, carteira) {
 
     } catch (error) {
         console.error("Erro ao calcular a valorização do dia para Ações:", error);
-        valorizationReaisDiv.textContent = "Erro ao carregar";
+        valorizationReaisDiv.textContent = "Erro";
         return [];
     }
 }
@@ -97,12 +99,11 @@ function renderAcoesSummary(carteira, precosAtuais) {
     const rentabilidadePercent = totalInvestido > 0 ? (rentabilidadeReais / totalInvestido) * 100 : 0;
 
     const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const formatPercent = (value) => `${value.toFixed(2)}%`;
 
     const updateField = (id, value, isCurrency = true, addSign = false) => {
         const element = document.getElementById(id);
         if (element) {
-            const formattedValue = isCurrency ? formatCurrency(value) : formatPercent(value);
+            const formattedValue = isCurrency ? formatCurrency(value) : `${value.toFixed(2)}%`;
             const sinal = value >= 0 ? '+' : '';
             element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
             element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
@@ -131,7 +132,9 @@ function renderAcoesHighlights(dailyPerformance, historicalPerformance) {
     if (!dayContainer || !historyContainer) return;
 
     const createHtml = (item) => {
-        if (!item) return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+        if (!item || typeof item.changePercent !== 'number') {
+            return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+        }
         const isPositive = item.changePercent >= 0;
         const colorClass = isPositive ? 'positive' : 'negative';
         const arrow = isPositive ? '↑' : '↓';
@@ -144,20 +147,20 @@ function renderAcoesHighlights(dailyPerformance, historicalPerformance) {
     };
 
     // Destaques do Dia
-    if (dailyPerformance.length > 0) {
+    if (dailyPerformance && dailyPerformance.length > 0) {
         dailyPerformance.sort((a, b) => b.changePercent - a.changePercent);
         const highestDay = dailyPerformance[0];
-        const lowestDay = dailyPerformance[dailyPerformance.length - 1];
+        const lowestDay = dailyPerformance.length > 1 ? dailyPerformance[dailyPerformance.length - 1] : highestDay;
         dayContainer.innerHTML = createHtml(highestDay) + createHtml(lowestDay);
     } else {
         dayContainer.innerHTML = createHtml(null) + createHtml(null);
     }
 
     // Destaques Históricos
-    if (historicalPerformance.length > 0) {
+    if (historicalPerformance && historicalPerformance.length > 0) {
         historicalPerformance.sort((a, b) => b.changePercent - a.changePercent);
         const highestHistory = historicalPerformance[0];
-        const lowestHistory = historicalPerformance[historicalPerformance.length - 1];
+        const lowestHistory = historicalPerformance.length > 1 ? historicalPerformance[historicalPerformance.length - 1] : highestHistory;
         historyContainer.innerHTML = createHtml(highestHistory) + createHtml(lowestHistory);
     } else {
         historyContainer.innerHTML = createHtml(null) + createHtml(null);
@@ -180,9 +183,8 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
 
     if (acoesLancamentos.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação lançada ainda.</p>`;
-        const reaisDiv = document.getElementById("acoes-valorization-reais");
+        document.getElementById("acoes-valorization-reais").textContent = "N/A";
         const percentDiv = document.getElementById("acoes-valorization-percent");
-        if (reaisDiv) reaisDiv.textContent = "N/A";
         if (percentDiv) {
             percentDiv.innerHTML = "";
             percentDiv.className = 'valorization-pill';
@@ -192,7 +194,7 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         document.getElementById("acoes-rentabilidade-reais").textContent = "R$ 0,00";
         document.getElementById("acoes-valorizacao-percent").textContent = "0,00%";
         document.getElementById("acoes-rentabilidade-percent").textContent = "0,00%";
-        renderAcoesHighlights([], []); // Limpa os destaques
+        renderAcoesHighlights([], []);
         return;
     }
 
@@ -226,7 +228,7 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
     const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
     if (tickers.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
-        renderAcoesHighlights([], []); // Limpa os destaques
+        renderAcoesHighlights([], []);
         return;
     }
 
