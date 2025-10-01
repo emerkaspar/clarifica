@@ -25,26 +25,29 @@ async function renderFiisDayValorization(tickers, carteira) {
         let totalValorizacaoReais = 0;
         let totalInvestidoPonderado = 0;
         let variacaoPonderadaTotal = 0;
-        const dailyPerformance = []; // Array para armazenar a performance de cada FII
+        const dailyPerformance = []; 
 
         results.forEach((data, index) => {
-            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice.length >= 2) {
+            if (data && data.results && data.results[0] && data.results[0].historicalDataPrice && data.results[0].historicalDataPrice.length >= 2) {
                 const ticker = tickers[index];
-                const prices = data.results[0].historicalDataPrice.reverse();
+                
+                // --- CORREÇÃO DEFINITIVA APLICADA AQUI ---
+                // A linha .reverse() foi removida para usar a ordem correta da API.
+                const prices = data.results[0].historicalDataPrice; 
                 const hoje = prices[0].close;
                 const ontem = prices[1].close;
-                const quantidade = carteira[ticker].quantidade;
-                const valorPosicaoAtual = hoje * quantidade;
+                
+                if (carteira[ticker] && ontem > 0) {
+                    const quantidade = carteira[ticker].quantidade;
+                    const valorPosicaoAtual = hoje * quantidade;
 
-                if (ontem > 0) {
                     const variacaoPercentual = ((hoje / ontem) - 1) * 100;
                     const variacaoReais = (hoje - ontem) * quantidade;
 
                     totalValorizacaoReais += variacaoReais;
                     totalInvestidoPonderado += valorPosicaoAtual;
                     variacaoPonderadaTotal += variacaoPercentual * (valorPosicaoAtual / 100);
-
-                    // Adiciona a performance do ativo ao array
+                    
                     dailyPerformance.push({ ticker, changePercent: variacaoPercentual });
                 }
             }
@@ -56,7 +59,7 @@ async function renderFiisDayValorization(tickers, carteira) {
         const sinal = isPositive ? '+' : '';
         const corClasse = isPositive ? 'positive' : 'negative';
         const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
-
+        
         const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
 
@@ -70,7 +73,7 @@ async function renderFiisDayValorization(tickers, carteira) {
 
     } catch (error) {
         console.error("Erro ao calcular a valorização do dia para FIIs:", error);
-        valorizationReaisDiv.textContent = "Erro ao carregar";
+        valorizationReaisDiv.textContent = "Erro";
         return [];
     }
 }
@@ -101,12 +104,11 @@ function renderFiisSummary(carteira, precosAtuais) {
     const rentabilidadePercent = totalInvestido > 0 ? (rentabilidadeReais / totalInvestido) * 100 : 0;
 
     const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const formatPercent = (value) => `${value.toFixed(2)}%`;
 
     const updateField = (id, value, isCurrency = true, addSign = false) => {
         const element = document.getElementById(id);
         if (element) {
-            const formattedValue = isCurrency ? formatCurrency(value) : formatPercent(value);
+            const formattedValue = isCurrency ? formatCurrency(value) : `${value.toFixed(2)}%`;
             const sinal = value >= 0 ? '+' : '';
             element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
             element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
@@ -136,7 +138,9 @@ function renderFiisHighlights(dailyPerformance, historicalPerformance) {
     if (!dayContainer || !historyContainer) return;
 
     const createHtml = (item) => {
-        if (!item) return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+        if (!item || typeof item.changePercent !== 'number') {
+            return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+        }
         const isPositive = item.changePercent >= 0;
         const colorClass = isPositive ? 'positive' : 'negative';
         const arrow = isPositive ? '↑' : '↓';
@@ -149,20 +153,20 @@ function renderFiisHighlights(dailyPerformance, historicalPerformance) {
     };
 
     // Destaques do Dia
-    if (dailyPerformance.length > 0) {
+    if (dailyPerformance && dailyPerformance.length > 0) {
         dailyPerformance.sort((a, b) => b.changePercent - a.changePercent);
         const highestDay = dailyPerformance[0];
-        const lowestDay = dailyPerformance[dailyPerformance.length - 1];
+        const lowestDay = dailyPerformance.length > 1 ? dailyPerformance[dailyPerformance.length - 1] : highestDay;
         dayContainer.innerHTML = createHtml(highestDay) + createHtml(lowestDay);
     } else {
         dayContainer.innerHTML = createHtml(null) + createHtml(null);
     }
 
     // Destaques Históricos
-    if (historicalPerformance.length > 0) {
+    if (historicalPerformance && historicalPerformance.length > 0) {
         historicalPerformance.sort((a, b) => b.changePercent - a.changePercent);
         const highestHistory = historicalPerformance[0];
-        const lowestHistory = historicalPerformance[historicalPerformance.length - 1];
+        const lowestHistory = historicalPerformance.length > 1 ? historicalPerformance[historicalPerformance.length - 1] : highestHistory;
         historyContainer.innerHTML = createHtml(highestHistory) + createHtml(lowestHistory);
     } else {
         historyContainer.innerHTML = createHtml(null) + createHtml(null);
@@ -259,7 +263,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
 
-            // --- CÁLCULOS RESTAURADOS E NOVOS ---
             const variacaoReais = valorPosicaoAtual - valorInvestido;
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
 
@@ -290,7 +293,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                 }
             }
 
-            // --- HTML DO CARD ATUALIZADO ---
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="FIIs">
                     <div class="fii-card-ticker">${ativo.ativo}</div>
