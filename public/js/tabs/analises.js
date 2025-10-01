@@ -15,9 +15,8 @@ async function calcularRentabilidadePorAtivo(lancamentos, proventos) {
         return [];
     }
 
-    // --- SEPARA ATIVOS DE RENDA VARIÁVEL E RENDA FIXA ---
     const variaveis = {};
-    const fixos = []; // Cada lançamento de RF é um investimento individual
+    const fixos = []; 
 
     lancamentos.forEach(l => {
         if (['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo)) {
@@ -41,23 +40,21 @@ async function calcularRentabilidadePorAtivo(lancamentos, proventos) {
         }
     });
     
-    // Adiciona proventos aos ativos de Renda Variável
     proventos.forEach(p => {
         if (variaveis[p.ativo]) {
             variaveis[p.ativo].proventosRecebidos += p.valor;
         }
     });
 
-    // --- 1. CÁLCULO PARA RENDA VARIÁVEL (Ações, FIIs, etc.) ---
     const tickersVariaveis = Object.keys(variaveis);
     const precosAtuais = await fetchCurrentPrices(tickersVariaveis);
     const resultadosVariaveis = Object.values(variaveis).map(ativo => {
-        const precoAtual = precosAtuais[ativo.ativo] || 0;
+        const precoAtual = precosAtuais[ativo.ativo]?.price || 0; // <<< CORREÇÃO APLICADA AQUI
         const quantidadeAtual = ativo.quantidadeComprada - ativo.quantidadeVendida;
         const valorAtual = quantidadeAtual * precoAtual;
         const valorInvestido = ativo.valorTotalInvestido;
 
-        if (valorInvestido <= 0 || quantidadeAtual <=0) {
+        if (valorInvestido <= 0 || quantidadeAtual <= 0) {
             return { ...ativo, rentabilidadeTotalPercent: 0 };
         }
 
@@ -68,7 +65,6 @@ async function calcularRentabilidadePorAtivo(lancamentos, proventos) {
         return { ...ativo, rentabilidadeTotalPercent };
     });
 
-    // --- 2. CÁLCULO PARA RENDA FIXA ---
     const resultadosFixos = [];
     if (fixos.length > 0) {
         const hoje = new Date();
@@ -126,7 +122,6 @@ async function calcularRentabilidadePorAtivo(lancamentos, proventos) {
         }
     }
 
-    // --- 3. COMBINAR E ORDENAR ---
     const resultadosFinais = [...resultadosVariaveis, ...resultadosFixos];
     return resultadosFinais.sort((a, b) => b.rentabilidadeTotalPercent - a.rentabilidadeTotalPercent);
 }
