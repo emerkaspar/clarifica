@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // REGRA NOVA E ESPECÍFICA:
+    // Permite que qualquer usuário autenticado LEIA a coleção de cotações.
+    // Ninguém pode escrever ou apagar cotações diretamente pelo app (só pelo servidor).
+    match /cotacoes/{cotacaoId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    // REGRA ANTIGA (agora genérica para as outras coleções):
+    // Aplica-se a 'lancamentos', 'proventos', 'calculosSalvos', etc.
+    match /{collection}/{docId} {
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userID;
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userID;
+    }
+  }
+}

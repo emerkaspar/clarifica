@@ -16,7 +16,8 @@ import { renderMovimentacaoChart } from './charts.js';
 import { updateMainSummaryHeader } from './summary.js';
 import { renderPatrimonioTab } from './tabs/patrimonio.js';
 import { renderRentabilidadeTab } from './tabs/rentabilidade.js';
-import { fetchCurrentPrices } from './api/brapi.js'; // NOVO: Traz a busca de preços para o main.js
+import { fetchCurrentPrices } from './api/brapi.js';
+import { initializePegCalculator } from './tabs/calculos.js';
 
 // --- ESTADO GLOBAL DA APLicação ---
 let currentUserID = null;
@@ -25,13 +26,14 @@ let allProventos = [];
 let allClassificacoes = {};
 let currentProventosMeta = null;
 let allValoresManuaisTD = {};
-let userConfig = {}; 
+let userConfig = {};
 
 // Função que será chamada quando o usuário fizer login
 const onLogin = (userID) => {
     currentUserID = userID;
     initializeDataListeners(userID);
     setupAllModals(userID);
+    initializePegCalculator(userID);
 };
 
 // Função que será chamada quando o usuário fizer logout
@@ -52,27 +54,24 @@ function initializeDataListeners(userID) {
     onSnapshot(qLancamentos, async (snapshot) => {
         allLancamentos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         window.allLancamentos = allLancamentos;
-        
-        // 1. Identifica todos os ativos que precisam de preço (RV/Cripto/ETF)
+
         const tickersAtivos = allLancamentos
             .filter(a => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
             .map(a => a.ativo);
 
-        // 2. BUSCA OS PREÇOS AGORA (CACHE-FIRST)
         const precosAtuais = await fetchCurrentPrices(tickersAtivos);
-
         const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosAtuais);
 
         renderHistorico(allLancamentos);
         renderMovimentacaoChart(allLancamentos);
-        renderAcoesCarteira(allLancamentos, allProventos); // Estes módulos usam fetchCurrentPrices internamente.
-        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs); // Estes módulos usam fetchCurrentPrices internamente.
-        renderEtfCarteira(allLancamentos, allProventos); // Estes módulos usam fetchCurrentPrices internamente.
-        renderCriptoCarteira(allLancamentos, allProventos); // Estes módulos usam fetchCurrentPrices internamente.
+        renderAcoesCarteira(allLancamentos, allProventos);
+        renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
+        renderEtfCarteira(allLancamentos, allProventos);
+        renderCriptoCarteira(allLancamentos, allProventos);
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
         renderClassificacao(allLancamentos, allClassificacoes);
         renderPatrimonioTab(allLancamentos, allProventos);
-        renderRentabilidadeTab(allLancamentos, allProventos, summaryData); 
+        renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
     });
 
     // Listener para Proventos
@@ -81,7 +80,6 @@ function initializeDataListeners(userID) {
         allProventos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         window.allProventos = allProventos;
 
-        // Re-executa o fluxo de preços para atualizar o resumo
         const tickersAtivos = allLancamentos
             .filter(a => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
             .map(a => a.ativo);
@@ -125,11 +123,10 @@ function initializeDataListeners(userID) {
         renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
     });
 
-    // NOVO: Listener para Configurações Gerais do Usuário
+    // Listener para Configurações Gerais do Usuário
     const configDocRef = doc(db, "configuracoes", userID);
     onSnapshot(configDocRef, (doc) => {
         userConfig = doc.exists() ? doc.data() : {};
-        // Re-renderiza a aba de FIIs com a nova configuração ideal
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
     });
 }

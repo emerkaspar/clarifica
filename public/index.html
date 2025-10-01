@@ -936,11 +936,245 @@
               </div>
             </div>
             <div class="tab-pane" id="calculos">
-              <h2>Cálculos e Projeções</h2>
-              <p>
-                Em breve: ferramentas para cálculos de preço médio, projeção de
-                aposentadoria e outras simulações.
-              </p>
+              <div class="content-container" style="max-width: 900px">
+                <div
+                  class="content-header"
+                  style="justify-content: space-between"
+                >
+                  <h3>Calculadora de PEG Ratio</h3>
+                  <div style="display: flex; gap: 10px">
+                    <button
+                      id="btn-ver-salvos"
+                      class="btn-adicionar btn-secondary"
+                    >
+                      <i class="fas fa-list-alt"></i> Cálculos Salvos
+                    </button>
+                    <button
+                      id="btn-salvar-calculo"
+                      class="btn-adicionar btn-secondary"
+                    >
+                      <i class="fas fa-save"></i> Salvar Cálculo
+                    </button>
+                  </div>
+                </div>
+
+                <div class="calculator-grid">
+                  <div class="calculator-inputs">
+                    <form id="peg-calculator-form">
+                      <div class="form-group-with-hint">
+                        <label for="ticker" class="form-label"
+                          >Ticker da Empresa</label
+                        >
+                        <input
+                          type="text"
+                          id="ticker"
+                          class="form-input"
+                          placeholder="Ex: PETR4"
+                        />
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="Opcional: para identificar o cálculo salvo"
+                        ></i>
+                      </div>
+                      <div class="form-group-with-hint">
+                        <label for="pl-atual" class="form-label"
+                          >P/L Atual</label
+                        >
+                        <input
+                          type="number"
+                          id="pl-atual"
+                          class="form-input"
+                          step="0.01"
+                          placeholder="Ex: 8.5"
+                        />
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="Preço ÷ Lucro por ação"
+                        ></i>
+                      </div>
+                      <div class="form-group-with-hint">
+                        <label for="roe-medio" class="form-label"
+                          >ROE Médio (%)</label
+                        >
+                        <input
+                          type="number"
+                          id="roe-medio"
+                          class="form-input"
+                          step="0.1"
+                          placeholder="Ex: 15"
+                        />
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="Rentabilidade média sobre patrimônio líquido"
+                        ></i>
+                      </div>
+                      <div class="form-group-with-hint">
+                        <label for="payout-medio" class="form-label"
+                          >Payout Médio (%)</label
+                        >
+                        <input
+                          type="number"
+                          id="payout-medio"
+                          class="form-input"
+                          step="0.1"
+                          placeholder="Ex: 50"
+                        />
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="Percentual médio de lucro distribuído"
+                        ></i>
+                      </div>
+                      <div class="form-group-with-hint">
+                        <label for="inflacao" class="form-label"
+                          >Inflação (IPCA + spread)</label
+                        >
+                        <input
+                          type="number"
+                          id="inflacao"
+                          class="form-input"
+                          step="0.1"
+                          placeholder="Ex: 6.5"
+                        />
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="Índice usado para ajustar crescimento real"
+                        ></i>
+                      </div>
+                    </form>
+                  </div>
+
+                  <div class="calculator-results">
+                    <div class="result-item">
+                      <div class="result-label">
+                        <span>Crescimento Esperado (%)</span>
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="ROE Médio * (1 - Payout Médio)"
+                        ></i>
+                      </div>
+                      <div
+                        id="crescimento-esperado-result"
+                        class="result-value"
+                      >
+                        -
+                      </div>
+                      <div class="interpretation-text">
+                        Taxa de crescimento sustentável
+                      </div>
+                    </div>
+                    <div class="result-item">
+                      <div class="result-label">
+                        <span>PEG Ratio</span>
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="P/L dividido pelo crescimento nominal"
+                        ></i>
+                      </div>
+                      <div id="peg-result" class="result-value">-</div>
+                      <div
+                        id="peg-interpretation"
+                        class="interpretation-text"
+                      ></div>
+                    </div>
+                    <div class="result-item">
+                      <div class="result-label">
+                        <span>Crescimento Real</span>
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="Crescimento esperado descontando a inflação"
+                        ></i>
+                      </div>
+                      <div id="crescimento-real-result" class="result-value">
+                        -
+                      </div>
+                      <div
+                        id="crescimento-real-alert"
+                        class="interpretation-text"
+                      ></div>
+                    </div>
+                    <div class="result-item">
+                      <div class="result-label">
+                        <span>PEG Real</span>
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="P/L dividido pelo crescimento real"
+                        ></i>
+                      </div>
+                      <div id="peg-real-result" class="result-value">-</div>
+                    </div>
+                    <div class="result-item">
+                      <div class="result-label">
+                        <span>Desconto (%)</span>
+                        <i
+                          class="fas fa-info-circle hint-icon"
+                          title="Quanto o preço atual está abaixo do valor justo estimado pelo PEG Ratio"
+                        ></i>
+                      </div>
+                      <div id="desconto-result" class="result-value">-</div>
+                      <div
+                        id="desconto-alert"
+                        class="interpretation-text"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="salvar-calculo-modal" class="modal-overlay">
+              <div class="modal-content" style="max-width: 500px">
+                <div class="modal-header">
+                  <h2>Salvar Cálculo</h2>
+                  <button
+                    class="modal-close-btn"
+                    data-modal="salvar-calculo-modal"
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form id="form-salvar-calculo">
+                    <div
+                      class="form-group-with-hint"
+                      style="margin-bottom: 15px"
+                    >
+                      <label for="salvar-titulo" class="form-label"
+                        >Título do Cálculo</label
+                      >
+                      <input
+                        type="text"
+                        id="salvar-titulo"
+                        class="form-input"
+                        placeholder="Ex: Análise PETR4"
+                        required
+                      />
+                    </div>
+                    <div class="form-group-with-hint">
+                      <label for="salvar-notas" class="form-label"
+                        >Notas (Opcional)</label
+                      >
+                      <textarea
+                        id="salvar-notas"
+                        class="form-input"
+                        rows="3"
+                        placeholder="Ex: Baseado no relatório do 3T25"
+                      ></textarea>
+                    </div>
+                    <div class="modal-footer" style="padding: 25px 0 0 0">
+                      <button
+                        type="button"
+                        class="btn-cancelar"
+                        data-modal="salvar-calculo-modal"
+                      >
+                        Cancelar
+                      </button>
+                      <button type="submit" class="btn-salvar">
+                        <i class="fas fa-save"></i> Salvar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </div>
             <div class="tab-pane" id="analises">
               <h2>Análises Detalhadas</h2>
@@ -1880,6 +2114,29 @@
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+    <div id="calculos-salvos-modal" class="modal-overlay">
+      <div class="modal-content" style="max-width: 700px">
+        <div class="modal-header">
+          <h2>Cálculos Salvos</h2>
+          <button class="modal-close-btn" data-modal="calculos-salvos-modal">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="saved-calc-search-wrapper">
+            <input
+              type="search"
+              id="search-saved-calc"
+              class="form-input"
+              placeholder="Buscar por ticker ou título..."
+            />
+          </div>
+          <div id="calculos-salvos-lista">
+            <p>Nenhum cálculo salvo ainda.</p>
+          </div>
         </div>
       </div>
     </div>

@@ -1504,3 +1504,161 @@ body {
   height: 350px;
   width: 100%;
 }
+/* --- ESTILOS PARA A CALCULADORA PEG RATIO --- */
+.calculator-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  background-color: #1a1b1e;
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid #2a2c30;
+}
+
+.form-group-with-hint {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.form-group-with-hint .form-label {
+  margin-bottom: 8px;
+}
+
+.hint-icon {
+  position: absolute;
+  right: 0;
+  top: 5px;
+  color: #a0a7b3;
+  cursor: help;
+  font-size: 0.9rem;
+}
+
+.calculator-results {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.result-item {
+  background-color: #21252e;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #2a2c30;
+}
+
+.result-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #a0a7b3;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.result-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.interpretation-text {
+  font-size: 0.8rem;
+  margin-top: 5px;
+  min-height: 1.2em;
+}
+
+.interpretation-text.good {
+  color: #00d9c3;
+}
+.interpretation-text.bad {
+  color: #ef4444;
+}
+.interpretation-text.neutral {
+  color: #a0a7b3;
+}
+.interpretation-text.highlight {
+  font-weight: bold;
+  color: #ecc94b; /* Amarelo/Dourado para destaque */
+}
+
+@media (max-width: 768px) {
+  .calculator-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+/* --- ESTILOS ADICIONAIS PARA CALCULADORA E CÁLCULOS SALVOS --- */
+.saved-calculations-section {
+  margin-top: 40px;
+}
+
+.saved-calculations-section h3 {
+  color: #e0e0e0;
+  border-bottom: 1px solid #2a2c30;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.saved-calc-card {
+  background-color: #1a1b1e;
+  border: 1px solid #2a2c30;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 20px;
+}
+
+.saved-calc-info h4 {
+  margin: 0 0 10px 0;
+  color: #00d9c3;
+  font-size: 1.1rem;
+}
+
+.saved-calc-info p {
+  margin: 5px 0;
+  font-size: 0.85rem;
+  color: #a0a7b3;
+}
+.saved-calc-info p strong {
+  color: #e0e0e0;
+}
+
+.saved-calc-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.saved-calc-actions .btn-crud-group {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-carregar {
+  font-size: 0.9rem;
+  padding: 8px 15px;
+}
+
+@media (max-width: 600px) {
+  .saved-calc-card {
+    grid-template-columns: 1fr;
+  }
+  .saved-calc-actions {
+    flex-direction: row;
+    margin-top: 15px;
+  }
+}
+/* --- ESTILOS PARA MODAL DE CÁLCULOS SALVOS --- */
+.saved-calc-search-wrapper {
+  margin-bottom: 20px;
+}
+
+#calculos-salvos-lista {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 10px; /* Espaço para a barra de rolagem */
+}
