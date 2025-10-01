@@ -2,7 +2,7 @@
 import { db } from '../firebase-config.js';
 import { collection, addDoc, doc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// --- ELEMENTOS DO FORMULÁRIO E RESULTADOS ---
+// --- ELEMENTOS DO FORMULÁRIO E RESULTADOS (PEG RATIO) ---
 const form = document.getElementById('peg-calculator-form');
 const tickerInput = document.getElementById('ticker');
 const plAtualInput = document.getElementById('pl-atual');
@@ -10,7 +10,7 @@ const roeMedioInput = document.getElementById('roe-medio');
 const payoutMedioInput = document.getElementById('payout-medio');
 const inflacaoInput = document.getElementById('inflacao');
 
-// Resultados
+// Resultados (PEG Ratio)
 const crescimentoEsperadoResultEl = document.getElementById('crescimento-esperado-result');
 const pegResultEl = document.getElementById('peg-result');
 const pegInterpretationEl = document.getElementById('peg-interpretation');
@@ -20,27 +20,102 @@ const pegRealResultEl = document.getElementById('peg-real-result');
 const descontoResultEl = document.getElementById('desconto-result');
 const descontoAlertEl = document.getElementById('desconto-alert');
 
-// Modal de Salvamento
+// Modal de Salvamento (PEG Ratio)
 const salvarCalculoModal = document.getElementById('salvar-calculo-modal');
 const btnSalvarCalculo = document.getElementById('btn-salvar-calculo');
 const formSalvarCalculo = document.getElementById('form-salvar-calculo');
 const salvarTituloInput = document.getElementById('salvar-titulo');
 const salvarNotasInput = document.getElementById('salvar-notas');
 
-// Modal de Cálculos Salvos
+// Modal de Cálculos Salvos (PEG Ratio)
 const calculosSalvosModal = document.getElementById('calculos-salvos-modal');
 const btnVerSalvos = document.getElementById('btn-ver-salvos');
 const searchSavedCalcInput = document.getElementById('search-saved-calc');
 const calculosSalvosListaDiv = document.getElementById('calculos-salvos-lista');
 
-let currentCalculations = {}; // Armazena os cálculos atuais
-let allSavedCalculations = []; // Armazena todos os cálculos do usuário
+let currentCalculations = {}; // Armazena os cálculos atuais (PEG Ratio)
+let allSavedCalculations = []; // Armazena todos os cálculos do usuário (PEG Ratio)
+
+
+// --- CALCULADORA: TETO PROJETIVO ---
+function initializeTetoProjetivoCalculator() {
+    const formTeto = document.getElementById('teto-projetivo-form');
+    if (!formTeto) return;
+
+    // Inputs
+    const payoutInput = document.getElementById('teto-payout');
+    const lucroProjetivoInput = document.getElementById('teto-lucro-projetivo');
+    const yieldMinimoInput = document.getElementById('teto-yield-minimo');
+    const cotacaoAtualInput = document.getElementById('teto-cotacao-atual');
+    const quantidadePapeisInput = document.getElementById('teto-quantidade-papeis');
+
+    // Results
+    const lpaResultEl = document.getElementById('teto-lpa-projetivo');
+    const dpaResultEl = document.getElementById('teto-dpa-projetivo');
+    const yieldProjetivoResultEl = document.getElementById('teto-yield-projetivo');
+    const precoJustoResultEl = document.getElementById('teto-preco-justo');
+    const margemSegurancaResultEl = document.getElementById('teto-margem-seguranca');
+    
+    // Buttons
+    const btnReiniciar = document.getElementById('btn-reiniciar-teto');
+
+    const formatCurrency = (value) => (typeof value === 'number' && !isNaN(value)) ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
+    const formatPercent = (value) => (typeof value === 'number' && !isNaN(value)) ? `${value.toFixed(2)}%` : '0,00%';
+
+    // Esta função APENAS limpa os campos de resultado.
+    function clearTetoResults() {
+        lpaResultEl.textContent = 'R$ 0,00';
+        dpaResultEl.textContent = 'R$ 0,00';
+        yieldProjetivoResultEl.textContent = '0,00%';
+        precoJustoResultEl.textContent = 'R$ 0,00';
+        margemSegurancaResultEl.textContent = '0,00%';
+        margemSegurancaResultEl.style.color = '#e0e0e0';
+    }
+
+    // Esta função limpa TUDO: os inputs (form.reset) e os resultados.
+    function resetTetoCalculator() {
+        formTeto.reset();
+        clearTetoResults();
+    }
+
+    function calculateTeto() {
+        const payout = parseFloat(payoutInput.value) || 0;
+        const lucroProjetivo = parseFloat(lucroProjetivoInput.value) || 0;
+        const yieldMinimo = parseFloat(yieldMinimoInput.value) || 0;
+        const cotacaoAtual = parseFloat(cotacaoAtualInput.value) || 0;
+        const quantidadePapeis = parseFloat(quantidadePapeisInput.value) || 0;
+
+        if (quantidadePapeis === 0 || cotacaoAtual === 0 || yieldMinimo === 0) {
+            clearTetoResults(); 
+            return;
+        }
+        
+        const lpaProjetivo = lucroProjetivo / quantidadePapeis;
+        const dpaProjetivo = lpaProjetivo * (payout / 100);
+        const yieldProjetivo = (dpaProjetivo / cotacaoAtual) * 100;
+        const precoJusto = dpaProjetivo / (yieldMinimo / 100);
+        
+        // --- CÁLCULO AJUSTADO CONFORME SOLICITADO ---
+        const margemSeguranca = cotacaoAtual > 0 ? ((precoJusto - cotacaoAtual) / cotacaoAtual) * 100 : 0;
+
+        lpaResultEl.textContent = formatCurrency(lpaProjetivo);
+        dpaResultEl.textContent = formatCurrency(dpaProjetivo);
+        yieldProjetivoResultEl.textContent = formatPercent(yieldProjetivo);
+        precoJustoResultEl.textContent = formatCurrency(precoJusto);
+        margemSegurancaResultEl.textContent = formatPercent(margemSeguranca);
+        
+        margemSegurancaResultEl.style.color = margemSeguranca >= 0 ? '#00d9c3' : '#ef4444';
+    }
+
+    formTeto.addEventListener('input', calculateTeto);
+    btnReiniciar.addEventListener('click', resetTetoCalculator);
+}
+
 
 /**
- * Executa todos os cálculos e atualiza a UI.
+ * Executa todos os cálculos e atualiza a UI (PEG RATIO).
  */
 function calculateAndUpdate() {
-    // 1. Pega os valores dos inputs
     const inputs = {
         ticker: tickerInput.value.toUpperCase(),
         plAtual: parseFloat(plAtualInput.value) || 0,
@@ -49,7 +124,6 @@ function calculateAndUpdate() {
         inflacao: parseFloat(inflacaoInput.value) || 0,
     };
 
-    // 2. Realiza os cálculos
     const taxaDeRetencao = 1 - (inputs.payoutMedio / 100);
     const crescimentoEsperado = inputs.roeMedio * taxaDeRetencao;
 
@@ -67,7 +141,6 @@ function calculateAndUpdate() {
 
     currentCalculations = { inputs, resultados };
 
-    // 3. Atualiza os campos de resultado na tela
     crescimentoEsperadoResultEl.textContent = `${crescimentoEsperado.toFixed(2)}%`;
 
     if (inputs.plAtual <= 0 || crescimentoEsperado <= 0) {
@@ -80,7 +153,6 @@ function calculateAndUpdate() {
     pegRealResultEl.textContent = isFinite(resultados.pegReal) ? resultados.pegReal.toFixed(2) : 'N/A';
     descontoResultEl.textContent = resultados.desconto > 0 ? `${resultados.desconto.toFixed(2)}%` : 'Sem desconto';
 
-    // 4. Aplica as regras de interpretação e alertas
     updateInterpretations(resultados.peg, resultados.desconto, resultados.crescimentoReal);
 }
 
@@ -126,13 +198,9 @@ function loadCalculation(calc) {
     inflacaoInput.value = calc.inputs.inflacao || '';
 
     calculateAndUpdate();
-    // Fecha o modal após carregar para melhorar a experiência
     calculosSalvosModal.classList.remove('show');
 }
 
-/**
- * Renderiza a lista de cálculos salvos, aplicando um filtro de busca se necessário.
- */
 function renderSavedCalculations(searchTerm = '') {
     if (!calculosSalvosListaDiv) return;
 
@@ -182,16 +250,13 @@ function renderSavedCalculations(searchTerm = '') {
     });
 }
 
-/**
- * Inicializa a calculadora e os modais.
- */
 export function initializePegCalculator(userID) {
+    initializeTetoProjetivoCalculator();
+
     if (!form) return;
 
-    // Listener para o formulário principal
     form.addEventListener('input', calculateAndUpdate);
 
-    // Listeners para abrir e fechar modais
     btnSalvarCalculo.addEventListener('click', () => {
         if (!currentCalculations.inputs || !currentCalculations.inputs.plAtual) {
             alert('Preencha os dados da calculadora antes de salvar.');
@@ -203,11 +268,10 @@ export function initializePegCalculator(userID) {
     });
 
     btnVerSalvos.addEventListener('click', () => {
-        renderSavedCalculations(); // Renderiza a lista completa ao abrir
+        renderSavedCalculations();
         calculosSalvosModal.classList.add('show');
     });
 
-    // Listener para o formulário de salvamento
     formSalvarCalculo.addEventListener('submit', async (e) => {
         e.preventDefault();
         const dataToSave = {
@@ -229,16 +293,13 @@ export function initializePegCalculator(userID) {
         }
     });
 
-    // Listener para a busca no modal de salvos
     searchSavedCalcInput.addEventListener('input', (e) => {
         renderSavedCalculations(e.target.value);
     });
 
-    // Listener do Firestore para atualizar a lista em tempo real
     const qCalculos = query(collection(db, "calculosSalvos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
     onSnapshot(qCalculos, (snapshot) => {
         allSavedCalculations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Se o modal estiver aberto, atualiza a lista filtrada
         if (calculosSalvosModal.classList.contains('show')) {
             renderSavedCalculations(searchSavedCalcInput.value);
         }
