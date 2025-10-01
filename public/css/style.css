@@ -1785,3 +1785,106 @@ body {
     font-weight: 600;
     font-size: 12px;
 }
+
+/* --- ESTILOS MODERNOS PARA A TABELA DE PATRIMÔNIO (VERSÃO AGRUPADA) --- */
+
+.patrimonio-card .table-wrapper {
+  margin-top: 10px;
+  border: 1px solid #2a2c30;
+  border-radius: 8px;
+  overflow: hidden; /* Garante que os cantos arredondados funcionem */
+}
+
+.patrimonio-card table {
+  border-collapse: collapse; /* Revertido para o padrão */
+  border-spacing: 0;
+}
+
+/* Remove estilos de hover e borda de <tr>, pois o tbody agora controla isso */
+.patrimonio-card tbody tr,
+.patrimonio-card tbody tr:hover {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  transform: none;
+}
+
+/* Remove os cantos arredondados das células individuais */
+.patrimonio-card td:first-child, .patrimonio-card td:last-child {
+  border-radius: 0;
+}
+
+/* Estilo para cada grupo (tbody) */
+.patrimonio-card tbody.collapsible-group {
+    border-bottom: 1px solid #2a2c30;
+}
+.patrimonio-card tbody.collapsible-group:last-child {
+    border-bottom: none;
+}
+
+/* Cabeçalho do Grupo */
+.group-header {
+    cursor: pointer;
+    background-color: #21252e;
+    transition: background-color 0.2s ease;
+}
+
+.group-header:hover {
+    background-color: #2a2c30;
+}
+
+.group-header td {
+    padding: 16px 20px;
+    font-weight: 600;
+    color: #e0e0e0;
+    font-size: 1rem;
+    border-bottom: 1px solid #2a2c30; /* Linha separadora do conteúdo */
+}
+
+.group-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.group-toggle-icon {
+    transition: transform 0.3s ease;
+    font-size: 0.8rem;
+    color: #a0a7b3;
+}
+
+/* Rotação do ícone quando o grupo está expandido */
+tbody.is-expanded .group-toggle-icon {
+    transform: rotate(90deg);
+}
+
+/* Linhas dos ativos */
+.asset-row {
+    background-color: #1a1b1e;
+    border-top: 1px solid #2a2c30;
+}
+.asset-row:hover {
+    background-color: #21252e;
+}
+
+/* Lógica para recolher: por padrão, as linhas de ativo ficam escondidas */
+.asset-row {
+    display: none;
+}
+
+/* Quando o tbody tem a classe 'is-expanded', as linhas aparecem */
+tbody.is-expanded .asset-row {
+    display: table-row;
+}
+
+.patrimonio-card .ativo-com-logo span {
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.patrimonio-card .ativo-logo-fallback {
+    font-weight: 600;
+    font-size: 12px;
+}
+}
+O comportamento segue o de expandir e recolher todos quando clica em algum seguem arquivos para conferencia

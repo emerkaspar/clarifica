@@ -6,6 +6,9 @@ let assetAllocationChart = null;
 let sortColumn = 'valorAtual';
 let sortDirection = 'desc';
 
+// Armazena o estado (expandido/recolhido) de cada grupo
+const groupCollapseState = {};
+
 const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 async function getPrecosAtuaisRendaFixa(lancamentos) {
@@ -303,53 +306,90 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
             patrimonioTotal += valorAtual;
             const custoDaPosicao = ativo.valorTotalInvestido < 0 ? 0 : ativo.valorTotalInvestido;
             const rentabilidade = custoDaPosicao > 0 ? ((valorAtual / custoDaPosicao) - 1) * 100 : 0;
-
-            return { ...ativo, valorAtual, rentabilidade, pesoCarteira: 0, precoMedio: ativo.quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo.quantidadeComprada : 0 };
+            return { ...ativo, valorAtual, rentabilidade, pesoCarteira: 0, precoMedio: ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0 };
         }
         return null;
     }).filter(Boolean);
 
-    carteiraArray.forEach(ativo => {
-        ativo.pesoCarteira = patrimonioTotal > 0 ? (ativo.valorAtual / patrimonioTotal) * 100 : 0;
-    });
+    carteiraArray.forEach(ativo => ativo.pesoCarteira = patrimonioTotal > 0 ? (ativo.valorAtual / patrimonioTotal) * 100 : 0);
 
-    carteiraArray.sort((a, b) => {
-        let valA = a[sortColumn];
-        let valB = b[sortColumn];
-        if (typeof valA === 'string') {
-            valA = valA.toLowerCase();
-            valB = valB.toLowerCase();
+    const groupedAssets = carteiraArray.reduce((acc, ativo) => {
+        const tipoMapeado = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(ativo.tipoAtivo) ? 'Renda Fixa' : ativo.tipoAtivo;
+        if (!acc[tipoMapeado]) {
+            acc[tipoMapeado] = { assets: [], total: 0 };
         }
-        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-    });
+        acc[tipoMapeado].assets.push(ativo);
+        acc[tipoMapeado].total += ativo.valorAtual;
+        return acc;
+    }, {});
 
-    tableBody.innerHTML = carteiraArray.map(ativo => {
-        const ativoInfo = precosEInfos[ativo.ativo];
-        const logoUrl = ativoInfo?.logoUrl;
-        const firstLetter = ativo.ativo.charAt(0);
-        const logoHtml = logoUrl
-            ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">`
-            : `<div class="ativo-logo-fallback">${firstLetter}</div>`;
+    let html = '';
+    const groupOrder = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
 
-        return `
-            <tr>
-                <td>
-                    <div class="ativo-com-logo">
-                        ${logoHtml}
-                        <span>${ativo.ativo}</span>
+    for (const tipo of groupOrder) {
+        if (!groupedAssets[tipo]) continue;
+
+        const group = groupedAssets[tipo];
+        const assets = group.assets;
+        const groupTotal = group.total;
+        const groupPercent = patrimonioTotal > 0 ? (groupTotal / patrimonioTotal) * 100 : 0;
+        const groupId = `group-${tipo.replace(/\s+/g, '-')}`;
+        
+        if (groupCollapseState[groupId] === undefined) {
+            groupCollapseState[groupId] = true;
+        }
+        const isExpanded = groupCollapseState[groupId];
+
+        assets.sort((a, b) => {
+            let valA = a[sortColumn];
+            let valB = b[sortColumn];
+            if (typeof valA === 'string') {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        html += `<tbody class="collapsible-group ${isExpanded ? 'is-expanded' : ''}" id="${groupId}">`;
+        html += `
+            <tr class="group-header">
+                <td colspan="2">
+                    <div class="group-header-title">
+                        <i class="fas fa-chevron-right group-toggle-icon"></i>
+                        ${tipo} (${assets.length})
                     </div>
                 </td>
-                <td><span class="tipo-ativo-badge">${ativo.tipoAtivo}</span></td>
-                <td>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</td>
-                <td>${formatCurrency(ativo.precoMedio)}</td>
-                <td>${formatCurrency(ativo.valorAtual)}</td>
-                <td class="${ativo.rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${ativo.rentabilidade.toFixed(2)}%</td>
-                <td>${ativo.pesoCarteira.toFixed(2)}%</td>
+                <td colspan="3">${formatCurrency(groupTotal)}</td>
+                <td colspan="2" style="text-align: right;">${groupPercent.toFixed(2)}%</td>
             </tr>
         `;
-    }).join('');
+
+        assets.forEach(ativo => {
+            const ativoInfo = precosEInfos[ativo.ativo];
+            const logoUrl = ativoInfo?.logoUrl;
+            const firstLetter = ativo.ativo.charAt(0);
+            const logoHtml = logoUrl
+                ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">`
+                : `<div class="ativo-logo-fallback">${firstLetter}</div>`;
+
+            html += `
+                <tr class="asset-row">
+                    <td><div class="ativo-com-logo">${logoHtml}<span>${ativo.ativo}</span></div></td>
+                    <td><span class="tipo-ativo-badge">${ativo.tipoAtivo}</span></td>
+                    <td>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</td>
+                    <td>${formatCurrency(ativo.precoMedio)}</td>
+                    <td>${formatCurrency(ativo.valorAtual)}</td>
+                    <td class="${ativo.rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${ativo.rentabilidade.toFixed(2)}%</td>
+                    <td>${ativo.pesoCarteira.toFixed(2)}%</td>
+                </tr>
+            `;
+        });
+        html += `</tbody>`;
+    }
+
+    tableBody.innerHTML = html;
 
     document.querySelectorAll('#patrimonio .table-card table thead th').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
@@ -359,12 +399,12 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
     });
 }
 
+
 export async function renderPatrimonioTab(lancamentos, proventos) {
     const patrimonioContent = document.getElementById('patrimonio-content');
     if (!patrimonioContent) return;
 
     if (!lancamentos || lancamentos.length === 0) {
-        // Lógica para limpar a UI se não houver lançamentos...
         return;
     }
     
@@ -403,7 +443,6 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
     const rfPrecos = await getPrecosAtuaisRendaFixa(lancamentos);
     Object.assign(precosEInfos, rfPrecos);
     
-    // As funções de renderização agora usam os dados corretos
     renderPatrimonioEvolutionChart(lancamentos, precosEInfos);
     renderAssetAllocationChart(carteira, precosEInfos);
     renderPosicaoConsolidada(carteira, precosEInfos);
@@ -411,10 +450,12 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const tableHeader = document.querySelector('#patrimonio .table-card table thead');
+    const tableBody = document.getElementById('posicao-consolidada-body');
+
     if (tableHeader) {
         tableHeader.addEventListener('click', (e) => {
-            const th = e.target.closest('th');
-            if (th && th.dataset.sort) {
+            const th = e.target.closest('th[data-sort]');
+            if (th) {
                 const newSortColumn = th.dataset.sort;
                 if (sortColumn === newSortColumn) {
                     sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -425,6 +466,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.allLancamentos) {
                     renderPatrimonioTab(window.allLancamentos, window.allProventos);
                 }
+            }
+        });
+    }
+
+    if (tableBody) {
+        tableBody.addEventListener('click', (e) => {
+            const header = e.target.closest('.group-header');
+            if (header) {
+                const parentTbody = header.closest('tbody.collapsible-group');
+                const groupId = parentTbody.id;
+                
+                // Alterna o estado de recolhimento para este grupo específico
+                groupCollapseState[groupId] = !parentTbody.classList.contains('is-expanded');
+                
+                // Aplica a classe ao tbody para controlar a visibilidade via CSS
+                parentTbody.classList.toggle('is-expanded');
             }
         });
     }
