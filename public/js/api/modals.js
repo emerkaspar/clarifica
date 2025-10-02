@@ -56,9 +56,8 @@ function setupLancamentosModal(userID) {
             }
         }
     };
-    // ALTERAÇÃO: Mudei o gatilho de 'change' para 'blur'
     dataOperacaoInput.addEventListener('blur', validateOperationYear);
-    // FIM DA ALTERAÇÃO E DO VALIDADOR
+    // FIM DO VALIDADOR
 
     const parseCurrency = (value) => {
         if (!value || typeof value !== 'string') return 0;
@@ -486,7 +485,41 @@ function setupProventoModal(userID) {
     const hoje = new Date().toISOString().split("T")[0];
     const ativoInput = form.querySelector("#provento-ativo");
     const sugestoesDiv = form.querySelector("#provento-ativo-sugestoes");
+    const dataPagamentoInput = form.querySelector("#provento-data-pagamento");
+    const valorInput = form.querySelector("#provento-valor");
     let timeoutBusca;
+
+    // VALIDADOR DE ANO DO LANÇAMENTO
+    const validatePaymentYear = () => {
+        if (!dataPagamentoInput.value) return;
+        const inputDate = new Date(dataPagamentoInput.value + 'T00:00:00');
+        const inputYear = inputDate.getFullYear();
+        const currentYear = new Date().getFullYear();
+
+        if (inputYear < currentYear) {
+            if (!confirm("Tem certeza que o lançamento é desse ano?")) {
+                dataPagamentoInput.value = ''; // Limpa o campo se o usuário cancelar
+            }
+        }
+    };
+    dataPagamentoInput.addEventListener('blur', validatePaymentYear);
+
+    // FUNÇÕES DE FORMATAÇÃO DE MOEDA
+    const parseCurrency = (value) => {
+        if (!value || typeof value !== 'string') return 0;
+        return parseFloat(value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+    };
+    const formatCurrencyOnInput = (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value) {
+            let numberValue = parseInt(value, 10) / 100;
+            e.target.value = numberValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        } else {
+            e.target.value = '';
+        }
+    };
+    valorInput.addEventListener('input', formatCurrencyOnInput);
+
 
     ativoInput.addEventListener("input", () => {
         clearTimeout(timeoutBusca);
@@ -527,16 +560,35 @@ function setupProventoModal(userID) {
             ativo: form["provento-ativo"].value.toUpperCase(),
             tipoProvento: form["provento-tipo-provento"].value,
             dataPagamento: form["provento-data-pagamento"].value,
-            valor: parseFloat(form["provento-valor"].value),
+            valor: parseCurrency(form["provento-valor"].value),
             timestamp: serverTimestamp(),
         };
 
+        const submitButton = form.querySelector(".btn-adicionar");
+        const originalButtonHtml = '<i class="fas fa-plus"></i> Lançar';
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
         try {
             await addDoc(collection(db, "proventos"), proventoData);
-            closeModal("provento-modal");
+            
+            submitButton.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+            setTimeout(() => {
+                form['provento-ativo'].value = '';
+                form['provento-valor'].value = '';
+                sugestoesDiv.innerHTML = "";
+                sugestoesDiv.style.display = "none";
+                form['provento-ativo'].focus();
+
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonHtml;
+            }, 1500);
+
         } catch (error) {
             console.error("Erro ao lançar provento: ", error);
             alert("Erro ao lançar provento: " + error.message);
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonHtml;
         }
     });
 
