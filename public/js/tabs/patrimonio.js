@@ -11,6 +11,13 @@ const groupCollapseState = {};
 
 const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+/**
+ * Busca os preços atuais para todos os ativos de Renda Fixa.
+ * - Para Tesouro Direto: Utiliza a marcação a mercado (MaM) a partir dos dados carregados.
+ * - Para outros (CDB, LCI, etc.): Calcula o valor na curva do contrato.
+ * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
+ * @returns {Promise<object>} - Objeto com os preços por ticker.
+ */
 async function getPrecosAtuaisRendaFixa(lancamentos) {
     const rfLancamentos = lancamentos.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
     const precosEInfos = {};
@@ -19,70 +26,102 @@ async function getPrecosAtuaisRendaFixa(lancamentos) {
         return precosEInfos;
     }
 
-    const rfValores = {};
+    // Separa Tesouro Direto dos outros ativos de RF
+    const tesouroDiretoLancamentos = rfLancamentos.filter(l => l.tipoAtivo === 'Tesouro Direto');
+    const outrosRfLancamentos = rfLancamentos.filter(l => l.tipoAtivo !== 'Tesouro Direto');
 
-    try {
-        const hoje = new Date();
-        const dataMaisAntiga = rfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, rfLancamentos[0].data);
-        const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
-
-        for (const ativo of rfLancamentos) {
-            const valorAplicadoOriginal = ativo.valorAplicado;
-            let valorBruto = valorAplicadoOriginal;
-            const dataCalculo = new Date(ativo.data + 'T00:00:00');
-            const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
-
-            if (ativo.tipoRentabilidade === 'Pós-Fixado') {
-                let acumuladorCDI = 1;
-                const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
-                historicoCDI
-                    .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
-                    .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
-                valorBruto = valorAplicadoOriginal * acumuladorCDI;
-            } else if (ativo.tipoRentabilidade === 'Prefixado') {
-                const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
-                const diasUteis = diasCorridosCalculo * (252 / 365.25);
-                valorBruto = valorAplicadoOriginal * Math.pow(1 + taxaAnual, diasUteis / 252);
-            } else if (ativo.tipoRentabilidade === 'Híbrido') {
-                let acumuladorIPCA = 1;
-                const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
-                const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
-                historicoIPCA
-                    .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
-                    .forEach(item => { acumuladorIPCA *= (1 + parseFloat(item.valor) / 100); });
-                const valorCorrigido = valorAplicadoOriginal * acumuladorIPCA;
-                const diasUteis = diasCorridosCalculo * (252 / 365.25);
-                valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+    // 1. Processa Tesouro Direto usando Marcação a Mercado (MaM)
+    if (tesouroDiretoLancamentos.length > 0 && window.allTesouroDiretoPrices) {
+        const tdValores = {};
+        for (const ativo of tesouroDiretoLancamentos) {
+            if (!tdValores[ativo.ativo]) {
+                tdValores[ativo.ativo] = { valorTotalMam: 0, quantidadeTotal: 0 };
             }
+            const precoInfo = window.allTesouroDiretoPrices[ativo.ativo];
+            // Usa o preço de mercado (PU) multiplicado pela quantidade do usuário
+            const valorMam = precoInfo ? precoInfo.valor * ativo.quantidade : ativo.valorAplicado; // Fallback para valor aplicado se não encontrar
 
-            const lucro = valorBruto - ativo.valorAplicado;
-            let aliquotaIR = 0;
-            if (lucro > 0 && !['LCI', 'LCA'].includes(ativo.tipoAtivo)) {
-                if (diasCorridosCalculo <= 180) aliquotaIR = 0.225;
-                else if (diasCorridosCalculo <= 360) aliquotaIR = 0.20;
-                else if (diasCorridosCalculo <= 720) aliquotaIR = 0.175;
-                else aliquotaIR = 0.15;
-            }
-            const valorLiquido = valorBruto - (lucro * aliquotaIR);
-
-            if (!rfValores[ativo.ativo]) {
-                rfValores[ativo.ativo] = { valorTotal: 0, quantidadeTotal: 0 };
-            }
-            rfValores[ativo.ativo].valorTotal += valorLiquido;
-            rfValores[ativo.ativo].quantidadeTotal += ativo.quantidade;
+            tdValores[ativo.ativo].valorTotalMam += valorMam;
+            tdValores[ativo.ativo].quantidadeTotal += ativo.quantidade;
         }
 
-        for (const ticker in rfValores) {
-            const data = rfValores[ticker];
+        for (const ticker in tdValores) {
+            const data = tdValores[ticker];
             if (data.quantidadeTotal > 0) {
                 precosEInfos[ticker] = {
-                    price: data.valorTotal / data.quantidadeTotal,
+                    price: data.valorTotalMam / data.quantidadeTotal, // Retorna o preço unitário de mercado
                     logoUrl: null
                 };
             }
         }
-    } catch (error) {
-        console.error("Erro ao calcular preços de Renda Fixa para a aba Patrimônio:", error);
+    }
+
+    // 2. Processa outros ativos de RF usando o cálculo na curva (lógica existente)
+    if (outrosRfLancamentos.length > 0) {
+        const outrosRfValores = {};
+        try {
+            const hoje = new Date();
+            const dataMaisAntiga = outrosRfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, outrosRfLancamentos[0].data);
+            const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
+
+            for (const ativo of outrosRfLancamentos) {
+                const valorAplicadoOriginal = ativo.valorAplicado;
+                let valorBruto = valorAplicadoOriginal;
+                const dataCalculo = new Date(ativo.data + 'T00:00:00');
+                const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
+
+                if (ativo.tipoRentabilidade === 'Pós-Fixado') {
+                    let acumuladorCDI = 1;
+                    const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
+                    historicoCDI
+                        .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
+                        .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
+                    valorBruto = valorAplicadoOriginal * acumuladorCDI;
+                } else if (ativo.tipoRentabilidade === 'Prefixado') {
+                    const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
+                    const diasUteis = diasCorridosCalculo * (252 / 365.25);
+                    valorBruto = valorAplicadoOriginal * Math.pow(1 + taxaAnual, diasUteis / 252);
+                } else if (ativo.tipoRentabilidade === 'Híbrido') {
+                    let acumuladorIPCA = 1;
+                    const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
+                    const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
+                    historicoIPCA
+                        .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
+                        .forEach(item => { acumuladorIPCA *= (1 + parseFloat(item.valor) / 100); });
+                    const valorCorrigido = valorAplicadoOriginal * acumuladorIPCA;
+                    const diasUteis = diasCorridosCalculo * (252 / 365.25);
+                    valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+                }
+
+                const lucro = valorBruto - ativo.valorAplicado;
+                let aliquotaIR = 0;
+                if (lucro > 0 && !['LCI', 'LCA'].includes(ativo.tipoAtivo)) {
+                    if (diasCorridosCalculo <= 180) aliquotaIR = 0.225;
+                    else if (diasCorridosCalculo <= 360) aliquotaIR = 0.20;
+                    else if (diasCorridosCalculo <= 720) aliquotaIR = 0.175;
+                    else aliquotaIR = 0.15;
+                }
+                const valorLiquido = valorBruto - (lucro * aliquotaIR);
+
+                if (!outrosRfValores[ativo.ativo]) {
+                    outrosRfValores[ativo.ativo] = { valorTotal: 0, quantidadeTotal: 0 };
+                }
+                outrosRfValores[ativo.ativo].valorTotal += valorLiquido;
+                outrosRfValores[ativo.ativo].quantidadeTotal += ativo.quantidade;
+            }
+
+            for (const ticker in outrosRfValores) {
+                const data = outrosRfValores[ticker];
+                if (data.quantidadeTotal > 0) {
+                    precosEInfos[ticker] = {
+                        price: data.valorTotal / data.quantidadeTotal,
+                        logoUrl: null
+                    };
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao calcular preços de Outros Renda Fixa para a aba Patrimônio:", error);
+        }
     }
     return precosEInfos;
 }
@@ -125,7 +164,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
                 valorInvestidoAcumulado -= l.quantidade * precoMedio;
             }
         }
-        
+
         if (!carteira[l.ativo]) {
             carteira[l.ativo] = { quantidade: 0, valorTotalInvestido: 0, quantidadeComprada: 0 };
         }
@@ -214,7 +253,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
                 }
             },
             plugins: {
-                legend: { position: 'top', align: 'end', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8 }},
+                legend: { position: 'top', align: 'end', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8 } },
                 tooltip: {
                     mode: 'index',
                     callbacks: {
@@ -334,7 +373,7 @@ function renderPosicaoConsolidada(carteira, precosEInfos) {
         const groupTotal = group.total;
         const groupPercent = patrimonioTotal > 0 ? (groupTotal / patrimonioTotal) * 100 : 0;
         const groupId = `group-${tipo.replace(/\s+/g, '-')}`;
-        
+
         if (groupCollapseState[groupId] === undefined) {
             groupCollapseState[groupId] = true;
         }
@@ -423,7 +462,7 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
     if (!lancamentos || lancamentos.length === 0) {
         return;
     }
-    
+
     const carteira = {};
     lancamentos.forEach(l => {
         if (!carteira[l.ativo]) {
@@ -454,11 +493,16 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
     const tickersAtivos = Object.values(carteira)
         .filter(a => a.quantidade > 0 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
         .map(a => a.ativo);
-    
+
+    // Busca preços de RV (Ações, FIIs, etc)
     const precosEInfos = await fetchCurrentPrices(tickersAtivos);
+
+    // Busca preços de RF (CDB, Tesouro, etc), agora com a lógica correta de MaM para TD
     const rfPrecos = await getPrecosAtuaisRendaFixa(lancamentos);
+
+    // Combina todos os preços
     Object.assign(precosEInfos, rfPrecos);
-    
+
     renderPatrimonioEvolutionChart(lancamentos, precosEInfos);
     renderAssetAllocationChart(carteira, precosEInfos);
     renderPosicaoConsolidada(carteira, precosEInfos);
@@ -489,9 +533,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (header) {
                 const parentTbody = header.closest('tbody.collapsible-group');
                 const groupId = parentTbody.id;
-                
+
                 groupCollapseState[groupId] = !parentTbody.classList.contains('is-expanded');
-                
+
                 parentTbody.classList.toggle('is-expanded');
             }
         });
