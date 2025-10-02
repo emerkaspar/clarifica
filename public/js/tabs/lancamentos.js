@@ -27,28 +27,32 @@ export function renderHistorico(lancamentos, precosEInfos = {}) {
         const valorTotal = l.valorTotal || l.valorAplicado || 0;
         const quantidade = l.quantidade || '-';
         const preco = l.preco;
-
-        // Lógica para obter a logomarca ou o ícone padrão
+        const dataOperacaoFormatada = new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR');
         const ativoInfo = precosEInfos[l.ativo];
         const logoUrl = ativoInfo?.logoUrl;
-        const logoHtml = logoUrl 
+        const logoHtml = logoUrl
             ? `<img src="${logoUrl}" alt="${l.ativo}" class="ativo-logo">`
             : `<div class="ativo-logo-fallback"><i class="fas fa-dollar-sign"></i></div>`;
 
-
+        // Adicionada a classe "lancamento-card" para o CSS de responsividade
         return `
-            <div class="lista-item" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
-                <div class="lista-item-valor ativo-com-logo">
-                    ${logoHtml}
-                    <span>${l.ativo}</span>
+            <div class="lista-item lancamento-card">
+                <div class="card-cell" data-label="Ativo">
+                    <div class="ativo-com-logo">
+                        ${logoHtml}
+                        <span>${l.ativo}</span>
+                    </div>
                 </div>
-                <div><span class="tipo-ativo-badge">${l.tipoAtivo}</span></div>
-                <div class="lista-item-valor ${l.tipoOperacao === "compra" ? "operacao-compra" : "operacao-venda"}">
-                  ${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)}
+                <div class="card-cell" data-label="Data Operação">${dataOperacaoFormatada}</div>
+                <div class="card-cell" data-label="Tipo"><span class="tipo-ativo-badge">${l.tipoAtivo}</span></div>
+                <div class="card-cell" data-label="Ordem">
+                    <span class="${l.tipoOperacao === "compra" ? "operacao-compra" : "operacao-venda"}">
+                      ${l.tipoOperacao.charAt(0).toUpperCase() + l.tipoOperacao.slice(1)}
+                    </span>
                 </div>
-                <div class="lista-item-valor">${typeof quantidade === 'number' ? quantidade.toLocaleString("pt-BR") : quantidade}</div>
-                <div class="lista-item-valor">${isRendaFixa || !preco ? '-' : preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
-                <div class="lista-item-valor">${valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                <div class="card-cell" data-label="Quantidade">${typeof quantidade === 'number' ? quantidade.toLocaleString("pt-BR") : quantidade}</div>
+                <div class="card-cell" data-label="Preço Unitário">${isRendaFixa || !preco ? '-' : preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+                <div class="card-cell" data-label="Total">${valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
                 <div class="lista-acoes">
                     <button class="btn-crud btn-editar" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
                     <button class="btn-crud btn-excluir" data-id="${l.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
@@ -57,6 +61,8 @@ export function renderHistorico(lancamentos, precosEInfos = {}) {
         `;
     }).join("");
 }
+
+// O restante do arquivo (listeners) permanece o mesmo...
 
 // Event listener para os botões de editar e excluir
 historicoListaDiv.addEventListener("click", async (e) => {
@@ -79,7 +85,6 @@ historicoListaDiv.addEventListener("click", async (e) => {
         const lancamento = docSnap.data();
         const isRendaFixa = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(lancamento.tipoAtivo);
 
-        // Chama a função global correta para abrir o modal
         if (isRendaFixa && typeof window.openRendaFixaModal === 'function') {
             window.openRendaFixaModal(lancamento, docId);
         } else if (typeof window.openLancamentoModal === 'function') {
@@ -88,9 +93,7 @@ historicoListaDiv.addEventListener("click", async (e) => {
     }
 });
 
-// Event listener para a barra de pesquisa
 searchInput.addEventListener("input", () => {
-    // Re-renderiza a lista com o filtro aplicado.
     if (window.allLancamentos && window.precosEInfos) {
         renderHistorico(window.allLancamentos, window.precosEInfos);
     }

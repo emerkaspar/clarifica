@@ -2148,3 +2148,71 @@ tbody.is-expanded .group-toggle-icon {
     text-align: left; /* Alinha o texto do valor à esquerda */
   }
 }
+/* --- ESTILOS PARA TABELA/CARD DE LANÇAMENTOS --- */
+
+/* Layout Padrão (Desktop) */
+.lista-item.lancamento-card {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr auto;
+  min-width: 800px;
+}
+
+.lancamento-card .card-cell {
+  display: flex; /* Alinha o conteúdo verticalmente */
+  align-items: center;
+}
+
+/* Esconde os labels dos cards ("Ativo:", "Data:", etc.) na visão de desktop */
+.lancamento-card .card-cell::before {
+  display: none;
+}
+
+/* --- RESPONSIVIDADE TABELA DE LANÇAMENTOS (CELULAR) --- */
+@media (max-width: 768px) {
+  /* Esconde o cabeçalho da tabela em telas pequenas */
+  .lancamentos-header {
+    display: none;
+  }
+
+  /* Transforma cada linha em um card */
+  .lista-item.lancamento-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Duas colunas para os dados */
+    gap: 15px 10px;
+    padding: 15px;
+    position: relative;
+    padding-bottom: 50px; /* Espaço para os botões de ação */
+    min-width: 0; /* Remove a largura mínima no mobile */
+  }
+
+  /* Estiliza cada célula do card no mobile */
+  .lancamento-card .card-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start; /* Alinha o conteúdo à esquerda */
+  }
+
+  /* Mostra o label (título da coluna) antes de cada dado */
+  .lancamento-card .card-cell::before {
+    content: attr(data-label);
+    display: block; /* Garante que o label seja exibido */
+    color: #a0a7b3;
+    font-size: 0.75rem;
+    font-weight: normal;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Célula do Ativo (primeira) ocupa a largura toda no card */
+  .lancamento-card .card-cell:first-child {
+    grid-column: 1 / -1; /* Ocupa as duas colunas */
+  }
+
+  /* Posiciona os botões de ação no canto inferior direito do card */
+  .lancamento-card .lista-acoes {
+    position: absolute;
+    bottom: 10px;
+    right: 15px;
+  }
+}
