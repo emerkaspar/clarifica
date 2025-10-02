@@ -109,7 +109,7 @@ async function fetchDailyVariation(tickers) {
         if (data?.results?.[0]?.historicalDataPrice?.length >= 1) {
             const prices = data.results[0].historicalDataPrice;
             const hoje = prices[0].close;
-            const ontem = prices[1]?.close || hoje; // Fallback se não houver dia anterior
+            const ontem = prices[1]?.close || hoje;
             if (hoje && ontem) {
                 variations[ticker] = {
                     change: hoje - ontem,
@@ -122,94 +122,83 @@ async function fetchDailyVariation(tickers) {
 }
 
 /**
- * Renderiza o gráfico de evolução do patrimônio.
+ * Renderiza o gráfico de evolução do patrimônio (LÓGICA CORRIGIDA).
  */
 async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
     const canvas = document.getElementById('patrimonio-evolution-chart');
     if (!canvas) return;
 
+    if (patrimonioEvolutionChart) {
+        patrimonioEvolutionChart.destroy();
+        patrimonioEvolutionChart = null;
+    }
+
     const lancamentosOrdenados = [...lancamentos].sort((a, b) => new Date(a.data) - new Date(b.data));
     if (lancamentosOrdenados.length === 0) {
-        if (patrimonioEvolutionChart) patrimonioEvolutionChart.destroy();
         return;
     }
 
     const monthlyData = {};
     const hoje = new Date();
-    const dataInicio = new Date(lancamentosOrdenados[0].data);
+    const dataInicio = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
+
     for (let d = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1); d <= hoje; d.setMonth(d.getMonth() + 1)) {
         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         monthlyData[monthKey] = {
             label: d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }),
             valorAplicado: 0,
             patrimonioFinal: 0,
-            processed: false
         };
     }
 
+    const carteira = {};
     let valorInvestidoAcumulado = 0;
-    let carteiraHistorico = {};
+    let lancamentoIndex = 0;
 
-    lancamentosOrdenados.forEach(l => {
-        if (!carteiraHistorico[l.ativo]) {
-            carteiraHistorico[l.ativo] = { quantidade: 0, valorTotalInvestido: 0, _quantidadeComprada: 0, _valorTotalComprado: 0 };
-        }
-        const ativo = carteiraHistorico[l.ativo];
+    for (const monthKey in monthlyData) {
+        const [year, month] = monthKey.split('-').map(Number);
+        const fimDoMes = new Date(year, month, 0, 23, 59, 59);
 
-        if (l.tipoOperacao === 'compra') {
-            valorInvestidoAcumulado += l.valorTotal;
-            ativo.quantidade += l.quantidade;
-            ativo.valorTotalInvestido += l.valorTotal;
-            ativo._quantidadeComprada += l.quantidade;
-            ativo._valorTotalComprado += l.valorTotal;
-        } else if (l.tipoOperacao === 'venda') {
-            if (ativo._quantidadeComprada > 0) {
-                const precoMedio = ativo._valorTotalComprado / ativo._quantidadeComprada;
-                valorInvestidoAcumulado -= l.quantidade * precoMedio;
+        while (lancamentoIndex < lancamentosOrdenados.length && new Date(lancamentosOrdenados[lancamentoIndex].data + 'T00:00:00') <= fimDoMes) {
+            const l = lancamentosOrdenados[lancamentoIndex];
+            
+            if (!carteira[l.ativo]) {
+                carteira[l.ativo] = { quantidade: 0, valorTotalInvestido: 0, _quantidadeComprada: 0, _valorTotalComprado: 0 };
             }
-            ativo.quantidade -= l.quantidade;
+            const ativo = carteira[l.ativo];
+
+            if (l.tipoOperacao === 'compra') {
+                valorInvestidoAcumulado += l.valorTotal;
+                ativo.quantidade += l.quantidade;
+                ativo.valorTotalInvestido += l.valorTotal;
+                ativo._quantidadeComprada += l.quantidade;
+                ativo._valorTotalComprado += l.valorTotal;
+            } else if (l.tipoOperacao === 'venda') {
+                if (ativo._quantidadeComprada > 0) {
+                    const precoMedio = ativo._valorTotalComprado / ativo._quantidadeComprada;
+                    valorInvestidoAcumulado -= l.quantidade * precoMedio;
+                }
+                ativo.quantidade -= l.quantidade;
+            }
+            lancamentoIndex++;
         }
 
-        const monthKey = l.data.substring(0, 7);
-        if (monthlyData[monthKey]) {
-            monthlyData[monthKey].valorAplicado = valorInvestidoAcumulado < 0 ? 0 : valorInvestidoAcumulado;
-        }
-    });
+        let patrimonioAtualDoMes = 0;
+        Object.keys(carteira).forEach(ticker => {
+            const ativo = carteira[ticker];
+            if (ativo.quantidade > 1e-8) {
+                const preco = precosEInfos[ticker]?.price || (ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0);
+                patrimonioAtualDoMes += ativo.quantidade * preco;
+            }
+        });
 
-    let patrimonioDoMes = 0;
-    Object.keys(carteiraHistorico).forEach(ticker => {
-        const ativo = carteiraHistorico[ticker];
-        if (ativo.quantidade > 1e-8) {
-            const preco = precosEInfos[ticker]?.price || (ativo._valorTotalComprado / ativo._quantidadeComprada);
-            patrimonioDoMes += ativo.quantidade * preco;
-        }
-    });
-    
-    const ultimoMesProcessado = Object.keys(monthlyData).sort().pop();
-    if(monthlyData[ultimoMesProcessado]) {
-        monthlyData[ultimoMesProcessado].patrimonioFinal = patrimonioDoMes;
-        monthlyData[ultimoMesProcessado].processed = true;
+        monthlyData[monthKey].patrimonioFinal = patrimonioAtualDoMes;
+        monthlyData[monthKey].valorAplicado = valorInvestidoAcumulado < 0 ? 0 : valorInvestidoAcumulado;
     }
-
-    let lastValorAplicado = 0;
-    let lastPatrimonio = 0;
-    for (const key in monthlyData) {
-        if (monthlyData[key].processed || monthlyData[key].valorAplicado > 0) {
-            lastValorAplicado = monthlyData[key].valorAplicado;
-            lastPatrimonio = monthlyData[key].patrimonioFinal > 0 ? monthlyData[key].patrimonioFinal : lastPatrimonio;
-            monthlyData[key].processed = true; 
-        } else {
-            monthlyData[key].valorAplicado = lastValorAplicado;
-            monthlyData[key].patrimonioFinal = lastPatrimonio;
-        }
-    }
-
 
     const labels = Object.values(monthlyData).map(d => d.label);
     const valoresAplicados = Object.values(monthlyData).map(d => d.valorAplicado);
     const patrimoniosFinais = Object.values(monthlyData).map(d => d.patrimonioFinal);
-
-    if (patrimonioEvolutionChart) patrimonioEvolutionChart.destroy();
 
     patrimonioEvolutionChart = new Chart(canvas, {
         type: 'line',
@@ -220,8 +209,8 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
                     label: 'Valor Aplicado',
                     data: valoresAplicados,
                     borderColor: '#5a6170',
-                    backgroundColor: 'transparent',
                     borderDash: [5, 5],
+                    fill: false,
                     pointRadius: 0,
                     tension: 0.1
                 },
@@ -250,12 +239,18 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
     });
 }
 
+
 /**
  * Renderiza o gráfico de alocação de ativos.
  */
 function renderAssetAllocationChart(carteira, precosEInfos) {
     const canvas = document.getElementById('asset-allocation-chart');
     if (!canvas) return;
+
+    if (assetAllocationChart) {
+        assetAllocationChart.destroy();
+        assetAllocationChart = null;
+    }
 
     const alocacao = { 'Ações': 0, 'FIIs': 0, 'ETF': 0, 'Cripto': 0, 'Renda Fixa': 0 };
     let patrimonioTotal = 0;
@@ -264,7 +259,6 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
         if (ativo.quantidade > 1e-8) {
             const preco = precosEInfos[ativo.ativo]?.price || 0;
             const valorAtual = ativo.quantidade * preco;
-
             const tipoMapeado = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(ativo.tipoAtivo) ? 'Renda Fixa' : ativo.tipoAtivo;
             if (alocacao.hasOwnProperty(tipoMapeado)) {
                 alocacao[tipoMapeado] += valorAtual;
@@ -285,8 +279,6 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
                 <span class="allocation-percent">${percentage.toFixed(2)}%</span>
             </div>`;
     }).join('');
-
-    if (assetAllocationChart) assetAllocationChart.destroy();
 
     assetAllocationChart = new Chart(canvas, {
         type: 'doughnut',
@@ -458,9 +450,14 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
  */
 export async function renderPatrimonioTab(lancamentos, proventos) {
     const patrimonioContent = document.getElementById('patrimonio-content');
-    if (!patrimonioContent || !lancamentos || lancamentos.length === 0) return;
+    if (!patrimonioContent || !lancamentos || lancamentos.length === 0) {
+         if (patrimonioEvolutionChart) patrimonioEvolutionChart.destroy();
+         if (assetAllocationChart) assetAllocationChart.destroy();
+         document.getElementById('posicao-consolidada-container').innerHTML = '<h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">Posição Consolidada</h3><p>Nenhum lançamento encontrado.</p>';
+         document.getElementById('allocation-details').innerHTML = '';
+        return;
+    }
 
-    // 1. Consolida a carteira
     const carteira = lancamentos.reduce((acc, l) => {
         if (!acc[l.ativo]) {
             acc[l.ativo] = {
@@ -484,7 +481,6 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
         return acc;
     }, {});
 
-    // 2. Busca todos os preços necessários
     const tickersRV = Object.values(carteira)
         .filter(a => a.quantidade > 1e-8 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
         .map(a => a.ativo);
@@ -496,7 +492,6 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
     ]);
     const precosEInfos = { ...precosRV, ...precosRF };
 
-    // 3. Renderiza os componentes da aba
     renderPatrimonioEvolutionChart(lancamentos, precosEInfos);
     renderAssetAllocationChart(carteira, precosEInfos);
     renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariations);
