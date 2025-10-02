@@ -12,7 +12,14 @@ const setupTabs = () => {
             this.classList.add("active");
             const tabId = this.getAttribute("data-tab");
             if (tabId) {
-                document.getElementById(tabId).classList.add("active");
+                // --- INÍCIO DA CORREÇÃO ---
+                const pane = document.getElementById(tabId);
+                if (pane) {
+                    pane.classList.add("active");
+                } else {
+                    console.error(`Erro: A área de conteúdo para a aba "${tabId}" não foi encontrada.`);
+                }
+                // --- FIM DA CORREÇÃO ---
             }
         });
     });

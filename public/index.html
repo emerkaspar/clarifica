@@ -1343,63 +1343,39 @@
               </div>
             </div>
 
-            <div id="salvar-calculo-modal" class="modal-overlay">
-              <div class="modal-content" style="max-width: 500px">
-                <div class="modal-header">
-                  <h2>Salvar Cálculo</h2>
-                  <button
-                    class="modal-close-btn"
-                    data-modal="salvar-calculo-modal"
-                  >
-                    &times;
-                  </button>
-                </div>
-                <div class="modal-body">
-                  <form id="form-salvar-calculo">
-                    <div
-                      class="form-group-with-hint"
-                      style="margin-bottom: 15px"
-                    >
-                      <label for="salvar-titulo" class="form-label"
-                        >Título do Cálculo</label
-                      >
-                      <input
-                        type="text"
-                        id="salvar-titulo"
-                        class="form-input"
-                        placeholder="Ex: Análise PETR4"
-                        required
-                      />
-                    </div>
-                    <div class="form-group-with-hint">
-                      <label for="salvar-notas" class="form-label"
-                        >Notas (Opcional)</label
-                      >
-                      <textarea
-                        id="salvar-notas"
-                        class="form-input"
-                        rows="3"
-                        placeholder="Ex: Baseado no relatório do 3T25"
-                      ></textarea>
-                    </div>
-                    <div class="modal-footer" style="padding: 25px 0 0 0">
-                      <button
-                        type="button"
-                        class="btn-cancelar"
-                        data-modal="salvar-calculo-modal"
-                      >
-                        Cancelar
-                      </button>
-                      <button type="submit" class="btn-salvar">
-                        <i class="fas fa-save"></i> Salvar
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
             <div class="tab-pane" id="analises">
               <div class="content-container" style="max-width: none">
+                <div class="content-header">
+                  <h3>Análise de Alocação de Carteira</h3>
+                  <button id="btn-definir-divisao-ideal" class="btn-adicionar">
+                    <i class="fas fa-bullseye"></i> Definir Divisão Ideal
+                  </button>
+                </div>
+
+                <div class="patrimonio-grid" style="margin-bottom: 40px">
+                  <div class="patrimonio-card chart-card">
+                    <h4>Divisão Atual da Carteira</h4>
+                    <div class="chart-container-donut">
+                      <canvas id="carteira-atual-chart"></canvas>
+                    </div>
+                  </div>
+                  <div class="patrimonio-card chart-card">
+                    <h4>Divisão Ideal da Carteira</h4>
+                    <div class="chart-container-donut">
+                      <canvas id="carteira-ideal-chart"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="patrimonio-card table-card">
+                  <h4>Comparativo: Atual vs. Ideal</h4>
+                  <div class="table-wrapper">
+                    <div id="comparativo-alocacao-table"></div>
+                  </div>
+                </div>
+
+                <hr style="border-color: #2a2c30; margin: 40px 0" />
+
                 <h3
                   style="
                     color: #e0e0e0;
@@ -1415,6 +1391,134 @@
                   style="position: relative; height: 500px; width: 100%"
                 >
                   <canvas id="rentabilidade-comparativa-chart"></canvas>
+                </div>
+              </div>
+
+              <div id="divisao-carteira-ideal-modal" class="modal-overlay">
+                <div class="modal-content" style="max-width: 500px">
+                  <div class="modal-header">
+                    <h2>Definir Divisão Ideal da Carteira</h2>
+                    <button
+                      class="modal-close-btn"
+                      data-modal="divisao-carteira-ideal-modal"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form id="form-divisao-carteira-ideal">
+                      <p
+                        style="
+                          color: #a0a7b3;
+                          font-size: 0.9rem;
+                          margin-top: 0;
+                          margin-bottom: 20px;
+                        "
+                      >
+                        Defina os percentuais ideais para cada classe de ativo.
+                        A soma deve ser 100%.
+                      </p>
+                      <div
+                        class="form-grid"
+                        style="grid-template-columns: 1fr 1fr"
+                      >
+                        <div class="form-group-with-hint">
+                          <label for="ideal-acoes" class="form-label"
+                            >Ações (%)</label
+                          >
+                          <input
+                            type="number"
+                            id="ideal-acoes"
+                            class="form-input ideal-input"
+                            data-category="Ações"
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                          />
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label for="ideal-fiis" class="form-label"
+                            >FIIs (%)</label
+                          >
+                          <input
+                            type="number"
+                            id="ideal-fiis"
+                            class="form-input ideal-input"
+                            data-category="FIIs"
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                          />
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label for="ideal-renda-fixa" class="form-label"
+                            >Renda Fixa (%)</label
+                          >
+                          <input
+                            type="number"
+                            id="ideal-renda-fixa"
+                            class="form-input ideal-input"
+                            data-category="Renda Fixa"
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                          />
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label for="ideal-etfs" class="form-label"
+                            >ETFs (%)</label
+                          >
+                          <input
+                            type="number"
+                            id="ideal-etfs"
+                            class="form-input ideal-input"
+                            data-category="ETF"
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                          />
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label for="ideal-criptos" class="form-label"
+                            >Criptos (%)</label
+                          >
+                          <input
+                            type="number"
+                            id="ideal-criptos"
+                            class="form-input ideal-input"
+                            data-category="Cripto"
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                          />
+                        </div>
+                      </div>
+                      <div
+                        id="divisao-ideal-validation-message"
+                        class="validation-message"
+                        style="display: none"
+                      ></div>
+                      <div
+                        class="modal-footer"
+                        style="
+                          padding-top: 25px;
+                          padding-right: 0;
+                          padding-bottom: 0;
+                        "
+                      >
+                        <button
+                          type="button"
+                          class="btn-cancelar"
+                          data-modal="divisao-carteira-ideal-modal"
+                        >
+                          Cancelar
+                        </button>
+                        <button type="submit" class="btn-salvar">
+                          <i class="fas fa-save"></i> Salvar
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>

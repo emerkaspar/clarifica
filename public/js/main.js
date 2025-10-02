@@ -140,4 +140,12 @@ function initializeDataListeners(userID) {
 document.addEventListener("DOMContentLoaded", () => {
     initializeAuth(onLogin, onLogout);
     initializeUI();
+
+    // Listener para o evento de atualização da alocação ideal
+    document.addEventListener('idealAllocationChanged', () => {
+        // Re-renderiza a aba de análises para refletir a nova alocação ideal
+        if (allLancamentos && allProventos) {
+            renderAnalisesTab(allLancamentos, allProventos);
+        }
+    });
 });

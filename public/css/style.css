@@ -1527,7 +1527,6 @@ body {
   flex-shrink: 0;
 }
 
-
 /* --- ESTILOS MODERNOS PARA A TABELA DE PATRIMÔNIO (VERSÃO AGRUPADA) --- */
 .patrimonio-grid {
   display: grid;
@@ -1606,14 +1605,15 @@ body {
 }
 
 .patrimonio-card thead {
-   display: none;
+  display: none;
 }
 
 .patrimonio-card tbody tr {
   background-color: #1a1b1e;
   border: 1px solid #2a2c30;
   border-radius: 8px;
-  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
 }
 
 .patrimonio-card td {
@@ -1643,8 +1643,8 @@ body {
 }
 
 .group-header td {
-    font-weight: 600;
-    color: #e0e0e0;
+  font-weight: 600;
+  color: #e0e0e0;
 }
 
 .group-header-title {
@@ -1688,25 +1688,24 @@ tbody.is-expanded .group-toggle-icon {
 }
 
 .patrimonio-card .table-header-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
-    gap: 15px; /* Mesmo gap das colunas da tabela */
-    padding: 0 20px;
-    margin-bottom: 4px;
-    width: 100%;
-    box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+  gap: 15px; /* Mesmo gap das colunas da tabela */
+  padding: 0 20px;
+  margin-bottom: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .patrimonio-card .table-header-row div {
-    color: #a0a7b3;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    text-align: left;
+  color: #a0a7b3;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  text-align: left;
 }
 .patrimonio-card .table-header-row div[data-sort] {
-    cursor: pointer;
+  cursor: pointer;
 }
-
 
 @media (max-width: 1200px) {
   .main-summary-header {
@@ -1774,7 +1773,7 @@ tbody.is-expanded .group-toggle-icon {
 
 /* Layout para a calculadora PEG Ratio */
 .peg-calculator {
-   grid-template-columns: 1fr 1.2fr; /* Coluna de inputs menor que a de resultados */
+  grid-template-columns: 1fr 1.2fr; /* Coluna de inputs menor que a de resultados */
 }
 
 .calculator-form-grid {
@@ -1785,19 +1784,19 @@ tbody.is-expanded .group-toggle-icon {
 
 /* Remove a margem de baixo do último input */
 .calculator-form-grid .form-group-with-hint {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .calculator-results-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    align-content: start;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  align-content: start;
 }
 
 /* Faz com que os resultados principais ocupem a linha toda */
 .calculator-results-grid .primary-result {
-    grid-column: 1 / -1;
+  grid-column: 1 / -1;
 }
 
 /* Estilo unificado para os itens de resultado */
@@ -1812,7 +1811,7 @@ tbody.is-expanded .group-toggle-icon {
 
 /* Resultados principais maiores e com mais destaque */
 .calculator-card .primary-result {
-    padding: 15px 20px;
+  padding: 15px 20px;
 }
 
 .calculator-card .result-label {
@@ -1825,9 +1824,9 @@ tbody.is-expanded .group-toggle-icon {
 }
 
 .calculator-card .result-label .hint-icon {
-    position: static; /* Reseta a posição absoluta */
-    transform: none;
-    font-size: 0.8rem;
+  position: static; /* Reseta a posição absoluta */
+  transform: none;
+  font-size: 0.8rem;
 }
 
 .calculator-card .result-value {
@@ -1837,20 +1836,19 @@ tbody.is-expanded .group-toggle-icon {
 }
 
 .calculator-card .primary-result .result-value {
-    font-size: 1.7rem; /* Mantém a fonte um pouco maior para os principais */
+  font-size: 1.7rem; /* Mantém a fonte um pouco maior para os principais */
 }
 
 /* Ajustes no grid da calculadora PEG para melhor encaixe */
 .peg-calculator .calculator-form-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .peg-calculator .peg-results {
-    grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
 }
-
 
 /* Remove a grid antiga que não será mais usada, substituída por .calculator-card */
 .calculator-grid {
@@ -1865,4 +1863,39 @@ tbody.is-expanded .group-toggle-icon {
   .peg-calculator {
     grid-template-columns: 1fr;
   }
+}
+/* --- ESTILOS PARA A TABELA COMPARATIVA DE ALOCAÇÃO --- */
+.comparison-row {
+  display: grid;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #2a2c30;
+  font-size: 0.9rem;
+}
+.comparison-row:last-child {
+  border-bottom: none;
+}
+.comparison-category {
+  font-weight: 600;
+  color: #e0e0e0;
+}
+.comparison-value {
+  color: #a0a7b3;
+}
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+}
+.status-pill.status-ok {
+  background-color: #00d9c3; /* Verde */
+}
+.status-pill.status-sub {
+  background-color: #5a67d8; /* Azul */
+}
+.status-pill.status-sobre {
+  background-color: #ef4444; /* Vermelho */
 }

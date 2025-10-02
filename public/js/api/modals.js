@@ -94,17 +94,47 @@ function setupLancamentosModal(userID) {
             valorTotal: parseFloat(form.quantidade.value) * parseFloat(form.preco.value) + (parseFloat(form["outros-custos"].value) || 0),
         };
 
+        const submitButton = form.querySelector(".btn-adicionar");
+        // --- CORREÇÃO APLICADA AQUI ---
+        const originalButtonHtml = docId ? '<i class="fas fa-edit"></i> Atualizar' : '<i class="fas fa-plus"></i> Adicionar';
+
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
         try {
             if (docId) {
+                // Modo de Edição: Atualiza o documento e fecha o modal.
                 await updateDoc(doc(db, "lancamentos", docId), lancamentoData);
+                closeModal("lancamento-modal");
             } else {
+                // Modo de Adição: Adiciona um novo documento, mas NÃO fecha o modal.
                 lancamentoData.timestamp = serverTimestamp();
                 await addDoc(collection(db, "lancamentos"), lancamentoData);
+
+                // Fornece feedback visual e reseta o formulário para o próximo lançamento.
+                submitButton.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+                setTimeout(() => {
+                    // Limpa os campos para a próxima entrada
+                    form.ativo.value = '';
+                    form.quantidade.value = 1;
+                    form.preco.value = '';
+                    form['outros-custos'].value = '';
+                    sugestoesDiv.innerHTML = "";
+                    sugestoesDiv.style.display = "none";
+                    calcularTotal();
+                    form.ativo.focus(); // Coloca o foco de volta no campo "Ativo"
+
+                    // Restaura o botão para o estado original
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonHtml;
+                }, 1500); // Mostra a mensagem de "Salvo!" por 1.5 segundos
             }
-            closeModal("lancamento-modal");
         } catch (error) {
             console.error("Erro ao salvar lançamento: ", error);
             alert("Erro ao salvar: " + error.message);
+            // Restaura o botão em caso de erro
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonHtml;
         }
     });
 
@@ -113,7 +143,10 @@ function setupLancamentosModal(userID) {
         form["doc-id"].value = id;
         form.querySelector("#tipo-ativo").value = data.tipoAtivo || tipoAtivo;
         document.getElementById("lancamento-modal-title").textContent = id ? "Editar Lançamento" : "Adicionar Lançamento";
-        form.querySelector(".btn-adicionar").innerHTML = id ? '<i class="fas fa-edit"></i> Atualizar' : '<i class="fas fa-plus"></i> Adicionar';
+        const submitButton = form.querySelector(".btn-adicionar");
+        submitButton.innerHTML = id ? '<i class="fas fa-edit"></i> Atualizar' : '<i class="fas fa-plus"></i> Adicionar';
+        submitButton.disabled = false; // Garante que o botão está habilitado ao abrir
+
         form.ativo.value = data.ativo || "";
         form["data-operacao"].value = data.data || hoje;
         form.quantidade.value = data.quantidade || 1;
@@ -127,6 +160,7 @@ function setupLancamentosModal(userID) {
         }
         calcularTotal();
         modal.classList.add("show");
+        form.ativo.focus();
     };
 
     document.getElementById("btn-mostrar-form").addEventListener("click", () => window.openLancamentoModal());
@@ -134,10 +168,10 @@ function setupLancamentosModal(userID) {
     document.getElementById("btn-novo-lancamento-acao").addEventListener("click", () => window.openLancamentoModal({}, "", "Ações"));
     document.getElementById("btn-novo-lancamento-etf").addEventListener("click", () => window.openLancamentoModal({ ativo: 'IVVB11' }, "", "ETF"));
     document.getElementById("btn-novo-lancamento-cripto").addEventListener("click", () => window.openLancamentoModal({ ativo: 'BTC' }, "", "Cripto"));
-
 }
 
-// --- MODAL DE DIVISÃO IDEAL DE FIIS (NOVO) ---
+
+// --- MODAL DE DIVISÃO IDEAL DE FIIS ---
 function setupDivisaoIdealModal(userID) {
     const modal = document.getElementById("divisao-ideal-modal");
     if (!modal) return;
@@ -211,6 +245,74 @@ function setupDivisaoIdealModal(userID) {
     });
 }
 
+// --- MODAL DE DIVISÃO IDEAL DA CARTEIRA ---
+function setupDivisaoCarteiraIdealModal() {
+    const modal = document.getElementById("divisao-carteira-ideal-modal");
+    if (!modal) return;
+
+    const form = document.getElementById("form-divisao-carteira-ideal");
+    const openBtn = document.getElementById("btn-definir-divisao-ideal");
+    const validationMessageDiv = document.getElementById("divisao-ideal-validation-message");
+    const inputs = form.querySelectorAll('.ideal-input');
+
+    const saveIdealAllocation = (allocation) => {
+        localStorage.setItem('idealAllocation', JSON.stringify(allocation));
+    };
+
+    const loadIdealAllocation = () => {
+        const saved = localStorage.getItem('idealAllocation');
+        return saved ? JSON.parse(saved) : { 'Ações': 40, 'FIIs': 30, 'Renda Fixa': 20, 'ETF': 5, 'Cripto': 5 };
+    };
+
+    const populateForm = () => {
+        const ideal = loadIdealAllocation();
+        inputs.forEach(input => {
+            input.value = ideal[input.dataset.category] || '';
+        });
+    };
+
+    const validateTotal = () => {
+        let total = 0;
+        inputs.forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+
+        if (total !== 100) {
+            validationMessageDiv.textContent = `A soma dos percentuais é ${total}%, mas deve ser 100%.`;
+            validationMessageDiv.style.display = 'block';
+            return false;
+        }
+
+        validationMessageDiv.style.display = 'none';
+        return true;
+    };
+
+    openBtn.addEventListener("click", () => {
+        populateForm();
+        validateTotal();
+        modal.classList.add("show");
+    });
+
+    form.addEventListener("input", validateTotal);
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (!validateTotal()) {
+            return;
+        }
+
+        const newIdealAllocation = {};
+        inputs.forEach(input => {
+            newIdealAllocation[input.dataset.category] = parseFloat(input.value) || 0;
+        });
+
+        saveIdealAllocation(newIdealAllocation);
+        closeModal("divisao-carteira-ideal-modal");
+
+        document.dispatchEvent(new CustomEvent('idealAllocationChanged'));
+    });
+}
+
 
 // --- MODAL DE RENDA FIXA ---
 function setupRendaFixaModal(userID) {
@@ -224,7 +326,6 @@ function setupRendaFixaModal(userID) {
     const tipoAtivoSelect = form.querySelector("#rendafixa-tipo-ativo");
     let timeoutBusca;
 
-    // Lógica de autocompletar para Títulos do Tesouro
     ativoInput.addEventListener("input", () => {
         clearTimeout(timeoutBusca);
         sugestoesDiv.style.display = "none";
@@ -255,14 +356,12 @@ function setupRendaFixaModal(userID) {
         }, 300);
     });
 
-    // Esconde sugestões se clicar fora
     document.addEventListener('click', (e) => {
         if (sugestoesDiv && !sugestoesDiv.contains(e.target) && e.target !== ativoInput) {
             sugestoesDiv.style.display = 'none';
         }
     });
 
-    // Limpa o input e atualiza o placeholder ao mudar o tipo de ativo
     tipoAtivoSelect.addEventListener('change', () => {
         ativoInput.value = '';
         sugestoesDiv.style.display = 'none';
@@ -633,7 +732,6 @@ function setupAtivoDetalhesModal() {
             renderPerformanceChart(ticker, lancamentosDoAtivo, window.allProventos);
         }, 100);
 
-        // Reset para a primeira aba sempre que abrir
         ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-link').forEach(tab => tab.classList.remove('active'));
         ativoDetalhesModal.querySelectorAll('.fii-detalhes-tab-content').forEach(content => content.classList.remove('active'));
         ativoDetalhesModal.querySelector('[data-tab="performance"]').classList.add('active');
@@ -702,4 +800,5 @@ export function setupAllModals(userID) {
     setupClassificacaoModal(userID);
     setupAtivoDetalhesModal();
     setupUploadCsvModal(userID);
+    setupDivisaoCarteiraIdealModal();
 }
