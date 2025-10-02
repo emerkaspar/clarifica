@@ -1744,6 +1744,9 @@ tbody.is-expanded .group-toggle-icon {
     grid-template-columns: 1fr;
     gap: 40px;
   }
+  .asset-cards-grid {
+    grid-template-columns: 1fr; /* Força uma única coluna em telas menores */
+  }
 }
 
 @media (max-width: 600px) {
@@ -1939,11 +1942,12 @@ tbody.is-expanded .group-toggle-icon {
   transform: rotate(0deg); /* Estado inicial expandido */
 }
 
-.patrimonio-group-content.collapsed + .patrimonio-group-header .group-toggle-icon,
+.patrimonio-group-content.collapsed
+  + .patrimonio-group-header
+  .group-toggle-icon,
 .patrimonio-group-header.collapsed .group-toggle-icon {
-    transform: rotate(-90deg);
+  transform: rotate(-90deg);
 }
-
 
 .group-summary-grid {
   display: flex;
@@ -1985,7 +1989,8 @@ tbody.is-expanded .group-toggle-icon {
   padding: 20px;
   max-height: 5000px; /* Valor alto para permitir a animação de colapso */
   overflow: hidden;
-  transition: max-height 0.5s ease-in-out, padding-top 0.5s ease-in-out, padding-bottom 0.5s ease-in-out;
+  transition: max-height 0.5s ease-in-out, padding-top 0.5s ease-in-out,
+    padding-bottom 0.5s ease-in-out;
 }
 
 .patrimonio-group-content.collapsed {
@@ -2090,12 +2095,12 @@ tbody.is-expanded .group-toggle-icon {
 }
 
 .result-line .sub-value {
-    font-size: 0.75rem;
-    color: #a0a7b3;
-    margin-left: 5px;
+  font-size: 0.75rem;
+  color: #a0a7b3;
+  margin-left: 5px;
 }
 
 /* Garante que a transição de recolher funcione corretamente no ícone */
 .patrimonio-group-header .group-toggle-icon {
-    transition: transform 0.3s ease-out;
+  transition: transform 0.3s ease-out;
 }
