@@ -1,132 +1,129 @@
-import { fetchCurrentPrices } from '../api/brapi.js';
+import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
 import { fetchIndexers } from '../api/bcb.js';
 
+// --- ESTADO E VARIÁVEIS GLOBAIS DO MÓDULO ---
 let patrimonioEvolutionChart = null;
 let assetAllocationChart = null;
-let sortColumn = 'valorAtual';
-let sortDirection = 'desc';
+const groupCollapseState = {}; // Armazena o estado (expandido/recolhido) de cada grupo
 
-// Armazena o estado (expandido/recolhido) de cada grupo
-const groupCollapseState = {};
+// --- FUNÇÕES AUXILIARES DE FORMATAÇÃO ---
+const formatCurrency = (value, sign = false) => {
+    const options = { style: 'currency', currency: 'BRL' };
+    const formatted = (value || 0).toLocaleString('pt-BR', options);
+    return sign && value > 0 ? `+${formatted}` : formatted;
+};
 
-const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatPercent = (value, sign = false) => {
+    const formatted = `${(value || 0).toFixed(2)}%`.replace('.', ',');
+    return sign && value > 0 ? `+${formatted}` : formatted;
+};
 
 /**
  * Busca os preços atuais para todos os ativos de Renda Fixa.
- * - Para Tesouro Direto: Utiliza a marcação a mercado (MaM) a partir dos dados carregados.
- * - Para outros (CDB, LCI, etc.): Calcula o valor na curva do contrato.
- * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
- * @returns {Promise<object>} - Objeto com os preços por ticker.
  */
 async function getPrecosAtuaisRendaFixa(lancamentos) {
     const rfLancamentos = lancamentos.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
     const precosEInfos = {};
+    if (rfLancamentos.length === 0) return precosEInfos;
 
-    if (rfLancamentos.length === 0) {
-        return precosEInfos;
-    }
-
-    // Separa Tesouro Direto dos outros ativos de RF
     const tesouroDiretoLancamentos = rfLancamentos.filter(l => l.tipoAtivo === 'Tesouro Direto');
     const outrosRfLancamentos = rfLancamentos.filter(l => l.tipoAtivo !== 'Tesouro Direto');
 
-    // 1. Processa Tesouro Direto usando Marcação a Mercado (MaM)
+    // Processa Tesouro Direto usando Marcação a Mercado (MaM)
     if (tesouroDiretoLancamentos.length > 0 && window.allTesouroDiretoPrices) {
-        const tdValores = {};
-        for (const ativo of tesouroDiretoLancamentos) {
-            if (!tdValores[ativo.ativo]) {
-                tdValores[ativo.ativo] = { valorTotalMam: 0, quantidadeTotal: 0 };
+        tesouroDiretoLancamentos.forEach(ativo => {
+            if (!precosEInfos[ativo.ativo]) { // Evita recalcular se já tem preço
+                const precoInfo = window.allTesouroDiretoPrices[ativo.ativo];
+                const valorMamUnitario = precoInfo ? precoInfo.valor : ativo.valorAplicado / ativo.quantidade;
+                precosEInfos[ativo.ativo] = { price: valorMamUnitario, logoUrl: null };
             }
-            const precoInfo = window.allTesouroDiretoPrices[ativo.ativo];
-            // Usa o preço de mercado (PU) multiplicado pela quantidade do usuário
-            const valorMam = precoInfo ? precoInfo.valor * ativo.quantidade : ativo.valorAplicado; // Fallback para valor aplicado se não encontrar
-
-            tdValores[ativo.ativo].valorTotalMam += valorMam;
-            tdValores[ativo.ativo].quantidadeTotal += ativo.quantidade;
-        }
-
-        for (const ticker in tdValores) {
-            const data = tdValores[ticker];
-            if (data.quantidadeTotal > 0) {
-                precosEInfos[ticker] = {
-                    price: data.valorTotalMam / data.quantidadeTotal, // Retorna o preço unitário de mercado
-                    logoUrl: null
-                };
-            }
-        }
+        });
     }
 
-    // 2. Processa outros ativos de RF usando o cálculo na curva (lógica existente)
+    // Processa outros ativos de RF usando o cálculo na curva
     if (outrosRfLancamentos.length > 0) {
-        const outrosRfValores = {};
         try {
             const hoje = new Date();
             const dataMaisAntiga = outrosRfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, outrosRfLancamentos[0].data);
-            const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
+            if (new Date(dataMaisAntiga) <= hoje) {
+                const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
 
-            for (const ativo of outrosRfLancamentos) {
-                const valorAplicadoOriginal = ativo.valorAplicado;
-                let valorBruto = valorAplicadoOriginal;
-                const dataCalculo = new Date(ativo.data + 'T00:00:00');
-                const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
+                for (const ativo of outrosRfLancamentos) {
+                    let valorBruto = ativo.valorAplicado;
+                    const dataCalculo = new Date(ativo.data + 'T00:00:00');
+                    const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
 
-                if (ativo.tipoRentabilidade === 'Pós-Fixado') {
-                    let acumuladorCDI = 1;
-                    const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
-                    historicoCDI
-                        .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
-                        .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
-                    valorBruto = valorAplicadoOriginal * acumuladorCDI;
-                } else if (ativo.tipoRentabilidade === 'Prefixado') {
-                    const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
-                    const diasUteis = diasCorridosCalculo * (252 / 365.25);
-                    valorBruto = valorAplicadoOriginal * Math.pow(1 + taxaAnual, diasUteis / 252);
-                } else if (ativo.tipoRentabilidade === 'Híbrido') {
-                    let acumuladorIPCA = 1;
-                    const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
-                    const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
-                    historicoIPCA
-                        .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
-                        .forEach(item => { acumuladorIPCA *= (1 + parseFloat(item.valor) / 100); });
-                    const valorCorrigido = valorAplicadoOriginal * acumuladorIPCA;
-                    const diasUteis = diasCorridosCalculo * (252 / 365.25);
-                    valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
-                }
+                    if (ativo.tipoRentabilidade === 'Pós-Fixado') {
+                        let acumuladorCDI = 1;
+                        const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
+                        historicoCDI
+                            .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
+                            .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
+                        valorBruto = ativo.valorAplicado * acumuladorCDI;
+                    } else if (ativo.tipoRentabilidade === 'Prefixado') {
+                        const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
+                        const diasUteis = diasCorridosCalculo * (252 / 365.25);
+                        valorBruto = ativo.valorAplicado * Math.pow(1 + taxaAnual, diasUteis / 252);
+                    } else if (ativo.tipoRentabilidade === 'Híbrido') {
+                         let acumuladorIPCA = 1;
+                        const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
+                        const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
+                        historicoIPCA
+                            .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
+                            .forEach(item => { acumuladorIPCA *= (1 + parseFloat(item.valor) / 100); });
+                        const valorCorrigido = ativo.valorAplicado * acumuladorIPCA;
+                        const diasUteis = diasCorridosCalculo * (252 / 365.25);
+                        valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+                    }
 
-                const lucro = valorBruto - ativo.valorAplicado;
-                let aliquotaIR = 0;
-                if (lucro > 0 && !['LCI', 'LCA'].includes(ativo.tipoAtivo)) {
-                    if (diasCorridosCalculo <= 180) aliquotaIR = 0.225;
-                    else if (diasCorridosCalculo <= 360) aliquotaIR = 0.20;
-                    else if (diasCorridosCalculo <= 720) aliquotaIR = 0.175;
-                    else aliquotaIR = 0.15;
-                }
-                const valorLiquido = valorBruto - (lucro * aliquotaIR);
-
-                if (!outrosRfValores[ativo.ativo]) {
-                    outrosRfValores[ativo.ativo] = { valorTotal: 0, quantidadeTotal: 0 };
-                }
-                outrosRfValores[ativo.ativo].valorTotal += valorLiquido;
-                outrosRfValores[ativo.ativo].quantidadeTotal += ativo.quantidade;
-            }
-
-            for (const ticker in outrosRfValores) {
-                const data = outrosRfValores[ticker];
-                if (data.quantidadeTotal > 0) {
-                    precosEInfos[ticker] = {
-                        price: data.valorTotal / data.quantidadeTotal,
-                        logoUrl: null
-                    };
+                    const lucro = valorBruto - ativo.valorAplicado;
+                    let aliquotaIR = 0;
+                    if (lucro > 0 && !['LCI', 'LCA'].includes(ativo.tipoAtivo)) {
+                        if (diasCorridosCalculo <= 180) aliquotaIR = 0.225;
+                        else if (diasCorridosCalculo <= 360) aliquotaIR = 0.20;
+                        else if (diasCorridosCalculo <= 720) aliquotaIR = 0.175;
+                        else aliquotaIR = 0.15;
+                    }
+                    const valorLiquido = valorBruto - (lucro * aliquotaIR);
+                    precosEInfos[ativo.ativo] = { price: valorLiquido / ativo.quantidade, logoUrl: null };
                 }
             }
         } catch (error) {
-            console.error("Erro ao calcular preços de Outros Renda Fixa para a aba Patrimônio:", error);
+            console.error("Erro ao calcular preços de Outros Renda Fixa:", error);
         }
     }
     return precosEInfos;
 }
 
+/**
+ * Busca dados de variação diária para um conjunto de tickers.
+ */
+async function fetchDailyVariation(tickers) {
+    if (!tickers || tickers.length === 0) return {};
+    const variations = {};
+    const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
+    const results = await Promise.all(promises);
 
+    results.forEach((data, index) => {
+        const ticker = tickers[index];
+        if (data?.results?.[0]?.historicalDataPrice?.length >= 1) {
+            const prices = data.results[0].historicalDataPrice;
+            const hoje = prices[0].close;
+            const ontem = prices[1]?.close || hoje; // Fallback se não houver dia anterior
+            if (hoje && ontem) {
+                variations[ticker] = {
+                    change: hoje - ontem,
+                    changePercent: ((hoje / ontem) - 1) * 100,
+                };
+            }
+        }
+    });
+    return variations;
+}
+
+/**
+ * Renderiza o gráfico de evolução do patrimônio.
+ */
 async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
     const canvas = document.getElementById('patrimonio-evolution-chart');
     if (!canvas) return;
@@ -150,60 +147,63 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
         };
     }
 
-    const carteira = {};
     let valorInvestidoAcumulado = 0;
+    let carteiraHistorico = {};
 
     lancamentosOrdenados.forEach(l => {
-        const monthKey = l.data.substring(0, 7);
+        if (!carteiraHistorico[l.ativo]) {
+            carteiraHistorico[l.ativo] = { quantidade: 0, valorTotalInvestido: 0, _quantidadeComprada: 0, _valorTotalComprado: 0 };
+        }
+        const ativo = carteiraHistorico[l.ativo];
+
         if (l.tipoOperacao === 'compra') {
             valorInvestidoAcumulado += l.valorTotal;
+            ativo.quantidade += l.quantidade;
+            ativo.valorTotalInvestido += l.valorTotal;
+            ativo._quantidadeComprada += l.quantidade;
+            ativo._valorTotalComprado += l.valorTotal;
         } else if (l.tipoOperacao === 'venda') {
-            const ativo = carteira[l.ativo];
-            if (ativo && ativo.quantidadeComprada > 0) {
-                const precoMedio = ativo.valorTotalInvestido / ativo.quantidadeComprada;
+            if (ativo._quantidadeComprada > 0) {
+                const precoMedio = ativo._valorTotalComprado / ativo._quantidadeComprada;
                 valorInvestidoAcumulado -= l.quantidade * precoMedio;
             }
+            ativo.quantidade -= l.quantidade;
         }
 
-        if (!carteira[l.ativo]) {
-            carteira[l.ativo] = { quantidade: 0, valorTotalInvestido: 0, quantidadeComprada: 0 };
-        }
-
-        if (l.tipoOperacao === 'compra') {
-            carteira[l.ativo].quantidade += l.quantidade;
-            carteira[l.ativo].valorTotalInvestido += l.valorTotal;
-            carteira[l.ativo].quantidadeComprada += l.quantidade;
-        } else if (l.tipoOperacao === 'venda') {
-            carteira[l.ativo].quantidade -= l.quantidade;
-        }
-
+        const monthKey = l.data.substring(0, 7);
         if (monthlyData[monthKey]) {
-            let patrimonioAtualDoMes = 0;
-            Object.keys(carteira).forEach(ticker => {
-                const ativo = carteira[ticker];
-                if (ativo.quantidade > 0) {
-                    const preco = precosEInfos[ticker]?.price || (ativo.valorTotalInvestido / ativo.quantidade);
-                    patrimonioAtualDoMes += ativo.quantidade * preco;
-                }
-            });
-
-            monthlyData[monthKey].patrimonioFinal = patrimonioAtualDoMes;
             monthlyData[monthKey].valorAplicado = valorInvestidoAcumulado < 0 ? 0 : valorInvestidoAcumulado;
-            monthlyData[monthKey].processed = true;
         }
     });
+
+    let patrimonioDoMes = 0;
+    Object.keys(carteiraHistorico).forEach(ticker => {
+        const ativo = carteiraHistorico[ticker];
+        if (ativo.quantidade > 1e-8) {
+            const preco = precosEInfos[ticker]?.price || (ativo._valorTotalComprado / ativo._quantidadeComprada);
+            patrimonioDoMes += ativo.quantidade * preco;
+        }
+    });
+    
+    const ultimoMesProcessado = Object.keys(monthlyData).sort().pop();
+    if(monthlyData[ultimoMesProcessado]) {
+        monthlyData[ultimoMesProcessado].patrimonioFinal = patrimonioDoMes;
+        monthlyData[ultimoMesProcessado].processed = true;
+    }
 
     let lastValorAplicado = 0;
     let lastPatrimonio = 0;
     for (const key in monthlyData) {
-        if (monthlyData[key].processed) {
+        if (monthlyData[key].processed || monthlyData[key].valorAplicado > 0) {
             lastValorAplicado = monthlyData[key].valorAplicado;
-            lastPatrimonio = monthlyData[key].patrimonioFinal;
+            lastPatrimonio = monthlyData[key].patrimonioFinal > 0 ? monthlyData[key].patrimonioFinal : lastPatrimonio;
+            monthlyData[key].processed = true; 
         } else {
             monthlyData[key].valorAplicado = lastValorAplicado;
             monthlyData[key].patrimonioFinal = lastPatrimonio;
         }
     }
+
 
     const labels = Object.values(monthlyData).map(d => d.label);
     const valoresAplicados = Object.values(monthlyData).map(d => d.valorAplicado);
@@ -212,60 +212,47 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
     if (patrimonioEvolutionChart) patrimonioEvolutionChart.destroy();
 
     patrimonioEvolutionChart = new Chart(canvas, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: labels,
             datasets: [
                 {
                     label: 'Valor Aplicado',
                     data: valoresAplicados,
-                    backgroundColor: '#3a404d',
                     borderColor: '#5a6170',
-                    borderWidth: 1,
-                    order: 2,
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.1
                 },
                 {
                     label: 'Patrimônio',
                     data: patrimoniosFinais,
-                    backgroundColor: '#00d9c3',
-                    borderColor: '#00a896',
-                    borderWidth: 1,
-                    order: 1,
+                    borderColor: '#00d9c3',
+                    backgroundColor: 'rgba(0, 217, 195, 0.1)',
+                    fill: true,
+                    pointRadius: 0,
+                    tension: 0.1,
                 }
             ]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             scales: {
-                x: {
-                    stacked: true,
-                    grid: { display: false },
-                    ticks: { color: "#a0a7b3" }
-                },
-                y: {
-                    stacked: false,
-                    grid: { color: "#2a2c30" },
-                    ticks: {
-                        color: "#a0a7b3",
-                        callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}`
-                    }
-                }
+                x: { grid: { display: false }, ticks: { color: "#a0a7b3" } },
+                y: { grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}` } }
             },
             plugins: {
                 legend: { position: 'top', align: 'end', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8 } },
-                tooltip: {
-                    mode: 'index',
-                    callbacks: {
-                        label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
-                    }
-                }
+                tooltip: { mode: 'index', intersect: false, callbacks: { label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}` } }
             }
         }
     });
 }
 
-
+/**
+ * Renderiza o gráfico de alocação de ativos.
+ */
 function renderAssetAllocationChart(carteira, precosEInfos) {
     const canvas = document.getElementById('asset-allocation-chart');
     if (!canvas) return;
@@ -274,7 +261,7 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
     let patrimonioTotal = 0;
 
     Object.values(carteira).forEach(ativo => {
-        if (ativo.quantidade > 0) {
+        if (ativo.quantidade > 1e-8) {
             const preco = precosEInfos[ativo.ativo]?.price || 0;
             const valorAtual = ativo.quantidade * preco;
 
@@ -307,15 +294,13 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
             labels: labels,
             datasets: [{
                 data: data,
-                backgroundColor: ['#00d9c3', '#5A67D8', '#ED64A6', '#F56565', '#ECC94B', '#4299E1'],
+                backgroundColor: ['#00d9c3', '#5A67D8', '#ED64A6', '#ECC94B', '#a0a7b3', '#4299E1'],
                 borderColor: '#161a22',
                 borderWidth: 4,
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
+            responsive: true, maintainAspectRatio: false, cutout: '70%',
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -332,150 +317,158 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
     });
 }
 
+/**
+ * Renderiza a nova seção "Posição Consolidada" com cards.
+ */
+function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariations) {
+    const container = document.getElementById('posicao-consolidada-container');
+    if (!container) return;
 
-function renderPosicaoConsolidada(carteira, precosEInfos) {
-    const tableContainer = document.querySelector('#patrimonio .table-wrapper');
-    if (!tableContainer) return;
+    const proventosPorAtivo = proventos.reduce((acc, p) => {
+        acc[p.ativo] = (acc[p.ativo] || 0) + p.valor;
+        const umAnoAtras = new Date();
+        umAnoAtras.setFullYear(umAnoAtras.getFullYear() - 1);
+        if (new Date(p.dataPagamento) > umAnoAtras) {
+            acc[`${p.ativo}_12m`] = (acc[`${p.ativo}_12m`] || 0) + p.valor;
+        }
+        return acc;
+    }, {});
 
-    let patrimonioTotal = 0;
     const carteiraArray = Object.values(carteira).map(ativo => {
-        if (ativo.quantidade > 0) {
-            const preco = precosEInfos[ativo.ativo]?.price || 0;
-            const valorAtual = ativo.quantidade * preco;
-            patrimonioTotal += valorAtual;
+        if (ativo.quantidade > 1e-8) {
+            const precoAtual = precosEInfos[ativo.ativo]?.price || 0;
+            const valorAtual = ativo.quantidade * precoAtual;
             const custoDaPosicao = ativo.valorTotalInvestido < 0 ? 0 : ativo.valorTotalInvestido;
-            const rentabilidade = custoDaPosicao > 0 ? ((valorAtual / custoDaPosicao) - 1) * 100 : 0;
-            return { ...ativo, valorAtual, rentabilidade, pesoCarteira: 0, precoMedio: ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0 };
+            const resultado = valorAtual - custoDaPosicao + (proventosPorAtivo[ativo.ativo] || 0);
+            const rentabilidade = custoDaPosicao > 0 ? (resultado / custoDaPosicao) * 100 : 0;
+            const dividendYield = (valorAtual > 0) ? ((proventosPorAtivo[`${ativo.ativo}_12m`] || 0) / valorAtual) * 100 : 0;
+
+            return {
+                ...ativo, valorAtual, resultado, rentabilidade, dividendYield,
+                precoMedio: ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0,
+            };
         }
         return null;
     }).filter(Boolean);
 
-    carteiraArray.forEach(ativo => ativo.pesoCarteira = patrimonioTotal > 0 ? (ativo.valorAtual / patrimonioTotal) * 100 : 0);
-
     const groupedAssets = carteiraArray.reduce((acc, ativo) => {
         const tipoMapeado = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(ativo.tipoAtivo) ? 'Renda Fixa' : ativo.tipoAtivo;
-        if (!acc[tipoMapeado]) {
-            acc[tipoMapeado] = { assets: [], total: 0 };
-        }
-        acc[tipoMapeado].assets.push(ativo);
-        acc[tipoMapeado].total += ativo.valorAtual;
+        if (!acc[tipoMapeado]) acc[tipoMapeado] = [];
+        acc[tipoMapeado].push(ativo);
         return acc;
     }, {});
 
-    let tableHtml = '';
-    const groupOrder = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
+    let html = `<h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">Posição Consolidada</h3>`;
+    const groupOrder = ['Ações', 'FIIs', 'Renda Fixa', 'ETF', 'Cripto'];
 
     for (const tipo of groupOrder) {
         if (!groupedAssets[tipo]) continue;
 
-        const group = groupedAssets[tipo];
-        const assets = group.assets;
-        const groupTotal = group.total;
-        const groupPercent = patrimonioTotal > 0 ? (groupTotal / patrimonioTotal) * 100 : 0;
+        const assets = groupedAssets[tipo];
         const groupId = `group-${tipo.replace(/\s+/g, '-')}`;
 
-        if (groupCollapseState[groupId] === undefined) {
-            groupCollapseState[groupId] = true;
-        }
-        const isExpanded = groupCollapseState[groupId];
+        const groupSummary = assets.reduce((acc, ativo) => {
+            acc.investido += ativo.valorTotalInvestido;
+            acc.atual += ativo.valorAtual;
+            const variation = dailyVariations[ativo.ativo];
+            if (variation) acc.dia += variation.change * ativo.quantidade;
+            return acc;
+        }, { investido: 0, atual: 0, dia: 0 });
 
-        assets.sort((a, b) => {
-            let valA = a[sortColumn];
-            let valB = b[sortColumn];
-            if (typeof valA === 'string') {
-                valA = valA.toLowerCase();
-                valB = valB.toLowerCase();
-            }
-            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
+        const patrimonioOntem = groupSummary.atual - groupSummary.dia;
+        groupSummary.diaPercent = patrimonioOntem > 0 ? (groupSummary.dia / patrimonioOntem) * 100 : 0;
 
-        tableHtml += `<tbody class="collapsible-group ${isExpanded ? 'is-expanded' : ''}" id="${groupId}">`;
-        tableHtml += `
-            <tr class="group-header">
-                <td colspan="2">
+        if (groupCollapseState[groupId] === undefined) groupCollapseState[groupId] = true;
+        const isCollapsed = !groupCollapseState[groupId];
+
+        html += `
+            <div class="patrimonio-group-card">
+                <div class="patrimonio-group-header" data-group-id="${groupId}">
                     <div class="group-header-title">
-                        <i class="fas fa-chevron-right group-toggle-icon"></i>
+                        <i class="fas fa-chevron-down group-toggle-icon"></i>
                         ${tipo} (${assets.length})
                     </div>
-                </td>
-                <td></td>
-                <td></td>
-                <td>${formatCurrency(groupTotal)}</td>
-                <td></td>
-                <td style="text-align: right;">${groupPercent.toFixed(2)}%</td>
-            </tr>
+                    <div class="group-summary-grid">
+                        <div class="summary-item-small"><span class="label">Total Investido</span><span class="value">${formatCurrency(groupSummary.investido)}</span></div>
+                        <div class="summary-item-small"><span class="label">Valor Atual</span><span class="value large ${groupSummary.atual >= groupSummary.investido ? 'positive-change' : 'negative-change'}">${formatCurrency(groupSummary.atual)}</span></div>
+                        <div class="summary-item-small"><span class="label">Resultado Dia</span><span class="value ${groupSummary.dia >= 0 ? 'positive-change' : 'negative-change'}">${formatCurrency(groupSummary.dia, true)}</span><span class="sub-value ${groupSummary.dia >= 0 ? 'positive-change' : 'negative-change'}">${formatPercent(groupSummary.diaPercent, true)}</span></div>
+                    </div>
+                </div>
+                <div class="patrimonio-group-content ${isCollapsed ? 'collapsed' : ''}" id="${groupId}">
+                    <div class="asset-cards-grid">
         `;
 
+        assets.sort((a, b) => b.valorAtual - a.valorAtual);
         assets.forEach(ativo => {
-            const ativoInfo = precosEInfos[ativo.ativo];
-            const logoUrl = ativoInfo?.logoUrl;
-            const firstLetter = ativo.ativo.charAt(0);
-            const logoHtml = logoUrl
-                ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">`
-                : `<div class="ativo-logo-fallback">${firstLetter}</div>`;
+            const logoUrl = precosEInfos[ativo.ativo]?.logoUrl;
+            const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">` : `<div class="ativo-logo-fallback">${ativo.ativo.charAt(0)}</div>`;
+            const dailyVar = dailyVariations[ativo.ativo] || { change: 0, changePercent: 0 };
+            const valorDoDia = dailyVar.change * ativo.quantidade;
 
-            tableHtml += `
-                <tr class="asset-row">
-                    <td><div class="ativo-com-logo">${logoHtml}<span>${ativo.ativo}</span></div></td>
-                    <td><span class="tipo-ativo-badge">${ativo.tipoAtivo}</span></td>
-                    <td>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</td>
-                    <td>${formatCurrency(ativo.precoMedio)}</td>
-                    <td>${formatCurrency(ativo.valorAtual)}</td>
-                    <td class="${ativo.rentabilidade >= 0 ? 'positive-change' : 'negative-change'}">${ativo.rentabilidade.toFixed(2)}%</td>
-                    <td style="text-align: right;">${ativo.pesoCarteira.toFixed(2)}%</td>
-                </tr>
+            html += `
+                <div class="asset-card">
+                    <div class="asset-card-header">
+                        ${logoHtml}
+                        <div class="asset-card-ticker-info">
+                            <div class="ticker">${ativo.ativo}</div>
+                            <div class="tipo">${ativo.tipoAtivo}</div>
+                        </div>
+                    </div>
+                    <div class="asset-card-body">
+                        <div class="asset-metric"><span class="label">Preço Médio</span><span class="value">${formatCurrency(ativo.precoMedio)}</span></div>
+                        <div class="asset-metric"><span class="label">Preço Atual</span><span class="value">${formatCurrency(precosEInfos[ativo.ativo]?.price || 0)}</span></div>
+                        <div class="asset-metric"><span class="label">Quantidade</span><span class="value">${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}</span></div>
+                        <div class="asset-metric"><span class="label">Dividend Yield (12M)</span><span class="value">${formatPercent(ativo.dividendYield)}</span></div>
+                        <div class="asset-metric"><span class="label">Valor Investido</span><span class="value">${formatCurrency(ativo.valorTotalInvestido)}</span></div>
+                        <div class="asset-metric"><span class="label">Valor Atual</span><span class="value">${formatCurrency(ativo.valorAtual)}</span></div>
+                    </div>
+                    <div class="asset-card-footer">
+                        <div class="result-line">
+                            <span class="label">Resultado do Dia</span>
+                            <span class="value ${valorDoDia >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${formatCurrency(valorDoDia, true)}
+                                <span class="sub-value">${formatPercent(dailyVar.changePercent, true)}</span>
+                            </span>
+                        </div>
+                        <div class="result-line">
+                            <span class="label">Resultado Total</span>
+                            <span class="value ${ativo.resultado >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${formatCurrency(ativo.resultado, true)}
+                                <span class="sub-value">${formatPercent(ativo.rentabilidade, true)}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             `;
         });
-        tableHtml += `</tbody>`;
+        html += `</div></div></div>`;
     }
+    container.innerHTML = html;
 
-    const headerHtml = `
-      <div class="table-header-row">
-        <div data-sort="ativo">Ativo</div>
-        <div data-sort="tipoAtivo">Tipo</div>
-        <div data-sort="quantidade">Quantidade</div>
-        <div data-sort="precoMedio">Preço Médio</div>
-        <div data-sort="valorAtual">Valor Atual</div>
-        <div data-sort="rentabilidade">Rentabilidade</div>
-        <div data-sort="pesoCarteira" style="text-align: right;">% Carteira</div>
-      </div>
-    `;
-
-    tableContainer.innerHTML = headerHtml + `<table>${tableHtml}</table>`;
-
-    // Atualiza os indicadores de ordenação no cabeçalho
-    tableContainer.querySelectorAll('.table-header-row div[data-sort]').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
-        if (th.dataset.sort === sortColumn) {
-            th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    Object.keys(groupCollapseState).forEach(groupId => {
+        const header = document.querySelector(`[data-group-id="${groupId}"]`);
+        if (header) {
+            header.querySelector('.group-toggle-icon').style.transform = groupCollapseState[groupId] ? 'rotate(0deg)' : 'rotate(-90deg)';
         }
     });
 }
 
-
+/**
+ * Função principal que orquestra a renderização da aba Patrimônio.
+ */
 export async function renderPatrimonioTab(lancamentos, proventos) {
     const patrimonioContent = document.getElementById('patrimonio-content');
-    if (!patrimonioContent) return;
+    if (!patrimonioContent || !lancamentos || lancamentos.length === 0) return;
 
-    if (!lancamentos || lancamentos.length === 0) {
-        return;
-    }
-
-    const carteira = {};
-    lancamentos.forEach(l => {
-        if (!carteira[l.ativo]) {
-            carteira[l.ativo] = {
-                ativo: l.ativo,
-                tipoAtivo: l.tipoAtivo,
-                quantidade: 0,
-                valorTotalInvestido: 0,
-                _quantidadeComprada: 0,
-                _valorTotalComprado: 0
+    // 1. Consolida a carteira
+    const carteira = lancamentos.reduce((acc, l) => {
+        if (!acc[l.ativo]) {
+            acc[l.ativo] = {
+                ativo: l.ativo, tipoAtivo: l.tipoAtivo, quantidade: 0,
+                valorTotalInvestido: 0, _quantidadeComprada: 0, _valorTotalComprado: 0
             };
         }
-        const ativo = carteira[l.ativo];
+        const ativo = acc[l.ativo];
         if (l.tipoOperacao === 'compra') {
             ativo.quantidade += l.quantidade;
             ativo.valorTotalInvestido += l.valorTotal;
@@ -488,55 +481,41 @@ export async function renderPatrimonioTab(lancamentos, proventos) {
             }
             ativo.quantidade -= l.quantidade;
         }
-    });
+        return acc;
+    }, {});
 
-    const tickersAtivos = Object.values(carteira)
-        .filter(a => a.quantidade > 0 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
+    // 2. Busca todos os preços necessários
+    const tickersRV = Object.values(carteira)
+        .filter(a => a.quantidade > 1e-8 && !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(a.tipoAtivo))
         .map(a => a.ativo);
 
-    // Busca preços de RV (Ações, FIIs, etc)
-    const precosEInfos = await fetchCurrentPrices(tickersAtivos);
+    const [precosRV, precosRF, dailyVariations] = await Promise.all([
+        fetchCurrentPrices(tickersRV),
+        getPrecosAtuaisRendaFixa(lancamentos),
+        fetchDailyVariation(tickersRV)
+    ]);
+    const precosEInfos = { ...precosRV, ...precosRF };
 
-    // Busca preços de RF (CDB, Tesouro, etc), agora com a lógica correta de MaM para TD
-    const rfPrecos = await getPrecosAtuaisRendaFixa(lancamentos);
-
-    // Combina todos os preços
-    Object.assign(precosEInfos, rfPrecos);
-
+    // 3. Renderiza os componentes da aba
     renderPatrimonioEvolutionChart(lancamentos, precosEInfos);
     renderAssetAllocationChart(carteira, precosEInfos);
-    renderPosicaoConsolidada(carteira, precosEInfos);
+    renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariations);
 }
 
+// --- EVENT LISTENERS ---
 document.addEventListener('DOMContentLoaded', () => {
-    const tableContainer = document.querySelector('#patrimonio .table-card');
-
-    if (tableContainer) {
-        tableContainer.addEventListener('click', (e) => {
-            // Lógica para Ordenação
-            const th = e.target.closest('div[data-sort]');
-            if (th) {
-                const newSortColumn = th.dataset.sort;
-                if (sortColumn === newSortColumn) {
-                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-                } else {
-                    sortColumn = newSortColumn;
-                    sortDirection = 'desc';
-                }
-                if (window.allLancamentos) {
-                    renderPatrimonioTab(window.allLancamentos, window.allProventos);
-                }
-            }
-
-            // Lógica para Expandir/Recolher
-            const header = e.target.closest('.group-header');
+    const patrimonioContainer = document.getElementById('patrimonio-content');
+    if (patrimonioContainer) {
+        patrimonioContainer.addEventListener('click', (e) => {
+            const header = e.target.closest('.patrimonio-group-header');
             if (header) {
-                const parentTbody = header.closest('tbody.collapsible-group');
-                const groupId = parentTbody.id;
-
-                groupCollapseState[groupId] = !parentTbody.classList.contains('is-expanded');
-
-                parentTbody.classList.toggle('is-expanded');
+                const groupId = header.dataset.groupId;
+                const content = document.getElementById(groupId);
+                if (content) {
+                    const isCollapsed = content.classList.toggle('collapsed');
+                    groupCollapseState[groupId] = !isCollapsed;
+                    header.querySelector('.group-toggle-icon').style.transform = isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+                }
             }
         });
     }
