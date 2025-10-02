@@ -1747,6 +1747,16 @@ tbody.is-expanded .group-toggle-icon {
   .asset-cards-grid {
     grid-template-columns: 1fr; /* Força uma única coluna em telas menores */
   }
+
+  /* --- NOVAS REGRAS PARA O CABEÇALHO DO GRUPO --- */
+  .patrimonio-group-header {
+    grid-template-columns: 1fr; /* Muda para uma única coluna */
+    gap: 15px; /* Adiciona espaço entre o título e o resumo */
+  }
+
+  .group-summary-grid {
+    justify-content: space-between; /* Distribui melhor os itens do resumo */
+  }
 }
 
 @media (max-width: 600px) {
@@ -2103,4 +2113,38 @@ tbody.is-expanded .group-toggle-icon {
 /* Garante que a transição de recolher funcione corretamente no ícone */
 .patrimonio-group-header .group-toggle-icon {
   transition: transform 0.3s ease-out;
+}
+/* --- CORREÇÕES FINAIS DE RESPONSIVIDADE --- */
+
+/* Para telas de tablet e celular em geral (até 768px) */
+@media (max-width: 768px) {
+  /* Garante que o cabeçalho do grupo de ativos quebre a linha */
+  .patrimonio-group-header {
+    grid-template-columns: 1fr; /* Muda para uma única coluna */
+    gap: 15px; /* Adiciona espaço entre o título e o resumo */
+  }
+
+  /* Distribui melhor os itens do resumo no cabeçalho */
+  .group-summary-grid {
+    justify-content: space-between;
+  }
+
+  /* Garante que os cards de ativos ocupem a largura toda */
+  .asset-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Para telas de celular muito estreitas (até 380px) */
+@media (max-width: 380px) {
+  /* Faz o "Resultado Total" e "Proventos" quebrarem a linha dentro do card */
+  .result-line {
+    flex-direction: column; /* Empilha o label e o valor */
+    align-items: flex-start; /* Alinha ambos à esquerda */
+    gap: 2px; /* Adiciona um pequeno espaço entre eles */
+  }
+
+  .result-line .value {
+    text-align: left; /* Alinha o texto do valor à esquerda */
+  }
 }
