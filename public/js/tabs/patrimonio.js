@@ -394,9 +394,7 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
         assets.forEach(ativo => {
             const logoUrl = precosEInfos[ativo.ativo]?.logoUrl;
             const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">` : `<div class="ativo-logo-fallback">${ativo.ativo.charAt(0)}</div>`;
-            const dailyVar = dailyVariations[ativo.ativo] || { change: 0, changePercent: 0 };
-            const valorDoDia = dailyVar.change * ativo.quantidade;
-
+            
             html += `
                 <div class="asset-card">
                     <div class="asset-card-header">
@@ -416,10 +414,9 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
                     </div>
                     <div class="asset-card-footer">
                         <div class="result-line">
-                            <span class="label">Resultado do Dia</span>
-                            <span class="value ${valorDoDia >= 0 ? 'positive-change' : 'negative-change'}">
-                                ${formatCurrency(valorDoDia, true)}
-                                <span class="sub-value">${formatPercent(dailyVar.changePercent, true)}</span>
+                            <span class="label">Proventos Recebidos</span>
+                            <span class="value positive-change">
+                                ${formatCurrency(proventosPorAtivo[ativo.ativo] || 0)}
                             </span>
                         </div>
                         <div class="result-line">
