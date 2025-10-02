@@ -362,13 +362,11 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
         const groupSummary = assets.reduce((acc, ativo) => {
             acc.investido += ativo.valorTotalInvestido;
             acc.atual += ativo.valorAtual;
-            const variation = dailyVariations[ativo.ativo];
-            if (variation) acc.dia += variation.change * ativo.quantidade;
+            acc.proventos += (proventosPorAtivo[ativo.ativo] || 0);
             return acc;
-        }, { investido: 0, atual: 0, dia: 0 });
+        }, { investido: 0, atual: 0, proventos: 0 });
 
-        const patrimonioOntem = groupSummary.atual - groupSummary.dia;
-        groupSummary.diaPercent = patrimonioOntem > 0 ? (groupSummary.dia / patrimonioOntem) * 100 : 0;
+        const groupRentabilidadeReais = groupSummary.atual - groupSummary.investido + groupSummary.proventos;
 
         if (groupCollapseState[groupId] === undefined) groupCollapseState[groupId] = true;
         const isCollapsed = !groupCollapseState[groupId];
@@ -383,7 +381,12 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
                     <div class="group-summary-grid">
                         <div class="summary-item-small"><span class="label">Total Investido</span><span class="value">${formatCurrency(groupSummary.investido)}</span></div>
                         <div class="summary-item-small"><span class="label">Valor Atual</span><span class="value large ${groupSummary.atual >= groupSummary.investido ? 'positive-change' : 'negative-change'}">${formatCurrency(groupSummary.atual)}</span></div>
-                        <div class="summary-item-small"><span class="label">Resultado Dia</span><span class="value ${groupSummary.dia >= 0 ? 'positive-change' : 'negative-change'}">${formatCurrency(groupSummary.dia, true)}</span><span class="sub-value ${groupSummary.dia >= 0 ? 'positive-change' : 'negative-change'}">${formatPercent(groupSummary.diaPercent, true)}</span></div>
+                        <div class="summary-item-small">
+                            <span class="label">Rentabilidade</span>
+                            <span class="value ${groupRentabilidadeReais >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${formatCurrency(groupRentabilidadeReais, true)}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <div class="patrimonio-group-content ${isCollapsed ? 'collapsed' : ''}" id="${groupId}">
@@ -394,7 +397,7 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
         assets.forEach(ativo => {
             const logoUrl = precosEInfos[ativo.ativo]?.logoUrl;
             const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">` : `<div class="ativo-logo-fallback">${ativo.ativo.charAt(0)}</div>`;
-            
+
             html += `
                 <div class="asset-card">
                     <div class="asset-card-header">

@@ -35,14 +35,44 @@ function setupLancamentosModal(userID) {
     const hoje = new Date().toISOString().split("T")[0];
     const ativoInput = form.querySelector("#ativo");
     const sugestoesDiv = form.querySelector("#ativo-sugestoes");
+    const quantidadeInput = form.querySelector("#quantidade");
+    const precoInput = form.querySelector("#preco");
+    const outrosCustosInput = form.querySelector("#outros-custos");
     let timeoutBusca;
 
+    const parseCurrency = (value) => {
+        if (!value || typeof value !== 'string') return 0;
+        return parseFloat(value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+    };
+
     const calcularTotal = () => {
-        const qtd = parseFloat(form.quantidade.value) || 0;
-        const prc = parseFloat(form.preco.value) || 0;
-        const cst = parseFloat(form["outros-custos"].value) || 0;
+        const qtd = parseFloat(form.quantidade.value.replace(',', '.')) || 0;
+        const prc = parseCurrency(form.preco.value);
+        const cst = parseCurrency(form["outros-custos"].value);
         form.querySelector("#valor-total-calculado").textContent = (qtd * prc + cst).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     };
+
+    const formatCurrencyOnInput = (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value) {
+            let numberValue = parseInt(value, 10) / 100;
+            e.target.value = numberValue.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        } else {
+            e.target.value = '';
+        }
+        calcularTotal();
+    };
+
+    precoInput.addEventListener('input', formatCurrencyOnInput);
+    outrosCustosInput.addEventListener('input', formatCurrencyOnInput);
+    
+    quantidadeInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/,/g, '.');
+        calcularTotal();
+    });
 
     ativoInput.addEventListener("input", () => {
         clearTimeout(timeoutBusca);
@@ -67,7 +97,6 @@ function setupLancamentosModal(userID) {
         }, 400);
     });
 
-    form.querySelectorAll("input[type='number']").forEach((el) => el.addEventListener("input", calcularTotal));
     form.querySelector(".btn-compra").addEventListener("click", () => {
         form.querySelector("#operacao-tipo").value = "compra";
         form.querySelector(".btn-compra").classList.add("active");
@@ -82,20 +111,23 @@ function setupLancamentosModal(userID) {
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const docId = form["doc-id"].value;
+        const quantidade = parseFloat(form.quantidade.value.replace(',', '.')) || 0;
+        const preco = parseCurrency(form.preco.value);
+        const custos = parseCurrency(form["outros-custos"].value) || 0;
+
         const lancamentoData = {
             userID: userID,
             tipoOperacao: form["operacao-tipo"].value,
             tipoAtivo: form["tipo-ativo"].value,
             ativo: form.ativo.value.toUpperCase(),
             data: form["data-operacao"].value,
-            quantidade: parseFloat(form.quantidade.value),
-            preco: parseFloat(form.preco.value),
-            custos: parseFloat(form["outros-custos"].value) || 0,
-            valorTotal: parseFloat(form.quantidade.value) * parseFloat(form.preco.value) + (parseFloat(form["outros-custos"].value) || 0),
+            quantidade: quantidade,
+            preco: preco,
+            custos: custos,
+            valorTotal: (quantidade * preco) + custos,
         };
 
         const submitButton = form.querySelector(".btn-adicionar");
-        // --- CORREÇÃO APLICADA AQUI ---
         const originalButtonHtml = docId ? '<i class="fas fa-edit"></i> Atualizar' : '<i class="fas fa-plus"></i> Adicionar';
 
         submitButton.disabled = true;
@@ -103,18 +135,14 @@ function setupLancamentosModal(userID) {
 
         try {
             if (docId) {
-                // Modo de Edição: Atualiza o documento e fecha o modal.
                 await updateDoc(doc(db, "lancamentos", docId), lancamentoData);
                 closeModal("lancamento-modal");
             } else {
-                // Modo de Adição: Adiciona um novo documento, mas NÃO fecha o modal.
                 lancamentoData.timestamp = serverTimestamp();
                 await addDoc(collection(db, "lancamentos"), lancamentoData);
 
-                // Fornece feedback visual e reseta o formulário para o próximo lançamento.
                 submitButton.innerHTML = '<i class="fas fa-check"></i> Salvo!';
                 setTimeout(() => {
-                    // Limpa os campos para a próxima entrada
                     form.ativo.value = '';
                     form.quantidade.value = 1;
                     form.preco.value = '';
@@ -122,17 +150,15 @@ function setupLancamentosModal(userID) {
                     sugestoesDiv.innerHTML = "";
                     sugestoesDiv.style.display = "none";
                     calcularTotal();
-                    form.ativo.focus(); // Coloca o foco de volta no campo "Ativo"
+                    form.ativo.focus();
 
-                    // Restaura o botão para o estado original
                     submitButton.disabled = false;
                     submitButton.innerHTML = originalButtonHtml;
-                }, 1500); // Mostra a mensagem de "Salvo!" por 1.5 segundos
+                }, 1500);
             }
         } catch (error) {
             console.error("Erro ao salvar lançamento: ", error);
             alert("Erro ao salvar: " + error.message);
-            // Restaura o botão em caso de erro
             submitButton.disabled = false;
             submitButton.innerHTML = originalButtonHtml;
         }
@@ -145,13 +171,20 @@ function setupLancamentosModal(userID) {
         document.getElementById("lancamento-modal-title").textContent = id ? "Editar Lançamento" : "Adicionar Lançamento";
         const submitButton = form.querySelector(".btn-adicionar");
         submitButton.innerHTML = id ? '<i class="fas fa-edit"></i> Atualizar' : '<i class="fas fa-plus"></i> Adicionar';
-        submitButton.disabled = false; // Garante que o botão está habilitado ao abrir
+        submitButton.disabled = false;
+
+        const formatValueToCurrency = (value) => {
+            if (typeof value === 'number') {
+                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            }
+            return value || "";
+        };
 
         form.ativo.value = data.ativo || "";
         form["data-operacao"].value = data.data || hoje;
         form.quantidade.value = data.quantidade || 1;
-        form.preco.value = data.preco || "";
-        form["outros-custos"].value = data.custos || "";
+        form.preco.value = formatValueToCurrency(data.preco);
+        form["outros-custos"].value = formatValueToCurrency(data.custos);
         form["operacao-tipo"].value = data.tipoOperacao || "compra";
         if (data.tipoOperacao === "venda") {
             form.querySelector(".btn-venda").click();
