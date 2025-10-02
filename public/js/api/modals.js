@@ -38,7 +38,27 @@ function setupLancamentosModal(userID) {
     const quantidadeInput = form.querySelector("#quantidade");
     const precoInput = form.querySelector("#preco");
     const outrosCustosInput = form.querySelector("#outros-custos");
+    const dataOperacaoInput = form.querySelector("#data-operacao");
     let timeoutBusca;
+
+    // VALIDADOR DE ANO DO LANÇAMENTO
+    const validateOperationYear = () => {
+        if (!dataOperacaoInput.value) return;
+
+        // Adiciona 'T00:00:00' para evitar problemas com fuso horário ao extrair o ano
+        const inputDate = new Date(dataOperacaoInput.value + 'T00:00:00');
+        const inputYear = inputDate.getFullYear();
+        const currentYear = new Date().getFullYear();
+
+        if (inputYear < currentYear) {
+            if (!confirm("Tem certeza que o lançamento é desse ano?")) {
+                dataOperacaoInput.value = ''; // Limpa o campo se o usuário cancelar
+            }
+        }
+    };
+    // ALTERAÇÃO: Mudei o gatilho de 'change' para 'blur'
+    dataOperacaoInput.addEventListener('blur', validateOperationYear);
+    // FIM DA ALTERAÇÃO E DO VALIDADOR
 
     const parseCurrency = (value) => {
         if (!value || typeof value !== 'string') return 0;
