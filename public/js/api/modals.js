@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { db } from '../firebase-config.js';
 import { searchAssets } from './brapi.js';
 import { renderPerformanceChart } from '../charts.js';
@@ -215,8 +215,61 @@ function setupDivisaoIdealModal(userID) {
 // --- MODAL DE RENDA FIXA ---
 function setupRendaFixaModal(userID) {
     const modal = document.getElementById("rendafixa-modal");
+    if (!modal) return;
     const form = document.getElementById("form-novo-rendafixa");
     const hoje = new Date().toISOString().split("T")[0];
+
+    const ativoInput = form.querySelector("#rendafixa-ativo");
+    const sugestoesDiv = form.querySelector("#rendafixa-ativo-sugestoes");
+    const tipoAtivoSelect = form.querySelector("#rendafixa-tipo-ativo");
+    let timeoutBusca;
+
+    // Lógica de autocompletar para Títulos do Tesouro
+    ativoInput.addEventListener("input", () => {
+        clearTimeout(timeoutBusca);
+        sugestoesDiv.style.display = "none";
+        sugestoesDiv.innerHTML = "";
+
+        if (tipoAtivoSelect.value !== 'Tesouro Direto') {
+            return;
+        }
+
+        timeoutBusca = setTimeout(() => {
+            const term = ativoInput.value.toUpperCase();
+            const allTitles = Object.keys(window.allTesouroDiretoPrices || {});
+            const suggestions = allTitles.filter(title => title.toUpperCase().includes(term));
+
+            if (suggestions.length > 0) {
+                sugestoesDiv.style.display = "block";
+                suggestions.forEach((titulo) => {
+                    const div = document.createElement("div");
+                    div.className = "sugestao-item";
+                    div.textContent = titulo;
+                    div.onclick = () => {
+                        ativoInput.value = titulo;
+                        sugestoesDiv.style.display = "none";
+                    };
+                    sugestoesDiv.appendChild(div);
+                });
+            }
+        }, 300);
+    });
+
+    // Esconde sugestões se clicar fora
+    document.addEventListener('click', (e) => {
+        if (sugestoesDiv && !sugestoesDiv.contains(e.target) && e.target !== ativoInput) {
+            sugestoesDiv.style.display = 'none';
+        }
+    });
+
+    // Limpa o input e atualiza o placeholder ao mudar o tipo de ativo
+    tipoAtivoSelect.addEventListener('change', () => {
+        ativoInput.value = '';
+        sugestoesDiv.style.display = 'none';
+        ativoInput.placeholder = tipoAtivoSelect.value === 'Tesouro Direto'
+            ? "Digite para buscar o título..."
+            : "Ex: CDB Banco Inter 110%";
+    });
 
     document.getElementById("btn-novo-lancamento-rendafixa").addEventListener("click", () => window.openRendaFixaModal());
 
@@ -253,10 +306,15 @@ function setupRendaFixaModal(userID) {
 
     window.openRendaFixaModal = (data = {}, id = "") => {
         form.reset();
+        if (sugestoesDiv) sugestoesDiv.style.display = 'none';
         form["rendafixa-doc-id"].value = id;
         document.getElementById("rendafixa-modal-title").textContent = id ? "Editar Renda Fixa" : "Adicionar Renda Fixa";
         form.querySelector(".btn-adicionar").innerHTML = id ? '<i class="fas fa-save"></i> Salvar' : '<i class="fas fa-plus"></i> Adicionar';
-        form["rendafixa-tipo-ativo"].value = data.tipoAtivo || "Tesouro Direto";
+
+        const tipoAtivo = data.tipoAtivo || "Tesouro Direto";
+        form["rendafixa-tipo-ativo"].value = tipoAtivo;
+        ativoInput.placeholder = tipoAtivo === 'Tesouro Direto' ? "Digite para buscar o título..." : "Ex: CDB Banco Inter";
+
         form["rendafixa-ativo"].value = data.ativo || "";
         form["rendafixa-data-operacao"].value = data.data || hoje;
         form["rendafixa-data-vencimento"].value = data.dataVencimento || "";
@@ -267,6 +325,7 @@ function setupRendaFixaModal(userID) {
         modal.classList.add("show");
     };
 }
+
 
 // --- MODAL DE PROVENTOS ---
 function setupProventoModal(userID) {
@@ -465,125 +524,98 @@ function setupClassificacaoModal(userID) {
     };
 }
 
-// --- MODAL DE ATUALIZAR VALOR DO TESOURO DIRETO ---
-function setupAtualizarValorTdModal(userID) {
-    const modal = document.getElementById("atualizar-valor-td-modal");
-    const form = document.getElementById("form-atualizar-valor-td");
-    const selectAtivo = document.getElementById("atualizar-td-ativo");
-    const historicoDiv = document.getElementById("historico-valores-manuais-lista");
-    const hoje = new Date().toISOString().split("T")[0];
+// --- MODAL DE UPLOAD DE CSV DO TESOURO DIRETO ---
+function setupUploadCsvModal(userID) {
+    const modal = document.getElementById("upload-csv-td-modal");
+    const form = document.getElementById("form-upload-csv-td");
+    const fileInput = document.getElementById("csv-file-input");
+    const validationMessageDiv = document.getElementById("csv-validation-message");
 
-    const renderHistoricoValoresManuais = (valores) => {
-        if (valores.length === 0) {
-            historicoDiv.innerHTML = '<p style="font-size: 0.8rem; color: #a0a7b3;">Nenhum valor manual salvo.</p>';
-            return;
-        }
-        historicoDiv.innerHTML = valores.map(v => `
-            <div class="lista-item" style="grid-template-columns: 2fr 1fr 1fr auto; min-width: 400px; padding: 10px 15px;">
-                <div class="lista-item-valor">${v.ativo}</div>
-                <div class="lista-item-valor">${new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
-                <div class="lista-item-valor">${v.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
-                <div class="lista-acoes">
-                    <button class="btn-crud btn-editar-valor-manual" data-id="${v.id}" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                    <button class="btn-crud btn-excluir-valor-manual" data-id="${v.id}" title="Excluir"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
-                </div>
-            </div>
-        `).join('');
-    };
-
-    document.getElementById("btn-atualizar-valor-td").addEventListener("click", () => {
+    document.getElementById("btn-importar-csv-td").addEventListener("click", () => {
         form.reset();
-        form["atualizar-td-doc-id"].value = '';
-        form['data-posicao'].value = hoje;
-        form.querySelector('.btn-salvar').innerHTML = '<i class="fas fa-save"></i> Salvar Valor';
-
-        const tesouroLancamentos = (window.allLancamentos || []).filter(l => l.tipoAtivo === 'Tesouro Direto');
-        const titulosUnicos = [...new Set(tesouroLancamentos.map(l => l.ativo))];
-
-        selectAtivo.innerHTML = '<option value="">Selecione um título</option>';
-        if (titulosUnicos.length > 0) {
-            titulosUnicos.forEach(titulo => {
-                selectAtivo.innerHTML += `<option value="${titulo}">${titulo}</option>`;
-            });
-        } else {
-            selectAtivo.innerHTML = '<option value="">Nenhum Tesouro Direto na carteira</option>';
-        }
-
-        const q = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID), orderBy("timestamp", "desc"), limit(5));
-        onSnapshot(q, (snapshot) => {
-            const valores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderHistoricoValoresManuais(valores);
-        });
-
+        validationMessageDiv.style.display = 'none';
         modal.classList.add("show");
     });
 
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const docId = form["atualizar-td-doc-id"].value;
-        const ativo = form.ativo.value;
-        const dataPosicao = form["data-posicao"].value;
-        const valorAtual = parseFloat(form["valor-atual"].value);
+        const file = fileInput.files[0];
 
-        if (!ativo || !dataPosicao || !valorAtual) {
-            alert("Por favor, preencha todos os campos.");
+        if (!file) {
+            validationMessageDiv.textContent = "Por favor, selecione um arquivo.";
+            validationMessageDiv.style.display = 'block';
             return;
         }
 
-        const valorManualData = {
-            userID: userID,
-            ativo: ativo,
-            data: dataPosicao,
-            valor: valorAtual,
-            timestamp: serverTimestamp(),
+        if (file.type !== "text/csv") {
+            validationMessageDiv.textContent = "Formato de arquivo inválido. Por favor, envie um arquivo CSV.";
+            validationMessageDiv.style.display = 'block';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async function (event) {
+            const csvData = event.target.result;
+            const lines = csvData.split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 2) {
+                validationMessageDiv.textContent = "Arquivo CSV vazio ou com apenas o cabeçalho.";
+                validationMessageDiv.style.display = 'block';
+                return;
+            }
+            const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, ''));
+            const requiredHeaders = ["Título", "Rendimento anual do título", "Vencimento do Título", "Preço unitário de investimento"];
+
+            const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+            if (missingHeaders.length > 0) {
+                validationMessageDiv.textContent = `O arquivo CSV não contém as colunas obrigatórias: ${missingHeaders.join(', ')}`;
+                validationMessageDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const batch = writeBatch(db);
+                const collectionRef = collection(db, "tesouroDiretoPrices");
+                const uploadTimestamp = serverTimestamp();
+                const dataUpload = new Date().toISOString().split('T')[0];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(';');
+                    const entry = {};
+                    headers.forEach((header, index) => {
+                        entry[header] = values[index] ? values[index].trim().replace(/"/g, '') : '';
+                    });
+
+                    if (!entry["Título"]) continue;
+
+                    const docData = {
+                        userID: userID,
+                        titulo: entry["Título"],
+                        taxa: entry["Rendimento anual do título"],
+                        vencimento: entry["Vencimento do Título"],
+                        valor: parseFloat(entry["Preço unitário de investimento"].replace('R$', '').replace(/\./g, '').replace(',', '.')),
+                        data: dataUpload,
+                        timestamp: uploadTimestamp
+                    };
+
+                    const docId = `${userID}_${docData.titulo.replace(/[\s/.]+/g, '_')}`;
+                    const docRef = doc(collectionRef, docId);
+                    batch.set(docRef, docData, { merge: true });
+                }
+
+                await batch.commit();
+                alert("Arquivo CSV importado e dados atualizados com sucesso!");
+                closeModal("upload-csv-td-modal");
+
+            } catch (error) {
+                console.error("Erro ao processar e salvar o arquivo CSV: ", error);
+                validationMessageDiv.textContent = "Ocorreu um erro ao processar o arquivo. Verifique o formato e tente novamente.";
+                validationMessageDiv.style.display = 'block';
+            }
         };
-
-        try {
-            if (docId) { // Editando
-                await updateDoc(doc(db, "valoresManuaisTD", docId), valorManualData);
-                alert("Valor atualizado com sucesso!");
-            } else { // Criando novo
-                const newDocId = `${userID}_${ativo.replace(/[\s/.]+/g, '_')}`;
-                await setDoc(doc(db, "valoresManuaisTD", newDocId), valorManualData, { merge: true });
-                alert("Valor manual salvo com sucesso!");
-            }
-            form.reset();
-            form["atualizar-td-doc-id"].value = '';
-            form['data-posicao'].value = hoje;
-            form.querySelector('.btn-salvar').innerHTML = '<i class="fas fa-save"></i> Salvar Valor';
-
-        } catch (error) {
-            console.error("Erro ao salvar valor manual do Tesouro: ", error);
-            alert("Erro ao salvar: " + error.message);
-        }
-    });
-
-    historicoDiv.addEventListener("click", async (e) => {
-        const button = e.target.closest('button.btn-crud');
-        if (!button) return;
-
-        const docId = button.dataset.id;
-        const docRef = doc(db, 'valoresManuaisTD', docId);
-
-        if (button.classList.contains('btn-excluir-valor-manual')) {
-            if (confirm('Tem certeza que deseja excluir este valor manual?')) {
-                await deleteDoc(docRef);
-                alert('Valor excluído.');
-            }
-        } else if (button.classList.contains('btn-editar-valor-manual')) {
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                form.ativo.value = data.ativo;
-                form['data-posicao'].value = data.data;
-                form['valor-atual'].value = data.valor;
-                form['atualizar-td-doc-id'].value = docId;
-                form.querySelector('.btn-salvar').innerHTML = '<i class="fas fa-edit"></i> Atualizar Valor';
-                form.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
+        reader.readAsText(file, 'UTF-8');
     });
 }
+
 
 // --- MODAL DE DETALHES DO ATIVO ---
 function setupAtivoDetalhesModal() {
@@ -669,5 +701,5 @@ export function setupAllModals(userID) {
     setupMetaProventosModal(userID);
     setupClassificacaoModal(userID);
     setupAtivoDetalhesModal();
-    setupAtualizarValorTdModal(userID);
+    setupUploadCsvModal(userID);
 }

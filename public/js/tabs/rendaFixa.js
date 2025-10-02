@@ -6,9 +6,9 @@ import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.
  * Renderiza os cards da carteira de Renda Fixa.
  * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
  * @param {string} userID - O ID do usuário logado.
- * @param {object} valoresManuais - Objeto com os valores manuais salvos para o Tesouro.
+ * @param {object} tesouroPrices - Objeto com os valores atualizados para o Tesouro.
  */
-export async function renderRendaFixaCarteira(lancamentos, userID, valoresManuais) {
+export async function renderRendaFixaCarteira(lancamentos, userID, tesouroPrices) {
     const rendaFixaListaDiv = document.getElementById("rendafixa-lista");
     if (!rendaFixaListaDiv) return;
 
@@ -28,26 +28,20 @@ export async function renderRendaFixaCarteira(lancamentos, userID, valoresManuai
         const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
 
         const htmlPromises = rfLancamentos.map(async (ativo) => {
-            // Custo de Aquisição (NUNCA MUDA)
             const valorAplicadoOriginal = ativo.valorAplicado;
-            
+
             let valorBruto;
             let dataBaseParaCalculo = ativo.data;
 
-            // 1. Lógica para Tesouro Direto com Valor Manual (SOBRESCRITA)
-            const valorManualTD = ativo.tipoAtivo === 'Tesouro Direto' && valoresManuais && valoresManuais[ativo.ativo];
-            
+            const valorManualTD = ativo.tipoAtivo === 'Tesouro Direto' && tesouroPrices && tesouroPrices[ativo.ativo];
+
             if (valorManualTD) {
-                // Se for Tesouro com valor manual, este é o valor Bruto.
                 valorBruto = valorManualTD.valor * ativo.quantidade;
                 dataBaseParaCalculo = valorManualTD.data;
             } else {
-                // 2. Lógica de Cálculo Automático (CDB, LCI/LCA, Outros, Tesouro sem update manual)
-
                 const dataCalculo = new Date(dataBaseParaCalculo + 'T00:00:00');
                 const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
-                
-                // Inicializa o valor bruto para o cálculo de juros compostos ou indexadores
+
                 valorBruto = valorAplicadoOriginal;
 
                 if (ativo.tipoRentabilidade === 'Pós-Fixado') {
@@ -62,7 +56,7 @@ export async function renderRendaFixaCarteira(lancamentos, userID, valoresManuai
                             acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI);
                         });
                     valorBruto = valorAplicadoOriginal * acumuladorCDI;
-                    
+
                 } else if (ativo.tipoRentabilidade === 'Prefixado') {
                     const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
                     const diasUteis = diasCorridosCalculo * (252 / 365.25);
@@ -89,8 +83,6 @@ export async function renderRendaFixaCarteira(lancamentos, userID, valoresManuai
                 }
             }
 
-
-            // CÁLCULO FINAL (USANDO VALOR APLICADO ORIGINAL)
             const lucro = valorBruto - valorAplicadoOriginal;
             let aliquotaIR = 0;
             const isentoIR = ['LCI', 'LCA'].includes(ativo.tipoAtivo);

@@ -26,7 +26,7 @@ let allLancamentos = [];
 let allProventos = [];
 let allClassificacoes = {};
 let currentProventosMeta = null;
-let allValoresManuaisTD = {};
+let allTesouroDiretoPrices = {};
 let userConfig = {};
 
 // Função que será chamada quando o usuário fizer login
@@ -44,7 +44,7 @@ const onLogout = () => {
     allProventos = [];
     allClassificacoes = {};
     currentProventosMeta = null;
-    allValoresManuaisTD = {};
+    allTesouroDiretoPrices = {};
     userConfig = {};
 };
 
@@ -64,14 +64,14 @@ function initializeDataListeners(userID) {
         window.precosEInfos = precosEInfos;
 
         const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos);
-        
+
         renderHistorico(allLancamentos, precosEInfos);
         renderMovimentacaoChart(allLancamentos);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
-        renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
+        renderRendaFixaCarteira(allLancamentos, userID, allTesouroDiretoPrices);
         renderClassificacao(allLancamentos, allClassificacoes);
         renderPatrimonioTab(allLancamentos, allProventos);
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
@@ -101,7 +101,7 @@ function initializeDataListeners(userID) {
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
         renderAnalisesTab(allLancamentos, allProventos);
     });
-    
+
     const qClassificacoes = query(collection(db, "ativosClassificados"), where("userID", "==", userID));
     onSnapshot(qClassificacoes, (snapshot) => {
         allClassificacoes = {};
@@ -116,14 +116,16 @@ function initializeDataListeners(userID) {
         updateProventosTab(allProventos, currentProventosMeta);
     });
 
-    const qValoresManuais = query(collection(db, "valoresManuaisTD"), where("userID", "==", userID));
-    onSnapshot(qValoresManuais, (snapshot) => {
-        allValoresManuaisTD = {};
+    const qTesouroPrices = query(collection(db, "tesouroDiretoPrices"), where("userID", "==", userID), orderBy("timestamp", "desc"));
+    onSnapshot(qTesouroPrices, (snapshot) => {
+        allTesouroDiretoPrices = {};
         snapshot.forEach((doc) => {
             const data = doc.data();
-            allValoresManuaisTD[data.ativo] = { id: doc.id, ...data };
+            if (!allTesouroDiretoPrices[data.titulo]) {
+                allTesouroDiretoPrices[data.titulo] = data;
+            }
         });
-        renderRendaFixaCarteira(allLancamentos, userID, allValoresManuaisTD);
+        renderRendaFixaCarteira(allLancamentos, userID, allTesouroDiretoPrices);
     });
 
     const configDocRef = doc(db, "configuracoes", userID);
