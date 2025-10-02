@@ -125,6 +125,7 @@ function initializeDataListeners(userID) {
                 allTesouroDiretoPrices[data.titulo] = data;
             }
         });
+        window.allTesouroDiretoPrices = allTesouroDiretoPrices;
         renderRendaFixaCarteira(allLancamentos, userID, allTesouroDiretoPrices);
     });
 
