@@ -1,15 +1,55 @@
 import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
 import { renderDivisaoFiisCharts } from './fiisCharts.js';
+// --- NOVAS IMPORTAÇÕES ---
+import { db, auth } from '../firebase-config.js';
+import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+
+// --- NOVA FUNÇÃO ---
+/**
+ * Busca no Firestore o último valor de patrimônio salvo para a classe de ativo "FIIs".
+ * @param {string} userID - O ID do usuário logado.
+ * @returns {Promise<number>} - O valor do patrimônio do dia anterior, ou 0 se não encontrado.
+ */
+async function fetchPatrimonioAnterior(userID) {
+    if (!userID) return 0;
+
+    try {
+        const q = query(
+            collection(db, "historicoPatrimonioDiario"),
+            where("userID", "==", userID),
+            where("tipoAtivo", "==", "FIIs"),
+            orderBy("data", "desc"),
+            limit(1)
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.warn("Nenhum registro de patrimônio anterior encontrado para FIIs.");
+            return 0;
+        }
+
+        const ultimoRegistro = querySnapshot.docs[0].data();
+        return ultimoRegistro.valorPatrimonio || 0;
+
+    } catch (error) {
+        console.error("Erro ao buscar patrimônio anterior de FIIs:", error);
+        return 0;
+    }
+}
 
 
 /**
+ * --- FUNÇÃO ATUALIZADA ---
  * Calcula e renderiza a valorização do dia para a carteira de FIIs.
  * @param {Array<string>} tickers - A lista de tickers de FIIs na carteira.
  * @param {object} carteira - O objeto da carteira consolidada.
  * @param {object} precosAtuais - Objeto com os preços atuais para os tickers (intraday).
+ * @param {number} patrimonioAnterior - O valor do patrimônio de FIIs no fechamento do dia anterior.
  * @returns {Promise<Array<object>>} - Retorna uma lista com a performance diária de cada FII.
  */
-async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
+async function renderFiisDayValorization(tickers, carteira, precosAtuais, patrimonioAnterior) {
     const valorizationReaisDiv = document.getElementById("fiis-valorization-reais");
     const valorizationPercentDiv = document.getElementById("fiis-valorization-percent");
 
@@ -20,42 +60,31 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
     valorizationPercentDiv.className = 'valorization-pill';
 
     try {
-        const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
-        const results = await Promise.all(promises);
+        if (patrimonioAnterior <= 0) {
+            valorizationReaisDiv.textContent = "N/A";
+            valorizationPercentDiv.innerHTML = "-";
+            return [];
+        }
 
-        let totalValorizacaoReais = 0;
-        let patrimonioTotalOntem = 0;
-        const dailyPerformance = []; 
-
-        results.forEach((data, index) => {
-            const ticker = tickers[index];
-            if (data?.results?.[0]?.historicalDataPrice?.length >= 1 && precosAtuais[ticker]) {
-                
-                const hoje = precosAtuais[ticker]?.price; 
-                const ontem = data.results[0].historicalDataPrice[0].close;
-                
-                if (carteira[ticker] && ontem > 0 && hoje) {
-                    const quantidade = carteira[ticker].quantidade;
-                    const variacaoPercentual = ((hoje / ontem) - 1) * 100;
-                    const variacaoReais = (hoje - ontem) * quantidade;
-
-                    totalValorizacaoReais += variacaoReais;
-
-                    const patrimonioOntem = ontem * quantidade;
-                    patrimonioTotalOntem += patrimonioOntem;
-                    
-                    dailyPerformance.push({ ticker, changePercent: variacaoPercentual });
+        let patrimonioTotalHoje = 0;
+        tickers.forEach(ticker => {
+            if (carteira[ticker] && precosAtuais[ticker]) {
+                const quantidade = carteira[ticker].quantidade;
+                const precoAtual = precosAtuais[ticker].price;
+                if (quantidade > 0 && precoAtual > 0) {
+                    patrimonioTotalHoje += quantidade * precoAtual;
                 }
             }
         });
 
-        const variacaoPercentualFinal = patrimonioTotalOntem > 0 ? (totalValorizacaoReais / patrimonioTotalOntem) * 100 : 0;
+        const totalValorizacaoReais = patrimonioTotalHoje - patrimonioAnterior;
+        const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioAnterior) * 100;
 
         const isPositive = totalValorizacaoReais >= 0;
         const sinal = isPositive ? '+' : '';
         const corClasse = isPositive ? 'positive' : 'negative';
         const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
-        
+
         const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
 
@@ -64,7 +93,20 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
 
         valorizationPercentDiv.innerHTML = `${sinal}${percentualFormatado} ${iconeSeta}`;
         valorizationPercentDiv.classList.add(corClasse);
-
+        
+        const dailyPerformance = [];
+        const promises = tickers.map(ticker => fetchHistoricalData(ticker, '5d'));
+        const results = await Promise.all(promises);
+        results.forEach((data, index) => {
+            const ticker = tickers[index];
+            if (data?.results?.[0]?.historicalDataPrice?.length >= 1 && precosAtuais[ticker]) {
+                const hoje = precosAtuais[ticker]?.price;
+                const ontem = data.results[0].historicalDataPrice[0].close;
+                if (hoje && ontem > 0) {
+                    dailyPerformance.push({ ticker, changePercent: ((hoje / ontem) - 1) * 100 });
+                }
+            }
+        });
         return dailyPerformance;
 
     } catch (error) {
@@ -74,11 +116,8 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
     }
 }
 
-/**
- * Calcula e renderiza o resumo da carteira de FIIs.
- * @param {object} carteira - O objeto da carteira consolidada.
- * @param {object} precosAtuais - Objeto com os preços atuais dos ativos.
- */
+// ... O restante do arquivo (renderFiisSummary, renderFiisHighlights) permanece igual ...
+
 function renderFiisSummary(carteira, precosAtuais) {
     let totalInvestido = 0;
     let patrimonioAtual = 0;
@@ -121,12 +160,6 @@ function renderFiisSummary(carteira, precosAtuais) {
     updateField('fiis-rentabilidade-percent', rentabilidadePercent, false, true);
 }
 
-
-/**
- * Renderiza os destaques de rentabilidade (diária e histórica).
- * @param {Array<object>} dailyPerformance - Performance diária de cada ativo.
- * @param {Array<object>} historicalPerformance - Performance histórica de cada ativo.
- */
 function renderFiisHighlights(dailyPerformance, historicalPerformance) {
     const dayContainer = document.getElementById("fiis-highlights-day");
     const historyContainer = document.getElementById("fiis-highlights-history");
@@ -148,7 +181,6 @@ function renderFiisHighlights(dailyPerformance, historicalPerformance) {
         `;
     };
 
-    // Destaques do Dia
     if (dailyPerformance && dailyPerformance.length > 0) {
         dailyPerformance.sort((a, b) => b.changePercent - a.changePercent);
         const highestDay = dailyPerformance[0];
@@ -158,7 +190,6 @@ function renderFiisHighlights(dailyPerformance, historicalPerformance) {
         dayContainer.innerHTML = createHtml(null) + createHtml(null);
     }
 
-    // Destaques Históricos
     if (historicalPerformance && historicalPerformance.length > 0) {
         historicalPerformance.sort((a, b) => b.changePercent - a.changePercent);
         const highestHistory = historicalPerformance[0];
@@ -171,11 +202,8 @@ function renderFiisHighlights(dailyPerformance, historicalPerformance) {
 
 
 /**
+ * --- FUNÇÃO ATUALIZADA ---
  * Renderiza a aba de Fundos Imobiliários (FIIs).
- * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
- * @param {Array<object>} proventos - A lista completa de todos os proventos.
- * @param {object} classificacoes - As classificações de ativos salvas.
- * @param {object} divisaoIdeal - As porcentagens da divisão ideal salvas.
  */
 export async function renderFiisCarteira(lancamentos, proventos, classificacoes, divisaoIdeal) {
     const fiisListaDiv = document.getElementById("fiis-lista");
@@ -191,7 +219,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         document.getElementById("fiis-valorization-reais").textContent = "N/A";
         document.getElementById("fiis-valorization-percent").innerHTML = "";
         document.getElementById("fiis-valorization-percent").className = 'valorization-pill';
-
         document.getElementById("fiis-total-investido").textContent = "R$ 0,00";
         document.getElementById("fiis-patrimonio-atual").textContent = "R$ 0,00";
         document.getElementById("fiis-rentabilidade-reais").textContent = "R$ 0,00";
@@ -202,16 +229,9 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
     }
 
     const carteira = {};
-
     fiisLancamentos.forEach(l => {
         if (!carteira[l.ativo]) {
-            carteira[l.ativo] = {
-                ativo: l.ativo,
-                quantidade: 0,
-                quantidadeComprada: 0,
-                valorTotalInvestido: 0,
-                proventos: 0,
-            };
+            carteira[l.ativo] = { ativo: l.ativo, quantidade: 0, quantidadeComprada: 0, valorTotalInvestido: 0, proventos: 0, };
         }
         if (l.tipoOperacao === 'compra') {
             carteira[l.ativo].quantidade += l.quantidade;
@@ -238,11 +258,13 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
-        const dailyPerformance = await renderFiisDayValorization(tickers, carteira, precosAtuais);
+
+        // --- LÓGICA ATUALIZADA ---
+        const patrimonioAnterior = await fetchPatrimonioAnterior(auth.currentUser.uid);
+        const dailyPerformance = await renderFiisDayValorization(tickers, carteira, precosAtuais, patrimonioAnterior);
+
         const historicalPerformance = [];
-
         renderFiisSummary(carteira, precosAtuais);
-
         let totalValorFiis = 0;
         const valoresAtuais = {
             tipo: { 'Tijolo': 0, 'Papel': 0 },
@@ -257,10 +279,8 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
-
             const variacaoReais = valorPosicaoAtual - valorInvestido;
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
-
             const rentabilidadeReais = variacaoReais + ativo.proventos;
             const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
 
@@ -271,20 +291,13 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             if (classif) {
                 if (classif['Tipo FII'] === 'Tijolo') valoresAtuais.tipo.Tijolo += valorPosicaoAtual;
                 if (classif['Tipo FII'] === 'Papel') valoresAtuais.tipo.Papel += valorPosicaoAtual;
-                if (classif['Risco FII'] in valoresAtuais.risco) {
-                    valoresAtuais.risco[classif['Risco FII']] += valorPosicaoAtual;
-                }
+                if (classif['Risco FII'] in valoresAtuais.risco) { valoresAtuais.risco[classif['Risco FII']] += valorPosicaoAtual; }
                 if (classif['Tipo FII'] === 'Tijolo') {
                     const especie = classif['Espécie'];
-                    if (valoresAtuais.especieTijolo.hasOwnProperty(especie)) {
-                        valoresAtuais.especieTijolo[especie] += valorPosicaoAtual;
-                    } else {
-                        valoresAtuais.especieTijolo['Outros'] += valorPosicaoAtual;
-                    }
+                    if (valoresAtuais.especieTijolo.hasOwnProperty(especie)) { valoresAtuais.especieTijolo[especie] += valorPosicaoAtual; } 
+                    else { valoresAtuais.especieTijolo['Outros'] += valorPosicaoAtual; }
                 } else if (classif['Tipo FII'] === 'Papel') {
-                    if (valoresAtuais.especiePapel.hasOwnProperty(classif['Espécie'])) {
-                        valoresAtuais.especiePapel[classif['Espécie']] += valorPosicaoAtual;
-                    }
+                    if (valoresAtuais.especiePapel.hasOwnProperty(classif['Espécie'])) { valoresAtuais.especiePapel[classif['Espécie']] += valorPosicaoAtual; }
                 }
             }
 
@@ -295,7 +308,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                         <div class="label">Valor Atual da Posição</div>
                         <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                     </div>
-                    
                     <div class="fii-card-results-container">
                         <div class="fii-card-result ${variacaoReais >= 0 ? 'positive-change' : 'negative-change'}">
                             Variação: ${variacaoReais >= 0 ? '+' : ''}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoPercent.toFixed(2)}%) ${variacaoReais >= 0 ? '↑' : '↓'}
@@ -304,7 +316,6 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                             Rentabilidade: ${rentabilidadeReais >= 0 ? '+' : ''}${rentabilidadeReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercent.toFixed(2)}%) ${rentabilidadeReais >= 0 ? '↑' : '↓'}
                         </div>
                     </div>
-
                     <div class="fii-card-details">
                         <div class="detail-item"><span>Valor Investido</span><span>${valorInvestido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
                         <div class="detail-item"><span>Quantidade</span><span>${ativo.quantidade.toLocaleString('pt-BR')}</span></div>
@@ -317,9 +328,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         }).join('');
 
         fiisListaDiv.innerHTML = html;
-
         renderFiisHighlights(dailyPerformance, historicalPerformance);
-
         const divisaoAtualPercentual = JSON.parse(JSON.stringify(valoresAtuais));
         if (totalValorFiis > 0) {
             for (const categoria in divisaoAtualPercentual) {
@@ -328,9 +337,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                 }
             }
         }
-
         renderDivisaoFiisCharts(divisaoAtualPercentual, divisaoIdeal);
-
     } catch (error) {
         console.error("Erro ao renderizar carteira de FIIs:", error);
         fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;

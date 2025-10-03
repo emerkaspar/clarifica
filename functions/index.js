@@ -154,7 +154,7 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
     const todayStr = new Date().toISOString().split('T')[0];
 
     try {
-        // 1. Buscar todos os usuários (neste caso, pegará todos os lançamentos e agrupará por userID)
+        // 1. Buscar todos os lançamentos e agrupar por userID
         const lancamentosSnapshot = await db.collection("lancamentos").get();
         const todosLancamentos = [];
         lancamentosSnapshot.forEach(doc => {
@@ -173,7 +173,7 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
         for (const userID in lancamentosPorUsuario) {
             const lancamentosDoUsuario = lancamentosPorUsuario[userID];
             
-            // Separa os ativos por tipo
+            // Separa os ativos por tipo para saber quais cálculos fazer
             const ativosPorTipo = lancamentosDoUsuario.reduce((acc, l) => {
                 const tipo = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
                 if (!acc[tipo]) {
@@ -183,23 +183,40 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
                 return acc;
             }, {});
 
-            // 3. Foco em Ações, como solicitado
-            const tipoAtivo = 'Ações';
-            if (ativosPorTipo[tipoAtivo]) {
-                const tickersAcoes = [...new Set(ativosPorTipo[tipoAtivo])];
-                const patrimonioAcoes = await calcularPatrimonioPorTipo(userID, lancamentosDoUsuario, tipoAtivo, tickersAcoes);
+            // 3. Calcula e salva o patrimônio para AÇÕES
+            if (ativosPorTipo['Ações']) {
+                const tickersAcoes = [...new Set(ativosPorTipo['Ações'])];
+                const patrimonioAcoes = await calcularPatrimonioPorTipo(userID, lancamentosDoUsuario, 'Ações', tickersAcoes);
 
-                // 4. Salvar o resultado no Firestore
                 if (patrimonioAcoes > 0) {
-                    const docId = `${userID}_${tipoAtivo}_${todayStr}`;
+                    const docId = `${userID}_Ações_${todayStr}`;
                     await db.collection("historicoPatrimonioDiario").doc(docId).set({
                         userID: userID,
-                        tipoAtivo: tipoAtivo,
+                        tipoAtivo: 'Ações',
                         valorPatrimonio: patrimonioAcoes,
                         data: todayStr,
                         timestamp: new Date()
                     });
-                    console.log(`[Snapshot] Patrimônio de ${tipoAtivo} para usuário ${userID} salvo: ${patrimonioAcoes}`);
+                    console.log(`[Snapshot] Patrimônio de Ações para usuário ${userID} salvo: ${patrimonioAcoes}`);
+                }
+            }
+            
+            // --- NOVO BLOCO ---
+            // 4. Calcula e salva o patrimônio para FIIS
+            if (ativosPorTipo['FIIs']) {
+                const tickersFiis = [...new Set(ativosPorTipo['FIIs'])];
+                const patrimonioFiis = await calcularPatrimonioPorTipo(userID, lancamentosDoUsuario, 'FIIs', tickersFiis);
+
+                if (patrimonioFiis > 0) {
+                    const docId = `${userID}_FIIs_${todayStr}`;
+                    await db.collection("historicoPatrimonioDiario").doc(docId).set({
+                        userID: userID,
+                        tipoAtivo: 'FIIs',
+                        valorPatrimonio: patrimonioFiis,
+                        data: todayStr,
+                        timestamp: new Date()
+                    });
+                    console.log(`[Snapshot] Patrimônio de FIIs para usuário ${userID} salvo: ${patrimonioFiis}`);
                 }
             }
         }
@@ -216,7 +233,6 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
 
 /**
  * Função auxiliar para calcular o valor de patrimônio de um tipo de ativo.
- * Esta função é uma simplificação da lógica do frontend.
  */
 async function calcularPatrimonioPorTipo(userID, lancamentos, tipoAtivo, tickers) {
     let patrimonioTotal = 0;
@@ -237,7 +253,7 @@ async function calcularPatrimonioPorTipo(userID, lancamentos, tipoAtivo, tickers
         }
     });
 
-    // Busca as cotações mais recentes salvas no Firestore
+    // Busca as cotações mais recentes salvas no Firestore para calcular o patrimônio
     for (const ticker of tickers) {
         const ativo = carteira[ticker];
         if (ativo && ativo.quantidade > 0) {
