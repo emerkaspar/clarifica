@@ -65,7 +65,7 @@ async function getPrecosAtuaisRendaFixa(lancamentos) {
                         const diasUteis = diasCorridosCalculo * (252 / 365.25);
                         valorBruto = ativo.valorAplicado * Math.pow(1 + taxaAnual, diasUteis / 252);
                     } else if (ativo.tipoRentabilidade === 'Híbrido') {
-                         let acumuladorIPCA = 1;
+                        let acumuladorIPCA = 1;
                         const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
                         const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
                         historicoIPCA
@@ -161,7 +161,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
 
         while (lancamentoIndex < lancamentosOrdenados.length && new Date(lancamentosOrdenados[lancamentoIndex].data + 'T00:00:00') <= fimDoMes) {
             const l = lancamentosOrdenados[lancamentoIndex];
-            
+
             if (!carteira[l.ativo]) {
                 carteira[l.ativo] = { quantidade: 0, valorTotalInvestido: 0, _quantidadeComprada: 0, _valorTotalComprado: 0 };
             }
@@ -396,7 +396,14 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
         assets.sort((a, b) => b.valorAtual - a.valorAtual);
         assets.forEach(ativo => {
             const logoUrl = precosEInfos[ativo.ativo]?.logoUrl;
-            const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">` : `<div class="ativo-logo-fallback">${ativo.ativo.charAt(0)}</div>`;
+            let logoHtml;
+            if (ativo.tipoAtivo === 'FIIs') {
+                logoHtml = `<div class="ativo-logo-fallback"><i class="fas fa-building"></i></div>`;
+            } else if (logoUrl) {
+                logoHtml = `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo">`;
+            } else {
+                logoHtml = `<div class="ativo-logo-fallback">${ativo.ativo.charAt(0)}</div>`;
+            }
 
             html += `
                 <div class="asset-card">
@@ -451,10 +458,10 @@ function renderPosicaoConsolidada(carteira, precosEInfos, proventos, dailyVariat
 export async function renderPatrimonioTab(lancamentos, proventos) {
     const patrimonioContent = document.getElementById('patrimonio-content');
     if (!patrimonioContent || !lancamentos || lancamentos.length === 0) {
-         if (patrimonioEvolutionChart) patrimonioEvolutionChart.destroy();
-         if (assetAllocationChart) assetAllocationChart.destroy();
-         document.getElementById('posicao-consolidada-container').innerHTML = '<h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">Posição Consolidada</h3><p>Nenhum lançamento encontrado.</p>';
-         document.getElementById('allocation-details').innerHTML = '';
+        if (patrimonioEvolutionChart) patrimonioEvolutionChart.destroy();
+        if (assetAllocationChart) assetAllocationChart.destroy();
+        document.getElementById('posicao-consolidada-container').innerHTML = '<h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">Posição Consolidada</h3><p>Nenhum lançamento encontrado.</p>';
+        document.getElementById('allocation-details').innerHTML = '';
         return;
     }
 

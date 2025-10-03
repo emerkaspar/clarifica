@@ -13,9 +13,11 @@ export function renderHistorico(lancamentos, precosEInfos = {}) {
     if (!historicoListaDiv) return;
 
     const searchTerm = searchInput.value.toUpperCase();
-    const lancamentosFiltrados = lancamentos.filter((l) =>
-        l.ativo.toUpperCase().includes(searchTerm)
-    );
+
+    // Filtra e ordena os lançamentos
+    const lancamentosFiltrados = lancamentos
+        .filter((l) => l.ativo.toUpperCase().includes(searchTerm))
+        .sort((a, b) => new Date(b.data) - new Date(a.data));
 
     if (lancamentosFiltrados.length === 0) {
         historicoListaDiv.innerHTML = `<p>Nenhum lançamento encontrado.</p>`;
@@ -30,11 +32,16 @@ export function renderHistorico(lancamentos, precosEInfos = {}) {
         const dataOperacaoFormatada = new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR');
         const ativoInfo = precosEInfos[l.ativo];
         const logoUrl = ativoInfo?.logoUrl;
-        const logoHtml = logoUrl
-            ? `<img src="${logoUrl}" alt="${l.ativo}" class="ativo-logo">`
-            : `<div class="ativo-logo-fallback"><i class="fas fa-dollar-sign"></i></div>`;
 
-        // Adicionada a classe "lancamento-card" para o CSS de responsividade
+        let logoHtml;
+        if (l.tipoAtivo === 'FIIs') {
+            logoHtml = `<div class="ativo-logo-fallback"><i class="fas fa-building"></i></div>`;
+        } else if (logoUrl) {
+            logoHtml = `<img src="${logoUrl}" alt="${l.ativo}" class="ativo-logo">`;
+        } else {
+            logoHtml = `<div class="ativo-logo-fallback"><i class="fas fa-dollar-sign"></i></div>`;
+        }
+
         return `
             <div class="lista-item lancamento-card">
                 <div class="card-cell" data-label="Ativo">
@@ -61,8 +68,6 @@ export function renderHistorico(lancamentos, precosEInfos = {}) {
         `;
     }).join("");
 }
-
-// O restante do arquivo (listeners) permanece o mesmo...
 
 // Event listener para os botões de editar e excluir
 historicoListaDiv.addEventListener("click", async (e) => {
