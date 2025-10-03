@@ -36,40 +36,29 @@ const getPriceOnDate = (historicalData, targetDate) => {
 };
 
 
-// --- NOVAS FUNÇÕES PARA O GRÁFICO DE VARIAÇÃO ---
+// --- FUNÇÕES PARA O GRÁFICO DE VARIAÇÃO ---
 
-/**
- * Busca e armazena em cache o histórico de patrimônio diário do Firestore.
- * A busca agora é mais longa para acomodar a visão anual.
- */
 async function fetchHistoricoPatrimonio(intervalo) {
     if (!auth.currentUser || (allHistoricoPatrimonio.length > 0 && intervalo !== 'Anual')) return;
-
     try {
         const hoje = new Date();
         const dataFiltro = new Date();
-        
-        // Define o período de busca com base no intervalo para otimizar
         if (intervalo === 'Anual') {
-            dataFiltro.setFullYear(hoje.getFullYear() - 5); // Busca até 5 anos
+            dataFiltro.setFullYear(hoje.getFullYear() - 5);
         } else if (intervalo === 'Mensal') {
-            dataFiltro.setFullYear(hoje.getFullYear() - 1); // Busca 1 ano
+            dataFiltro.setFullYear(hoje.getFullYear() - 1);
         } else {
-            dataFiltro.setDate(hoje.getDate() - 35); // Busca 35 dias para garantir 30 variações
+            dataFiltro.setDate(hoje.getDate() - 35);
         }
-        
         const dataFiltroStr = dataFiltro.toISOString().split('T')[0];
-
         const q = query(
             collection(db, "historicoPatrimonioDiario"),
             where("userID", "==", auth.currentUser.uid),
             where("data", ">=", dataFiltroStr),
             orderBy("data", "asc")
         );
-
         const querySnapshot = await getDocs(q);
         allHistoricoPatrimonio = querySnapshot.docs.map(doc => doc.data());
-
     } catch (error) {
         console.error("Erro ao buscar histórico de patrimônio:", error);
         allHistoricoPatrimonio = [];
@@ -77,78 +66,80 @@ async function fetchHistoricoPatrimonio(intervalo) {
 }
 
 /**
- * Processa os dados históricos para calcular a variação diária, mensal ou anual.
+ * --- FUNÇÃO ATUALIZADA ---
+ * Processa os dados para calcular a variação por período, agora separando por tipo de ativo.
  */
 function processarVariacaoDiaria(tipoAtivoFiltro, intervalo) {
-    // 1. Agrega o patrimônio total por dia
     const patrimonioPorDia = allHistoricoPatrimonio.reduce((acc, registro) => {
         const { data, tipoAtivo, valorPatrimonio } = registro;
         if (!acc[data]) {
-            acc[data] = { total: 0, Ações: 0, FIIs: 0, ETF: 0, Cripto: 0, 'Renda Fixa': 0 };
+            acc[data] = { total: 0, 'Ações': 0, 'FIIs': 0, 'ETF': 0, 'Cripto': 0, 'Renda Fixa': 0 };
         }
         if (acc[data][tipoAtivo] !== undefined) {
-            acc[data][tipoAtivo] += valorPatrimonio;
+             acc[data][tipoAtivo] += valorPatrimonio;
         }
         acc[data].total += valorPatrimonio;
         return acc;
     }, {});
 
-    // 2. Agrega os dados por período (mês ou ano), se necessário
     let dadosAgregados = {};
     const sortedDates = Object.keys(patrimonioPorDia).sort();
     
     if (intervalo === 'Diário') {
         dadosAgregados = patrimonioPorDia;
-    } else { // Mensal ou Anual
-        const getKey = (date) => intervalo === 'Mensal' 
-            ? date.substring(0, 7) // 'YYYY-MM'
-            : date.substring(0, 4); // 'YYYY'
-
+    } else {
+        const getKey = (date) => intervalo === 'Mensal' ? date.substring(0, 7) : date.substring(0, 4);
         sortedDates.forEach(date => {
             const key = getKey(date);
-            // Salva apenas o último valor do período
             dadosAgregados[key] = patrimonioPorDia[date];
         });
     }
 
-    // 3. Calcula a variação entre os períodos
     const sortedKeys = Object.keys(dadosAgregados).sort();
     const labels = [];
-    const variacoesReais = [];
-    const variacoesPercent = [];
+    const assetTypes = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
+    const variacoes = {
+        'Ações': [], 'FIIs': [], 'ETF': [], 'Cripto': [], 'Renda Fixa': [], totalReais: [], totalPercent: []
+    };
 
     for (let i = 1; i < sortedKeys.length; i++) {
         const keyAtual = sortedKeys[i];
         const keyAnterior = sortedKeys[i - 1];
-
-        const valorAtual = tipoAtivoFiltro === 'Todos' ? dadosAgregados[keyAtual].total : dadosAgregados[keyAtual][tipoAtivoFiltro] || 0;
-        const valorAnterior = tipoAtivoFiltro === 'Todos' ? dadosAgregados[keyAnterior].total : dadosAgregados[keyAnterior][tipoAtivoFiltro] || 0;
-
-        if (valorAnterior > 0) {
-            const variacao = valorAtual - valorAnterior;
-            const percentual = (variacao / valorAnterior) * 100;
-            
+        
+        const valorTotalAnterior = dadosAgregados[keyAnterior].total;
+        
+        if (valorTotalAnterior > 0) {
             let label;
             if (intervalo === 'Diário') {
                 label = new Date(keyAtual + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
             } else if (intervalo === 'Mensal') {
                 const [year, month] = keyAtual.split('-');
                 label = new Date(year, month - 1, 1).toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
-            } else { // Anual
+            } else {
                 label = keyAtual;
             }
-
             labels.push(label);
-            variacoesReais.push(variacao);
-            variacoesPercent.push(percentual);
+
+            let variacaoTotalDia = 0;
+            assetTypes.forEach(tipo => {
+                const valorAtual = dadosAgregados[keyAtual][tipo] || 0;
+                const valorAnterior = dadosAgregados[keyAnterior][tipo] || 0;
+                const variacao = valorAtual - valorAnterior;
+                variacoes[tipo].push(variacao);
+                variacaoTotalDia += variacao;
+            });
+            
+            variacoes.totalReais.push(variacaoTotalDia);
+            variacoes.totalPercent.push((variacaoTotalDia / valorTotalAnterior) * 100);
         }
     }
 
-    return { labels, variacoesReais, variacoesPercent };
+    return { labels, variacoes };
 }
 
 /**
- * Renderiza ou atualiza o gráfico de variação diária.
+ * --- FUNÇÃO ATUALIZADA ---
+ * Renderiza o gráfico, agora com lógica para ser simples ou empilhado.
  */
 async function renderVariacaoDiariaChart() {
     const canvas = document.getElementById('daily-variation-chart');
@@ -158,12 +149,10 @@ async function renderVariacaoDiariaChart() {
     const filtroIntervaloBtn = document.querySelector("#daily-variation-interval-filter .filter-btn.active");
     const filtroIntervalo = filtroIntervaloBtn ? filtroIntervaloBtn.dataset.intervalo : 'Diário';
 
-    // Garante que temos dados suficientes para o período selecionado
     await fetchHistoricoPatrimonio(filtroIntervalo);
 
-    const { labels, variacoesReais, variacoesPercent } = processarVariacaoDiaria(filtroAtivo, filtroIntervalo);
+    const { labels, variacoes } = processarVariacaoDiaria(filtroAtivo, filtroIntervalo);
     
-    // Atualiza o título do gráfico dinamicamente
     const titleEl = canvas.closest('.performance-box').querySelector('h3');
     if (titleEl) {
         const periodos = { 'Diário': '30 dias', 'Mensal': '12 meses', 'Anual': 'últimos anos' };
@@ -173,35 +162,70 @@ async function renderVariacaoDiariaChart() {
     if (dailyVariationChart) {
         dailyVariationChart.destroy();
     }
+    
+    const isConsolidado = filtroAtivo === 'Todos';
+    let datasets = [];
+    
+    if (isConsolidado) {
+        const colors = {
+            'Ações': { bg: 'rgba(0, 217, 195, 0.8)', bd: '#00d9c3' },
+            'FIIs': { bg: 'rgba(90, 103, 216, 0.8)', bd: '#5A67D8' },
+            'ETF': { bg: 'rgba(237, 100, 166, 0.8)', bd: '#ED64A6' },
+            'Cripto': { bg: 'rgba(236, 201, 75, 0.8)', bd: '#ECC94B' },
+            'Renda Fixa': { bg: 'rgba(160, 167, 179, 0.8)', bd: '#a0a7b3' }
+        };
+        
+        datasets = Object.keys(colors).map(tipo => ({
+            label: tipo,
+            data: variacoes[tipo].slice(-30),
+            backgroundColor: colors[tipo].bg,
+            borderColor: colors[tipo].bd,
+            borderWidth: 1,
+            borderRadius: 2
+        }));
+
+    } else {
+        const data = variacoes[filtroAtivo].slice(-30);
+        datasets.push({
+            label: 'Variação em R$',
+            data: data,
+            backgroundColor: data.map(v => v >= 0 ? 'rgba(0, 217, 195, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+            borderColor: data.map(v => v >= 0 ? '#00d9c3' : '#ef4444'),
+            borderWidth: 1,
+            borderRadius: 4
+        });
+    }
 
     dailyVariationChart = new Chart(canvas, {
         type: 'bar',
         data: {
-            labels: labels.slice(-30), // Limita a exibição para não poluir o gráfico
-            datasets: [{
-                label: 'Variação em R$',
-                data: variacoesReais.slice(-30),
-                backgroundColor: variacoesReais.slice(-30).map(v => v >= 0 ? 'rgba(0, 217, 195, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-                borderColor: variacoesReais.slice(-30).map(v => v >= 0 ? '#00d9c3' : '#ef4444'),
-                borderWidth: 1,
-                borderRadius: 4
-            }]
+            labels: labels.slice(-30),
+            datasets: datasets
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                x: { grid: { display: false }, ticks: { color: "#a0a7b3" } },
-                y: { grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => formatCurrency(value) } }
+                x: { stacked: isConsolidado, grid: { display: false }, ticks: { color: "#a0a7b3" } },
+                y: { stacked: isConsolidado, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => formatCurrency(value) } }
             },
             plugins: {
-                legend: { display: false },
+                legend: { display: isConsolidado, position: 'bottom', labels: { color: '#a0a7b3' } },
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            const index = context.dataIndex;
-                            const valorReal = variacoesReais.slice(-30)[index];
-                            const valorPercent = variacoesPercent.slice(-30)[index];
-                            return `${formatCurrency(valorReal)} (${valorPercent.toFixed(2)}%)`;
+                            const valorReal = context.raw;
+                            return `${context.dataset.label}: ${formatCurrency(valorReal)}`;
+                        },
+                        footer: function(tooltipItems) {
+                             if (!isConsolidado) return;
+                             let sum = 0;
+                             tooltipItems.forEach(function(tooltipItem) {
+                                 sum += tooltipItem.raw;
+                             });
+                             const index = tooltipItems[0].dataIndex;
+                             const percent = variacoes.totalPercent.slice(-30)[index];
+                             return `Total: ${formatCurrency(sum)} (${percent.toFixed(2)}%)`;
                         }
                     }
                 }
@@ -210,13 +234,12 @@ async function renderVariacaoDiariaChart() {
     });
 }
 
-// Inicializa os listeners para os filtros do novo gráfico
+// Inicializa os listeners para os filtros
 document.addEventListener('DOMContentLoaded', () => {
     const assetFilter = document.getElementById('daily-variation-asset-filter');
     if (assetFilter) {
         assetFilter.addEventListener('change', renderVariacaoDiariaChart);
     }
-    
     const intervalFilter = document.getElementById('daily-variation-interval-filter');
     if (intervalFilter) {
         intervalFilter.addEventListener('click', (e) => {
@@ -234,11 +257,10 @@ document.addEventListener('DOMContentLoaded', () => {
  * Função principal que calcula e renderiza todos os cards da aba de Rentabilidade.
  */
 export async function renderRentabilidadeTab(lancamentos, proventos, summaryData) {
-    // ... (o início da função permanece o mesmo, calculando os cards de rentabilidade)
     const rentabilidadePane = document.getElementById('rentabilidade');
     if (!rentabilidadePane) return;
-    updateRentabilidadeField('rentabilidade-acumulada-percent', 'rentabilidade-acumulada-reais', 0, 0);
-    // ... etc ...
+    
+    // ... (lógica inicial de reset dos campos) ...
 
     if (!lancamentos || lancamentos.length === 0 || !summaryData) {
         renderConsolidatedPerformanceChart(lancamentos, proventos); 
@@ -246,11 +268,9 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
         return;
     }
     
-    // ... (toda a lógica de cálculo dos cards de rentabilidade) ...
+    // ... (toda a lógica de cálculo dos cards de rentabilidade permanece a mesma) ...
     
     // --- Renderiza os gráficos ---
     renderConsolidatedPerformanceChart(lancamentos, proventos);
-    
-    // --- RENDERIZA O NOVO GRÁFICO DE VARIAÇÃO ---
     renderVariacaoDiariaChart();
 }
