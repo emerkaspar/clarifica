@@ -382,6 +382,32 @@
                   <canvas id="consolidated-performance-chart"></canvas>
                 </div>
               </div>
+              <div class="performance-box" style="margin-top: 40px;">
+    <div class="evolution-header" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h3 style="margin: 0;">Variação Diária do Patrimônio</h3> <div class="evolution-filters">
+
+        <div id="daily-variation-interval-filter" class="filter-btn-group">
+            <button class="filter-btn active" data-intervalo="Diário">Diário</button>
+            <button class="filter-btn" data-intervalo="Mensal">Mensal</button>
+            <button class="filter-btn" data-intervalo="Anual">Anual</button>
+        </div>
+        <select id="daily-variation-asset-filter" class="filter-select">
+            <option value="Todos">Carteira Consolidada</option>
+            <option value="Ações">Ações</option>
+            <option value="FIIs">FIIs</option>
+            <option value="ETF">ETFs</option>
+            <option value="Cripto">Criptomoedas</option>
+            <option value="Renda Fixa">Renda Fixa</option>
+        </select>
+    </div>
+</div>
+<div class="performance-chart-container">
+    <canvas id="daily-variation-chart"></canvas>
+</div>
+    <div class="performance-chart-container">
+        <canvas id="daily-variation-chart"></canvas>
+    </div>
+</div>
             </div>
 
             <div class="tab-pane" id="proventos">
