@@ -29,6 +29,36 @@ let currentProventosMeta = null;
 let allTesouroDiretoPrices = {};
 let userConfig = {};
 
+// Adicione esta função em public/js/main.js
+
+async function fetchPatrimonioAnterior(userID, tipoAtivo) {
+    if (!userID) return 0;
+
+    try {
+        const q = query(
+            collection(db, "historicoPatrimonioDiario"),
+            where("userID", "==", userID),
+            where("tipoAtivo", "==", tipoAtivo),
+            orderBy("data", "desc"),
+            limit(1)
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.log(`Nenhum patrimônio anterior encontrado para ${tipoAtivo}.`);
+            return 0;
+        }
+
+        const ultimoRegistro = querySnapshot.docs[0].data();
+        return ultimoRegistro.valorPatrimonio || 0;
+
+    } catch (error) {
+        console.error(`Erro ao buscar patrimônio anterior para ${tipoAtivo}:`, error);
+        return 0;
+    }
+}
+
 // Função que será chamada quando o usuário fizer login
 const onLogin = (userID) => {
     currentUserID = userID;

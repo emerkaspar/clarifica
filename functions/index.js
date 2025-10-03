@@ -139,3 +139,117 @@ exports.scheduledBrapiUpdate = functions.pubsub.schedule('0,30 * * * *')
     console.log("Rotina de atualização agendada concluída.");
     return null;
 });
+
+
+/**
+ * 🚀 FUNÇÃO AGENDADA PARA SALVAR O PATRIMÔNIO DIÁRIO
+ * * Cronograma: '0 18 * * *' (Todos os dias às 18:00)
+ * * Fuso Horário: America/Sao_Paulo
+ */
+exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
+    .timeZone('America/Sao_Paulo')
+    .onRun(async (context) => {
+
+    console.log('[Snapshot] Iniciando rotina para salvar o patrimônio diário.');
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    try {
+        // 1. Buscar todos os usuários (neste caso, pegará todos os lançamentos e agrupará por userID)
+        const lancamentosSnapshot = await db.collection("lancamentos").get();
+        const todosLancamentos = [];
+        lancamentosSnapshot.forEach(doc => {
+            todosLancamentos.push({ id: doc.id, ...doc.data() });
+        });
+
+        const lancamentosPorUsuario = todosLancamentos.reduce((acc, l) => {
+            if (!acc[l.userID]) {
+                acc[l.userID] = [];
+            }
+            acc[l.userID].push(l);
+            return acc;
+        }, {});
+
+        // 2. Para cada usuário, calcular o patrimônio por tipo de ativo
+        for (const userID in lancamentosPorUsuario) {
+            const lancamentosDoUsuario = lancamentosPorUsuario[userID];
+            
+            // Separa os ativos por tipo
+            const ativosPorTipo = lancamentosDoUsuario.reduce((acc, l) => {
+                const tipo = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
+                if (!acc[tipo]) {
+                    acc[tipo] = [];
+                }
+                acc[tipo].push(l.ativo);
+                return acc;
+            }, {});
+
+            // 3. Foco em Ações, como solicitado
+            const tipoAtivo = 'Ações';
+            if (ativosPorTipo[tipoAtivo]) {
+                const tickersAcoes = [...new Set(ativosPorTipo[tipoAtivo])];
+                const patrimonioAcoes = await calcularPatrimonioPorTipo(userID, lancamentosDoUsuario, tipoAtivo, tickersAcoes);
+
+                // 4. Salvar o resultado no Firestore
+                if (patrimonioAcoes > 0) {
+                    const docId = `${userID}_${tipoAtivo}_${todayStr}`;
+                    await db.collection("historicoPatrimonioDiario").doc(docId).set({
+                        userID: userID,
+                        tipoAtivo: tipoAtivo,
+                        valorPatrimonio: patrimonioAcoes,
+                        data: todayStr,
+                        timestamp: new Date()
+                    });
+                    console.log(`[Snapshot] Patrimônio de ${tipoAtivo} para usuário ${userID} salvo: ${patrimonioAcoes}`);
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('[Snapshot] Erro ao executar a rotina de snapshot:', error);
+        return null;
+    }
+    
+    console.log('[Snapshot] Rotina de snapshot concluída.');
+    return null;
+});
+
+
+/**
+ * Função auxiliar para calcular o valor de patrimônio de um tipo de ativo.
+ * Esta função é uma simplificação da lógica do frontend.
+ */
+async function calcularPatrimonioPorTipo(userID, lancamentos, tipoAtivo, tickers) {
+    let patrimonioTotal = 0;
+    
+    // Filtra lançamentos para o tipo de ativo específico
+    const lancamentosDoTipo = lancamentos.filter(l => l.tipoAtivo === tipoAtivo);
+
+    // Consolida a carteira para este tipo de ativo
+    const carteira = {};
+    lancamentosDoTipo.forEach(l => {
+        if (!carteira[l.ativo]) {
+            carteira[l.ativo] = { quantidade: 0 };
+        }
+        if (l.tipoOperacao === 'compra') {
+            carteira[l.ativo].quantidade += l.quantidade;
+        } else if (l.tipoOperacao === 'venda') {
+            carteira[l.ativo].quantidade -= l.quantidade;
+        }
+    });
+
+    // Busca as cotações mais recentes salvas no Firestore
+    for (const ticker of tickers) {
+        const ativo = carteira[ticker];
+        if (ativo && ativo.quantidade > 0) {
+            const q = db.collection("cotacoes").where("ticker", "==", ticker).orderBy("data", "desc").limit(1);
+            const cotacaoSnapshot = await q.get();
+            
+            if (!cotacaoSnapshot.empty) {
+                const preco = cotacaoSnapshot.docs[0].data().preco;
+                patrimonioTotal += ativo.quantidade * preco;
+            }
+        }
+    }
+    
+    return patrimonioTotal;
+}
