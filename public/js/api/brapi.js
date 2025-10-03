@@ -1,4 +1,6 @@
 import { getFromFirestore, saveToFirestore, getFallbackFromFirestore } from './caching.js';
+import { db } from '../firebase-config.js'; // Adicionado
+import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"; // Adicionado
 
 // TOKEN CORRETO USADO NO FRONT-END
 const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm";
@@ -122,35 +124,58 @@ export async function fetchCurrentPrices(tickers) {
 
 
 /**
- * Busca dados históricos para o gráfico de performance (com fallback).
+ * Busca dados históricos para o gráfico de performance (com fallback aprimorado).
  */
 export async function fetchHistoricalData(ticker, range = '1mo') {
-    if (BRAAPI_IS_PERMANENTLY_DOWN) {
-        console.warn(`[BRAPI - MODO FALHA] Chamada histórica bloqueada. Usando fallback de preço atual.`);
-    }
-    
-    const url = `https://brapi.dev/api/quote/${ticker}?range=${range}&interval=1d`;
-    const data = await getFromBrapi(url);
-    
-    if (data && data.results && data.results.length > 0) {
-        return data;
+    // 1. Tenta buscar na API se não estiver em modo de falha permanente
+    if (!BRAAPI_IS_PERMANENTLY_DOWN) {
+        const url = `https://brapi.dev/api/quote/${ticker}?range=${range}&interval=1d`;
+        const data = await getFromBrapi(url);
+        if (data && data.results && data.results.length > 0) {
+            return data;
+        }
     }
 
-    const fallbackData = await getFallbackFromFirestore(ticker);
-    if (fallbackData) {
+    // 2. Se a API falhou ou está em modo de falha, busca os 2 últimos registros no Firestore
+    console.warn(`[BRAPI - MODO FALHA] Buscando fallback histórico para ${ticker} no Firestore.`);
+    try {
+        const q = query(
+            collection(db, "cotacoes"),
+            where("ticker", "==", ticker),
+            orderBy("data", "desc"),
+            limit(2)
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.error(`Nenhum dado histórico encontrado no Firestore para ${ticker}.`);
+            return null;
+        }
+
+        // 3. Simula a estrutura da resposta da Brapi com os dados do Firestore
+        const historicalDataPrice = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            // A data no Firestore está em ISO string, a Brapi usa timestamp. Convertemos.
+            return {
+                date: new Date(data.data).getTime() / 1000,
+                close: data.preco
+            };
+        });
+        
+        // Garante que o mais recente venha primeiro, como na API original.
+        historicalDataPrice.sort((a, b) => b.date - a.date);
+
         return {
             results: [{
                 symbol: ticker,
-                historicalDataPrice: [{
-                    date: new Date(fallbackData.data).getTime() / 1000, 
-                    close: fallbackData.preco 
-                }]
+                historicalDataPrice: historicalDataPrice
             }]
         };
-    }
 
-    console.error(`Erro ao buscar dados históricos de ${ticker}: Nenhuma fonte disponível.`);
-    return null;
+    } catch (error) {
+        console.error(`Erro ao buscar fallback histórico de ${ticker} no Firestore:`, error);
+        return null;
+    }
 }
 
 /**
