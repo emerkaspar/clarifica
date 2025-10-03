@@ -1,6 +1,29 @@
 import { fetchIndexers } from '../api/bcb.js';
-import { db } from '../firebase-config.js';
-import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { db, auth } from '../firebase-config.js'; // auth adicionado
+import { doc, deleteDoc, getDoc, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"; // Funções do Firestore adicionadas
+
+// --- NOVA FUNÇÃO ---
+async function fetchPatrimonioAnterior(userID) {
+    if (!userID) return 0;
+    try {
+        const q = query(
+            collection(db, "historicoPatrimonioDiario"),
+            where("userID", "==", userID),
+            where("tipoAtivo", "==", "Renda Fixa"),
+            orderBy("data", "desc"),
+            limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            console.warn("Nenhum registro de patrimônio anterior encontrado para Renda Fixa.");
+            return 0;
+        }
+        return querySnapshot.docs[0].data().valorPatrimonio || 0;
+    } catch (error) {
+        console.error("Erro ao buscar patrimônio anterior de Renda Fixa:", error);
+        return 0;
+    }
+}
 
 /**
  * Calcula os valores atuais (bruto, líquido, impostos) para ativos de Renda Fixa
@@ -9,27 +32,22 @@ import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.
  * @returns {Promise<object>} - Um objeto com os valores calculados para cada ativo.
  */
 async function calculateRendaFixaValues(ativos) {
+    // ... (esta função permanece inalterada)
     if (ativos.length === 0) {
         return {};
     }
-
     const hoje = new Date();
     const dataMaisAntiga = ativos.reduce((min, p) => (new Date(p.data) < new Date(min) ? p.data : min), ativos[0].data);
-
     if (new Date(dataMaisAntiga) > hoje) {
         return {};
     }
-
     const { historicoCDI, historicoIPCA } = await fetchIndexers(dataMaisAntiga, hoje.toISOString().split('T')[0]);
-
     const calculatedValues = {};
-
     for (const ativo of ativos) {
         const valorAplicadoOriginal = ativo.valorAplicado;
         let valorBruto = valorAplicadoOriginal;
         const dataCalculo = new Date(ativo.data + 'T00:00:00');
         const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
-
         if (ativo.tipoRentabilidade === 'Pós-Fixado') {
             let acumuladorCDI = 1;
             const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
@@ -37,12 +55,10 @@ async function calculateRendaFixaValues(ativos) {
                 .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
                 .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
             valorBruto = valorAplicadoOriginal * acumuladorCDI;
-
         } else if (ativo.tipoRentabilidade === 'Prefixado') {
             const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
             const diasUteis = diasCorridosCalculo * (252 / 365.25);
             valorBruto = valorAplicadoOriginal * Math.pow(1 + taxaAnual, diasUteis / 252);
-
         } else if (ativo.tipoRentabilidade === 'Híbrido') {
             let acumuladorIPCA = 1;
             const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
@@ -58,7 +74,6 @@ async function calculateRendaFixaValues(ativos) {
             const diasUteis = diasCorridosCalculo * (252 / 365.25);
             valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
         }
-
         const lucro = valorBruto - valorAplicadoOriginal;
         let aliquotaIR = 0;
         const isentoIR = ['LCI', 'LCA'].includes(ativo.tipoAtivo);
@@ -71,42 +86,31 @@ async function calculateRendaFixaValues(ativos) {
         }
         const impostoDevido = lucro * aliquotaIR;
         const valorLiquido = valorBruto - impostoDevido;
-
         calculatedValues[ativo.id] = { valorCurva: valorLiquido, valorBruto, impostoDevido };
     }
     return calculatedValues;
 }
 
 /**
+ * --- FUNÇÃO ATUALIZADA ---
  * Renderiza o card de valorização do dia.
- * @param {Array<object>} ativosCalculados - Lista de ativos com seus valores já calculados.
+ * @param {number} patrimonioTotalHoje - O patrimônio total calculado para hoje.
+ * @param {number} patrimonioTotalOntem - O patrimônio total salvo do dia anterior.
  */
-function renderRendaFixaDayValorization(ativosCalculados) {
+function renderRendaFixaDayValorization(patrimonioTotalHoje, patrimonioTotalOntem) {
     const valorizationReaisDiv = document.getElementById("rendafixa-valorization-reais");
     const valorizationPercentDiv = document.getElementById("rendafixa-valorization-percent");
 
     if (!valorizationReaisDiv || !valorizationPercentDiv) return;
 
-    valorizationReaisDiv.textContent = "Calculando...";
-    valorizationPercentDiv.innerHTML = "";
-    valorizationPercentDiv.className = 'valorization-pill';
-
-    let patrimonioTotalHoje = 0;
-    let patrimonioTotalOntem = 0;
-
-    ativosCalculados.forEach(ativo => {
-        const patrimonioAtualAtivo = ativo.valorAtual;
-        patrimonioTotalHoje += patrimonioAtualAtivo;
-
-        // Simplificação: consideramos que o rendimento de 1 dia é o rendimento total / dias corridos
-        const diasCorridos = (new Date() - new Date(ativo.data)) / (1000 * 60 * 60 * 24);
-        const rendimentoTotal = patrimonioAtualAtivo - ativo.valorAplicado;
-        const rendimentoDiario = diasCorridos > 1 ? rendimentoTotal / diasCorridos : rendimentoTotal;
-        patrimonioTotalOntem += (patrimonioAtualAtivo - rendimentoDiario);
-    });
+    if (patrimonioTotalOntem <= 0) {
+        valorizationReaisDiv.textContent = "N/A";
+        valorizationPercentDiv.innerHTML = "";
+        return;
+    }
 
     const totalValorizacaoReais = patrimonioTotalHoje - patrimonioTotalOntem;
-    const variacaoPercentualFinal = patrimonioTotalOntem > 0 ? (totalValorizacaoReais / patrimonioTotalOntem) * 100 : 0;
+    const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioTotalOntem) * 100;
 
     const isPositive = totalValorizacaoReais >= 0;
     const sinal = isPositive ? '+' : '';
@@ -123,17 +127,11 @@ function renderRendaFixaDayValorization(ativosCalculados) {
     valorizationPercentDiv.classList.add(corClasse);
 }
 
-/**
- * Renderiza o card de resumo da carteira de Renda Fixa.
- * @param {number} patrimonioTotal - O patrimônio total calculado.
- * @param {number} investidoTotal - O valor total investido.
- */
+// ... (renderRendaFixaSummary permanece inalterada) ...
 function renderRendaFixaSummary(patrimonioTotal, investidoTotal) {
     const rentabilidadeReais = patrimonioTotal - investidoTotal;
     const rentabilidadePercent = investidoTotal > 0 ? (rentabilidadeReais / investidoTotal) * 100 : 0;
-
     const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
     const updateField = (id, value, isCurrency = true, addSign = false) => {
         const element = document.getElementById(id);
         if (element) {
@@ -146,7 +144,6 @@ function renderRendaFixaSummary(patrimonioTotal, investidoTotal) {
             }
         }
     };
-
     updateField('rendafixa-total-investido', investidoTotal);
     updateField('rendafixa-patrimonio-atual', patrimonioTotal);
     updateField('rendafixa-rentabilidade-reais', rentabilidadeReais, true, true);
@@ -155,10 +152,8 @@ function renderRendaFixaSummary(patrimonioTotal, investidoTotal) {
 
 
 /**
+ * --- FUNÇÃO ATUALIZADA ---
  * Função principal que renderiza toda a aba de Renda Fixa.
- * @param {Array<object>} lancamentos - Lista de todos os lançamentos do usuário.
- * @param {string} userID - ID do usuário logado.
- * @param {object} allTesouroDiretoPrices - Objeto com os preços de mercado atuais do Tesouro Direto.
  */
 export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDiretoPrices) {
     const rendaFixaListaDiv = document.getElementById("rendafixa-lista");
@@ -167,44 +162,37 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
     rendaFixaListaDiv.innerHTML = `<p>Calculando rentabilidade da Renda Fixa...</p>`;
 
     const rfLancamentos = lancamentos.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
-    const outrosRf = rfLancamentos.filter(l => l.tipoAtivo !== 'Tesouro Direto');
-    const tesouroDireto = rfLancamentos.filter(l => l.tipoAtivo === 'Tesouro Direto');
-
+    
     if (rfLancamentos.length === 0) {
         rendaFixaListaDiv.innerHTML = `<p>Nenhum ativo de Renda Fixa lançado ainda.</p>`;
         renderRendaFixaSummary(0, 0);
-        renderRendaFixaDayValorization([]);
+        renderRendaFixaDayValorization(0, 0);
         return;
     }
 
+    const outrosRf = rfLancamentos.filter(l => l.tipoAtivo !== 'Tesouro Direto');
+    const tesouroDireto = rfLancamentos.filter(l => l.tipoAtivo === 'Tesouro Direto');
+
     try {
+        const patrimonioAnterior = await fetchPatrimonioAnterior(userID);
         const calculatedValuesOutros = await calculateRendaFixaValues(outrosRf);
 
-        const ativosCalculados = [];
         let patrimonioTotal = 0;
         let investidoTotal = 0;
         let html = '';
 
-        // Processa Tesouro Direto com Marcação a Mercado
         for (const ativo of tesouroDireto) {
             const precoInfo = allTesouroDiretoPrices[ativo.ativo];
             const valorMam = precoInfo ? precoInfo.valor * ativo.quantidade : ativo.valorAplicado;
-
-            let valorCurva = valorMam; // Fallback
+            let valorCurva = valorMam;
             if (ativo.tipoRentabilidade === 'Prefixado') {
                 const tempResult = await calculateRendaFixaValues([ativo]);
                 valorCurva = tempResult[ativo.id]?.valorCurva || valorMam;
             }
-
             patrimonioTotal += valorMam;
             investidoTotal += ativo.valorAplicado;
-
-            // Adiciona aos ativos calculados para o card de valorização do dia
-            ativosCalculados.push({ ...ativo, valorAtual: valorMam });
-
             const rentabilidadeMam = valorMam - ativo.valorAplicado;
             const rentabilidadePercentual = ativo.valorAplicado > 0 ? (rentabilidadeMam / ativo.valorAplicado) * 100 : 0;
-
             html += `
                 <div class="fii-card">
                     <div class="fii-card-ticker" style="background-color: rgba(90, 103, 216, 0.1); color: #818cf8;">
@@ -232,20 +220,14 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                 </div>`;
         }
 
-        // Processa Outros Ativos de Renda Fixa
         outrosRf.forEach(ativo => {
             const valores = calculatedValuesOutros[ativo.id];
             if (!valores) return;
-
             const { valorCurva, valorBruto, impostoDevido } = valores;
             patrimonioTotal += valorCurva;
             investidoTotal += ativo.valorAplicado;
-
-            ativosCalculados.push({ ...ativo, valorAtual: valorCurva });
-
             const rentabilidadeLiquida = valorCurva - ativo.valorAplicado;
             const rentabilidadePercentual = ativo.valorAplicado > 0 ? (rentabilidadeLiquida / ativo.valorAplicado) * 100 : 0;
-
             html += `
                 <div class="fii-card">
                      <div class="fii-card-ticker" style="background-color: rgba(90, 103, 216, 0.1); color: #818cf8;">${ativo.ativo}</div>
@@ -271,10 +253,8 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                 </div>`;
         });
 
-        // Atualiza os cards de resumo e valorização do dia com os totais
         renderRendaFixaSummary(patrimonioTotal, investidoTotal);
-        renderRendaFixaDayValorization(ativosCalculados);
-
+        renderRendaFixaDayValorization(patrimonioTotal, patrimonioAnterior); // Usa os totais calculados
         rendaFixaListaDiv.innerHTML = html;
 
     } catch (error) {
@@ -286,12 +266,11 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
 
 // --- EVENT LISTENERS PARA OS BOTÕES DE EDITAR/EXCLUIR ---
 document.getElementById('rendafixa-lista').addEventListener('click', async (e) => {
+    // ... (esta função permanece inalterada)
     const button = e.target.closest('button.btn-crud');
     if (!button) return;
-
     const docId = button.dataset.id;
     const docRef = doc(db, 'lancamentos', docId);
-
     if (button.classList.contains('btn-excluir-rf')) {
         if (confirm('Tem certeza que deseja excluir este lançamento de Renda Fixa?')) {
             await deleteDoc(docRef);

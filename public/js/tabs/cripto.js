@@ -1,9 +1,65 @@
 import { fetchCurrentPrices } from '../api/brapi.js';
+// --- NOVAS IMPORTAÇÕES ---
+import { db, auth } from '../firebase-config.js';
+import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+// --- NOVA FUNÇÃO ---
+async function fetchPatrimonioAnterior(userID) {
+    if (!userID) return 0;
+    try {
+        const q = query(
+            collection(db, "historicoPatrimonioDiario"),
+            where("userID", "==", userID),
+            where("tipoAtivo", "==", "Cripto"),
+            orderBy("data", "desc"),
+            limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            console.warn("Nenhum registro de patrimônio anterior encontrado para Cripto.");
+            return 0;
+        }
+        return querySnapshot.docs[0].data().valorPatrimonio || 0;
+    } catch (error) {
+        console.error("Erro ao buscar patrimônio anterior de Cripto:", error);
+        return 0;
+    }
+}
+
+// --- NOVA FUNÇÃO ---
+function renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior) {
+    const valorizationReaisDiv = document.getElementById("cripto-valorization-reais");
+    const valorizationPercentDiv = document.getElementById("cripto-valorization-percent");
+
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return;
+
+    if (patrimonioAnterior <= 0) {
+        valorizationReaisDiv.textContent = "N/A";
+        valorizationPercentDiv.innerHTML = "";
+        return;
+    }
+
+    const totalValorizacaoReais = patrimonioAtual - patrimonioAnterior;
+    const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioAnterior) * 100;
+
+    const isPositive = totalValorizacaoReais >= 0;
+    const sinal = isPositive ? '+' : '';
+    const corClasse = isPositive ? 'positive' : 'negative';
+    const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+
+    valorizationReaisDiv.textContent = `${sinal}${totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+    valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
+
+    valorizationPercentDiv.innerHTML = `${sinal}${variacaoPercentualFinal.toFixed(2)}% ${iconeSeta}`;
+    valorizationPercentDiv.className = `valorization-pill ${corClasse}`;
+}
+
 
 /**
  * Calcula e renderiza o resumo da carteira de Criptomoedas.
  * @param {object} carteira - O objeto da carteira consolidada.
  * @param {object} precosAtuais - Objeto com os preços atuais dos ativos.
+ * @returns {number} O patrimônio atual total.
  */
 function renderCriptoSummary(carteira, precosAtuais) {
     let totalInvestido = 0;
@@ -25,12 +81,11 @@ function renderCriptoSummary(carteira, precosAtuais) {
     const rentabilidadePercent = totalInvestido > 0 ? (rentabilidadeReais / totalInvestido) * 100 : 0;
 
     const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const formatPercent = (value) => `${value.toFixed(2)}%`;
 
     const updateField = (id, value, isCurrency = true, addSign = false) => {
         const element = document.getElementById(id);
         if (element) {
-            const formattedValue = isCurrency ? formatCurrency(value) : formatPercent(value);
+            const formattedValue = isCurrency ? formatCurrency(value) : `${value.toFixed(2)}%`;
             const sinal = value >= 0 ? '+' : '';
             element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
             element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
@@ -44,10 +99,13 @@ function renderCriptoSummary(carteira, precosAtuais) {
     updateField('cripto-patrimonio-atual', patrimonioAtual);
     updateField('cripto-rentabilidade-reais', rentabilidadeReais, true, true);
     updateField('cripto-rentabilidade-percent', rentabilidadePercent, false, true);
+    
+    return patrimonioAtual; // Retorna o valor para ser usado na valorização diária
 }
 
 
 /**
+ * --- FUNÇÃO ATUALIZADA ---
  * Renderiza os cards da carteira de Criptomoedas.
  */
 export async function renderCriptoCarteira(lancamentos, proventos) {
@@ -58,7 +116,7 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
     const valorizationReaisDiv = document.getElementById("cripto-valorization-reais");
     const valorizationPercentDiv = document.getElementById("cripto-valorization-percent");
-    if (valorizationReaisDiv) valorizationReaisDiv.textContent = "Indisponível";
+    if (valorizationReaisDiv) valorizationReaisDiv.textContent = "Calculando...";
     if (valorizationPercentDiv) valorizationPercentDiv.innerHTML = "";
 
 
@@ -70,6 +128,7 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
         document.getElementById("cripto-patrimonio-atual").textContent = "R$ 0,00";
         document.getElementById("cripto-rentabilidade-reais").textContent = "R$ 0,00";
         document.getElementById("cripto-rentabilidade-percent").textContent = "0,00%";
+        if (valorizationReaisDiv) valorizationReaisDiv.textContent = "N/A";
         return;
     }
 
@@ -102,7 +161,12 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
-        renderCriptoSummary(carteira, precosAtuais);
+        const patrimonioAtual = renderCriptoSummary(carteira, precosAtuais);
+        
+        // --- LÓGICA ATUALIZADA ---
+        const patrimonioAnterior = await fetchPatrimonioAnterior(auth.currentUser.uid);
+        renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior);
+
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
