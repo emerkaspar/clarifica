@@ -2443,5 +2443,34 @@
     </div>
 
     <script src="js/main.js" type="module"></script>
+    <div id="salvar-calculo-modal" class="modal-overlay">
+      <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+          <h2>Salvar Cálculo</h2>
+          <button class="modal-close-btn" data-modal="salvar-calculo-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="form-salvar-calculo">
+            <div class="form-grid" style="grid-template-columns: 1fr;">
+              <div>
+                <label for="salvar-titulo" class="form-label">Título</label>
+                <input type="text" id="salvar-titulo" class="form-input" required>
+              </div>
+              <div>
+                <label for="salvar-notas" class="form-label">Notas (Opcional)</label>
+                <textarea id="salvar-notas" class="form-input" rows="3" style="resize: vertical;"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer" style="padding: 25px 0 0 0;">
+              <button type="button" class="btn-cancelar" data-modal="salvar-calculo-modal">Cancelar</button>
+              <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <script src="js/main.js" type="module"></script>
+  </body>
+</html>
   </body>
 </html>
