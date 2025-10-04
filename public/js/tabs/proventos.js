@@ -33,8 +33,8 @@ const renderProventosList = (proventos, precosEInfos = {}) => {
         return acc;
     }, {});
 
-    // 2. Ordena os ativos pelo valor total de proventos (do maior para o menor)
-    const sortedAtivos = Object.entries(proventosPorAtivo).sort(([, a], [, b]) => b.total - a.total);
+    // 2. Ordena os ativos por nome em ordem alfabética (A-Z)
+    const sortedAtivos = Object.entries(proventosPorAtivo).sort(([a], [b]) => a.localeCompare(b));
 
     // 3. Gera o HTML dos cards
     proventosListaDiv.innerHTML = sortedAtivos.map(([ticker, data]) => {
