@@ -105,7 +105,7 @@ function initializeDataListeners(userID) {
         renderClassificacao(allLancamentos, allClassificacoes);
         renderPatrimonioTab(allLancamentos, allProventos);
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
-        renderAnalisesTab(allLancamentos, allProventos);
+        renderAnalisesTab(allLancamentos, allProventos, allClassificacoes);
     });
 
     const qProventos = query(collection(db, "proventos"), where("userID", "==", userID), orderBy("dataPagamento", "desc"));
@@ -129,7 +129,7 @@ function initializeDataListeners(userID) {
         renderCriptoCarteira(allLancamentos, allProventos);
         renderPatrimonioTab(allLancamentos, allProventos);
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
-        renderAnalisesTab(allLancamentos, allProventos);
+        renderAnalisesTab(allLancamentos, allProventos, allClassificacoes);
     });
 
     const qClassificacoes = query(collection(db, "ativosClassificados"), where("userID", "==", userID));
@@ -175,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener('idealAllocationChanged', () => {
         // Re-renderiza a aba de análises para refletir a nova alocação ideal
         if (allLancamentos && allProventos) {
-            renderAnalisesTab(allLancamentos, allProventos);
+            renderAnalisesTab(allLancamentos, allProventos, allClassificacoes);
         }
     });
 });
