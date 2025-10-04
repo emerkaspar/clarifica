@@ -206,7 +206,7 @@ async function calcularPatrimonioRendaFixa(userID, lancamentosDoTipo) {
 // --- FIM DAS NOVAS FUNÇÕES ---
 
 
-exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('10 19 * * *')
+exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
     .timeZone('America/Sao_Paulo')
     .onRun(async (context) => {
         console.log('[Snapshot] Iniciando rotina para salvar o patrimônio diário.');
