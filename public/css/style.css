@@ -2216,3 +2216,139 @@ tbody.is-expanded .group-toggle-icon {
     right: 15px;
   }
 }
+/* ... (todo o seu CSS existente) ... */
+
+/* --- NOVOS ESTILOS PARA A ABA DE PROVENTOS (CARDS) --- */
+.provento-group-card {
+  background-color: #1a1b1e;
+  border: 1px solid #2a2c30;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.provento-group-header {
+  padding: 15px 20px;
+  cursor: pointer;
+  background-color: #21252e;
+  transition: background-color 0.2s ease-in-out;
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  align-items: center;
+  gap: 20px;
+}
+
+.provento-group-header:hover {
+  background-color: #2a2c30;
+}
+
+.provento-group-header .ativo-com-logo span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.provento-group-header .group-summary {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.provento-group-header .group-summary span {
+  font-size: 0.75rem;
+  color: #a0a7b3;
+}
+
+.provento-group-header .group-summary strong {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #00d9c3; /* Cor verde para destaque no total */
+}
+
+.provento-group-header .group-toggle-icon {
+  transition: transform 0.3s ease;
+  font-size: 1rem;
+  color: #a0a7b3;
+  transform: rotate(0deg);
+}
+
+.provento-group-content {
+  padding: 0 20px;
+  max-height: 5000px;
+  overflow: hidden;
+  transition: max-height 0.5s ease-in-out, padding-top 0.5s ease-in-out,
+    padding-bottom 0.5s ease-in-out;
+}
+
+.provento-group-content.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.provento-item-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid #3a404d;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #a0a7b3;
+  text-transform: uppercase;
+}
+
+.provento-item-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 15px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #2a2c30;
+  font-size: 0.9rem;
+}
+
+.provento-item-row:last-child {
+  border-bottom: none;
+  padding-bottom: 20px;
+}
+
+/* Esconde o cabeçalho em telas menores, a informação estará no data-label */
+@media (max-width: 768px) {
+  .provento-item-header {
+    display: none;
+  }
+
+  .provento-group-header {
+    grid-template-columns: 1fr auto; /* Ajusta o header do card */
+  }
+
+  .provento-item-row {
+    grid-template-columns: 1fr 1fr; /* Duas colunas para os dados */
+    gap: 15px 10px;
+    position: relative;
+    padding-bottom: 50px; /* Espaço para os botões */
+  }
+
+  .provento-item-row .card-cell::before {
+    content: attr(data-label);
+    display: block;
+    color: #a0a7b3;
+    font-size: 0.75rem;
+    font-weight: normal;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .provento-item-row .card-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .provento-item-row .lista-acoes {
+    position: absolute;
+    bottom: 10px;
+    right: 0;
+  }
+}

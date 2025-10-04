@@ -122,7 +122,7 @@ function initializeDataListeners(userID) {
 
         const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos);
 
-        updateProventosTab(allProventos, currentProventosMeta);
+        updateProventosTab(allProventos, currentProventosMeta, precosEInfos);
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
@@ -143,7 +143,7 @@ function initializeDataListeners(userID) {
     const metaDocRef = doc(db, "metas", userID);
     onSnapshot(metaDocRef, (doc) => {
         currentProventosMeta = doc.exists() ? doc.data() : null;
-        updateProventosTab(allProventos, currentProventosMeta);
+        updateProventosTab(allProventos, currentProventosMeta, window.precosEInfos || {});
     });
 
     const qTesouroPrices = query(collection(db, "tesouroDiretoPrices"), where("userID", "==", userID), orderBy("timestamp", "desc"));

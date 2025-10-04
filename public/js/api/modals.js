@@ -87,7 +87,7 @@ function setupLancamentosModal(userID) {
 
     precoInput.addEventListener('input', formatCurrencyOnInput);
     outrosCustosInput.addEventListener('input', formatCurrencyOnInput);
-    
+
     quantidadeInput.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/,/g, '.');
         calcularTotal();
@@ -554,6 +554,7 @@ function setupProventoModal(userID) {
 
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
+        const docId = form["provento-doc-id"].value;
         const proventoData = {
             userID: userID,
             tipoAtivo: form["provento-tipo-ativo"].value,
@@ -561,44 +562,65 @@ function setupProventoModal(userID) {
             tipoProvento: form["provento-tipo-provento"].value,
             dataPagamento: form["provento-data-pagamento"].value,
             valor: parseCurrency(form["provento-valor"].value),
-            timestamp: serverTimestamp(),
         };
 
         const submitButton = form.querySelector(".btn-adicionar");
-        const originalButtonHtml = '<i class="fas fa-plus"></i> Lançar';
+        const originalButtonHtml = docId ? '<i class="fas fa-save"></i> Salvar' : '<i class="fas fa-plus"></i> Lançar';
         submitButton.disabled = true;
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
         try {
-            await addDoc(collection(db, "proventos"), proventoData);
-            
-            submitButton.innerHTML = '<i class="fas fa-check"></i> Salvo!';
-            setTimeout(() => {
-                form['provento-ativo'].value = '';
-                form['provento-valor'].value = '';
-                sugestoesDiv.innerHTML = "";
-                sugestoesDiv.style.display = "none";
-                form['provento-ativo'].focus();
+            if (docId) {
+                await updateDoc(doc(db, "proventos", docId), proventoData);
+                closeModal("provento-modal");
+            } else {
+                proventoData.timestamp = serverTimestamp();
+                await addDoc(collection(db, "proventos"), proventoData);
 
-                submitButton.disabled = false;
-                submitButton.innerHTML = originalButtonHtml;
-            }, 1500);
+                submitButton.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+                setTimeout(() => {
+                    form['provento-ativo'].value = '';
+                    form['provento-valor'].value = '';
+                    sugestoesDiv.innerHTML = "";
+                    sugestoesDiv.style.display = "none";
+                    form['provento-ativo'].focus();
 
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonHtml;
+                }, 1500);
+            }
         } catch (error) {
-            console.error("Erro ao lançar provento: ", error);
-            alert("Erro ao lançar provento: " + error.message);
+            console.error("Erro ao salvar provento: ", error);
+            alert("Erro ao salvar provento: " + error.message);
             submitButton.disabled = false;
             submitButton.innerHTML = originalButtonHtml;
         }
     });
 
-    document.getElementById("btn-lancamento-provento").addEventListener("click", () => {
+    window.openProventoModal = (data = {}, id = "") => {
         form.reset();
-        form["provento-data-pagamento"].value = hoje;
-        form.querySelector(".btn-tipo-provento[data-tipo='Ações']").click();
+        form["provento-doc-id"].value = id;
+        document.getElementById("provento-modal-title").textContent = id ? "Editar Provento" : "Lançar Provento Recebido";
+        const submitButton = form.querySelector(".btn-adicionar");
+        submitButton.innerHTML = id ? '<i class="fas fa-save"></i> Salvar' : '<i class="fas fa-plus"></i> Lançar';
+        submitButton.disabled = false;
+
+        form["provento-ativo"].value = data.ativo || "";
+        form["provento-data-pagamento"].value = data.dataPagamento || hoje;
+        form["provento-valor"].value = (data.valor || "").toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        form["provento-tipo-provento"].value = data.tipoProvento || "Dividendos";
+
+        const tipoAtivo = data.tipoAtivo || "Ações";
+        form.querySelector(`.btn-tipo-provento[data-tipo='${tipoAtivo}']`).click();
+
         modal.classList.add("show");
+    };
+
+    document.getElementById("btn-lancamento-provento").addEventListener("click", () => {
+        window.openProventoModal();
     });
 }
+
 
 // --- MODAL DE META DE PROVENTOS ---
 function setupMetaProventosModal(userID) {
