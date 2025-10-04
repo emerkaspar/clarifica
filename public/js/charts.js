@@ -6,6 +6,7 @@ let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
 let performanceChart = null;
 let consolidatedPerformanceChart = null; // Variável para controlar a instância do gráfico
+let proventosPorAtivoBarChart = null; // <-- VARIÁVEL ADICIONADA
 let isChartRendering = false; // Variável de "trava" para evitar race condition
 
 // ... (as funções renderMovimentacaoChart, renderPieCharts, renderEvolutionChart, renderPerformanceChart permanecem inalteradas) ...
@@ -501,3 +502,76 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         isChartRendering = false; // --- FIX: Libera a trava ---
     }
 }
+
+// --- INÍCIO DA NOVA FUNÇÃO ---
+export function renderProventosPorAtivoBarChart(proventos) {
+    const canvas = document.getElementById("proventos-por-ativo-bar-chart");
+    if (!canvas) return;
+
+    if (proventosPorAtivoBarChart) {
+        proventosPorAtivoBarChart.destroy();
+    }
+
+    // 1. Agrega os valores por ativo
+    const porAtivo = proventos.reduce((acc, p) => {
+        acc[p.ativo] = (acc[p.ativo] || 0) + p.valor;
+        return acc;
+    }, {});
+
+    // 2. Ordena do maior para o menor
+    const sortedData = Object.entries(porAtivo).sort(([, a], [, b]) => b - a);
+
+    const labels = sortedData.map(item => item[0]);
+    const data = sortedData.map(item => item[1]);
+
+    // 3. Cria o gráfico de barras horizontais
+    proventosPorAtivoBarChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Recebido (R$)',
+                data: data,
+                backgroundColor: 'rgba(0, 217, 195, 0.7)',
+                borderColor: '#00d9c3',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y', // <-- Isso torna o gráfico horizontal
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const value = context.parsed.x;
+                            return ' Total: ' + value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: "#2a2c30" },
+                    ticks: {
+                        color: "#a0a7b3",
+                        callback: function (value) {
+                            return "R$ " + value.toLocaleString("pt-BR");
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: "#a0a7b3" }
+                }
+            }
+        }
+    });
+};
+// --- FIM DA NOVA FUNÇÃO ---

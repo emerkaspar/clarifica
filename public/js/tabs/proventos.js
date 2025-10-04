@@ -1,6 +1,6 @@
 import { db } from '../firebase-config.js';
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { renderPieCharts, renderEvolutionChart } from '../charts.js';
+import { renderPieCharts, renderEvolutionChart, renderProventosPorAtivoBarChart } from '../charts.js';
 
 // --- ELEMENTOS DA UI ---
 const proventosListaDiv = document.getElementById("proventos-lista");
@@ -88,6 +88,7 @@ export function updateProventosTab(proventos, meta) {
     renderSummary(proventos, meta);
     renderPieCharts(proventos);
     renderEvolutionChart(proventos);
+    renderProventosPorAtivoBarChart(proventos);
 }
 
 // --- EVENT LISTENERS ---
