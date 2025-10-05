@@ -100,113 +100,62 @@ exports.scheduledBrapiUpdate = functions.pubsub.schedule('0,30 * * * *')
     });
 
 
-// --- INÍCIO DAS NOVAS FUNÇÕES E CORREÇÕES ---
+// --- INÍCIO DAS NOVAS FUNÇÕES ---
 
 /**
- * Funções auxiliares para buscar indexadores do Banco Central (BCB).
+ * Busca o valor do patrimônio pré-calculado pelo frontend.
  */
-const formatDateForBCB = (dateInput) => {
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return null;
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-};
-
-async function fetchIndexers(dataInicial, dataFinal) {
-    const dataInicialBCB = formatDateForBCB(dataInicial);
-    const dataFinalBCB = formatDateForBCB(dataFinal);
-    if (!dataInicialBCB || !dataFinalBCB) {
-        throw new Error('Datas para busca no BCB são inválidas.');
+async function getCachedPatrimonio(userID, tipoAtivo) {
+    try {
+        const docRef = db.collection('patrimonioCache').doc(`${userID}_${tipoAtivo}`);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            return docSnap.data().valorPatrimonio || 0;
+        }
+        console.warn(`[Snapshot] Nenhum cache de patrimônio encontrado para ${tipoAtivo} do usuário ${userID}.`);
+        return 0;
+    } catch (error) {
+        console.error(`[Snapshot] Erro ao buscar patrimônio em cache para ${tipoAtivo}:`, error);
+        return 0;
     }
-    const [cdiResponse, ipcaResponse] = await Promise.all([
-        axios.get(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicialBCB}&dataFinal=${dataFinalBCB}`),
-        axios.get(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial=${dataInicialBCB}&dataFinal=${dataFinalBCB}`)
-    ]);
-    return { historicoCDI: cdiResponse.data, historicoIPCA: ipcaResponse.data };
 }
 
 /**
- * Calcula o patrimônio de Renda Fixa (lógica movida do frontend para o backend).
+ * Calcula o patrimônio para ativos de Renda Variável.
  */
-async function calcularPatrimonioRendaFixa(userID, lancamentosDoTipo) {
-    let patrimonioTotalRf = 0;
-    if (lancamentosDoTipo.length === 0) return 0;
-
-    const tesouroDiretoLancamentos = lancamentosDoTipo.filter(l => l.tipoAtivo === 'Tesouro Direto');
-    const outrosRfLancamentos = lancamentosDoTipo.filter(l => l.tipoAtivo !== 'Tesouro Direto');
-
-    // 1. Processa Tesouro Direto buscando o último preço salvo
-    for (const ativo of tesouroDiretoLancamentos) {
-        const q = db.collection("tesouroDiretoPrices")
-            .where("userID", "==", userID)
-            .where("titulo", "==", ativo.ativo)
-            .orderBy("timestamp", "desc")
-            .limit(1);
-        const precoSnapshot = await q.get();
-        if (!precoSnapshot.empty) {
-            const precoData = precoSnapshot.docs[0].data();
-            patrimonioTotalRf += (precoData.valor * ativo.quantidade);
-        } else {
-            patrimonioTotalRf += ativo.valorAplicado; // Fallback
-        }
+async function calcularPatrimonioRendaVariavel(lancamentosDoTipo) {
+    let patrimonioTotal = 0;
+    if (!lancamentosDoTipo || lancamentosDoTipo.length === 0) {
+        return 0;
     }
 
-    // 2. Processa outros ativos de RF na curva
-    if (outrosRfLancamentos.length > 0) {
-        const hoje = new Date();
-        const dataMaisAntiga = outrosRfLancamentos.reduce((min, p) => new Date(p.data) < new Date(min) ? p.data : min, outrosRfLancamentos[0].data);
-        const { historicoCDI, historicoIPCA } = await fetchIndexers(new Date(dataMaisAntiga), hoje);
+    const carteira = {};
+    lancamentosDoTipo.forEach(l => {
+        if (!carteira[l.ativo]) { carteira[l.ativo] = { quantidade: 0 }; }
+        if (l.tipoOperacao === 'compra') {
+            carteira[l.ativo].quantidade += l.quantidade;
+        } else if (l.tipoOperacao === 'venda') {
+            carteira[l.ativo].quantidade -= l.quantidade;
+        }
+    });
 
-        for (const ativo of outrosRfLancamentos) {
-            let valorBruto = ativo.valorAplicado;
-            const dataCalculo = new Date(ativo.data + 'T00:00:00');
-            const diasCorridosCalculo = Math.floor((hoje - dataCalculo) / (1000 * 60 * 60 * 24));
-
-            if (ativo.tipoRentabilidade === 'Pós-Fixado') { /* Lógica do cálculo na curva */ }
-            // ... (A lógica completa de cálculo na curva para Pós, Pre e Híbrido é mantida aqui)
-            if (ativo.tipoRentabilidade === 'Pós-Fixado') {
-                let acumuladorCDI = 1;
-                const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
-                historicoCDI
-                    .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
-                    .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
-                valorBruto = ativo.valorAplicado * acumuladorCDI;
-            } else if (ativo.tipoRentabilidade === 'Prefixado') {
-                const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
-                const diasUteis = diasCorridosCalculo * (252 / 365.25);
-                valorBruto = ativo.valorAplicado * Math.pow(1 + taxaAnual, diasUteis / 252);
-            } else if (ativo.tipoRentabilidade === 'Híbrido') {
-                let acumuladorIPCA = 1;
-                const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
-                const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
-                historicoIPCA
-                    .filter(item => new Date(item.data.split('/').reverse().join('-') + 'T00:00:00') >= dataCalculo)
-                    .forEach(item => { acumuladorIPCA *= (1 + parseFloat(item.valor) / 100); });
-                const valorCorrigido = ativo.valorAplicado * acumuladorIPCA;
-                const diasUteis = diasCorridosCalculo * (252 / 365.25);
-                valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+    for (const ticker in carteira) {
+        const ativo = carteira[ticker];
+        if (ativo && ativo.quantidade > 0) {
+            const q = db.collection("cotacoes").where("ticker", "==", ticker).orderBy("data", "desc").limit(1);
+            const cotacaoSnapshot = await q.get();
+            if (!cotacaoSnapshot.empty) {
+                const preco = cotacaoSnapshot.docs[0].data().preco;
+                patrimonioTotal += ativo.quantidade * preco;
             }
-
-            const lucro = valorBruto - ativo.valorAplicado;
-            let aliquotaIR = 0;
-            if (lucro > 0 && !['LCI', 'LCA'].includes(ativo.tipoAtivo)) {
-                if (diasCorridosCalculo <= 180) aliquotaIR = 0.225;
-                else if (diasCorridosCalculo <= 360) aliquotaIR = 0.20;
-                else if (diasCorridosCalculo <= 720) aliquotaIR = 0.175;
-                else aliquotaIR = 0.15;
-            }
-            patrimonioTotalRf += (valorBruto - (lucro * aliquotaIR));
         }
     }
-    return patrimonioTotalRf;
+    return patrimonioTotal;
 }
 
-// --- FIM DAS NOVAS FUNÇÕES ---
 
-
-exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
+// --- FUNÇÃO PRINCIPAL CORRIGIDA ---
+exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('22 09 * * *')
     .timeZone('America/Sao_Paulo')
     .onRun(async (context) => {
         console.log('[Snapshot] Iniciando rotina para salvar o patrimônio diário.');
@@ -222,34 +171,33 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
                 acc[l.userID].push(l);
                 return acc;
             }, {});
+
             for (const userID in lancamentosPorUsuario) {
                 const lancamentosDoUsuario = lancamentosPorUsuario[userID];
                 const ativosPorTipo = lancamentosDoUsuario.reduce((acc, l) => {
                     const tipo = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
                     if (!acc[tipo]) { acc[tipo] = []; }
-                    acc[tipo].push(l); // Salva o lançamento inteiro, não só o ticker
+                    acc[tipo].push(l);
                     return acc;
                 }, {});
 
                 const assetTypesToProcess = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
 
                 for (const tipoAtivo of assetTypesToProcess) {
-                    let patrimonio = 0; // CORREÇÃO: Inicializa o patrimônio
+                    let patrimonio = 0;
+                    const hasAssets = ativosPorTipo[tipoAtivo] && ativosPorTipo[tipoAtivo].length > 0;
 
-                    // --- LÓGICA DE DECISÃO CORRIGIDA ---
-                    if (tipoAtivo === 'Renda Fixa') {
-                        if (ativosPorTipo[tipoAtivo] && ativosPorTipo[tipoAtivo].length > 0) {
-                            patrimonio = await calcularPatrimonioRendaFixa(userID, ativosPorTipo[tipoAtivo]);
-                        }
-                    } else {
-                        if (ativosPorTipo[tipoAtivo] && ativosPorTipo[tipoAtivo].length > 0) {
-                            const tickers = [...new Set(ativosPorTipo[tipoAtivo].map(l => l.ativo))];
-                            patrimonio = await calcularPatrimonioPorTipo(userID, lancamentosDoUsuario, tipoAtivo, tickers);
+                    if (hasAssets) {
+                        if (tipoAtivo === 'Renda Fixa') {
+                            // **NOVA LÓGICA:** Busca o valor do cache salvo pelo frontend.
+                            patrimonio = await getCachedPatrimonio(userID, 'Renda Fixa');
+                        } else {
+                            // Lógica antiga para Renda Variável permanece.
+                            patrimonio = await calcularPatrimonioRendaVariavel(ativosPorTipo[tipoAtivo]);
                         }
                     }
-                    // --- FIM DA LÓGICA DE DECISÃO ---
 
-                    if (patrimonio > 0) {
+                    if (hasAssets) {
                         const docId = `${userID}_${tipoAtivo}_${todayStr}`;
                         await db.collection("historicoPatrimonioDiario").doc(docId).set({
                             userID: userID,
@@ -269,34 +217,3 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('0 18 * * *')
         console.log('[Snapshot] Rotina de snapshot concluída.');
         return null;
     });
-
-async function calcularPatrimonioPorTipo(userID, lancamentos, tipoAtivo, tickers) {
-    let patrimonioTotal = 0;
-    const lancamentosDoTipo = lancamentos.filter(l => {
-        const tipoMapeado = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
-        return tipoMapeado === tipoAtivo;
-    });
-
-    const carteira = {};
-    lancamentosDoTipo.forEach(l => {
-        if (!carteira[l.ativo]) { carteira[l.ativo] = { quantidade: 0 }; }
-        if (l.tipoOperacao === 'compra') {
-            carteira[l.ativo].quantidade += l.quantidade;
-        } else if (l.tipoOperacao === 'venda') {
-            carteira[l.ativo].quantidade -= l.quantidade;
-        }
-    });
-
-    for (const ticker of tickers) {
-        const ativo = carteira[ticker];
-        if (ativo && ativo.quantidade > 0) {
-            const q = db.collection("cotacoes").where("ticker", "==", ticker).orderBy("data", "desc").limit(1);
-            const cotacaoSnapshot = await q.get();
-            if (!cotacaoSnapshot.empty) {
-                const preco = cotacaoSnapshot.docs[0].data().preco;
-                patrimonioTotal += ativo.quantidade * preco;
-            }
-        }
-    }
-    return patrimonioTotal;
-}

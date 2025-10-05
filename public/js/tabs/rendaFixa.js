@@ -1,8 +1,28 @@
 import { fetchIndexers } from '../api/bcb.js';
-import { db, auth } from '../firebase-config.js'; // auth adicionado
-import { doc, deleteDoc, getDoc, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"; // Funções do Firestore adicionadas
+import { db, auth } from '../firebase-config.js';
+import { doc, deleteDoc, getDoc, collection, query, where, orderBy, limit, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// --- NOVA FUNÇÃO ---
+/**
+ * Salva o valor de patrimônio calculado mais recente em um cache no Firestore.
+ * A função de backend lerá daqui para criar o histórico diário.
+ */
+async function saveCurrentPatrimonioToCache(userID, tipoAtivo, valor) {
+    if (!userID || typeof valor !== 'number') return;
+    try {
+        const docRef = doc(db, 'patrimonioCache', `${userID}_${tipoAtivo}`);
+        await setDoc(docRef, {
+            userID,
+            tipoAtivo,
+            valorPatrimonio: valor,
+            lastUpdated: serverTimestamp()
+        });
+        console.log(`[Cache RF] Patrimônio de Renda Fixa (${valor}) salvo no cache para o backend.`);
+    } catch (error) {
+        console.error("[Cache RF] Erro ao salvar patrimônio no cache:", error);
+    }
+}
+
+
 async function fetchPatrimonioAnterior(userID) {
     if (!userID) return 0;
     try {
@@ -25,14 +45,7 @@ async function fetchPatrimonioAnterior(userID) {
     }
 }
 
-/**
- * Calcula os valores atuais (bruto, líquido, impostos) para ativos de Renda Fixa
- * que NÃO são do Tesouro Direto (CDB, LCI, LCA, etc.), baseando-se na curva da contratação.
- * @param {Array<object>} ativos - A lista de lançamentos de Renda Fixa (exceto Tesouro Direto).
- * @returns {Promise<object>} - Um objeto com os valores calculados para cada ativo.
- */
 async function calculateRendaFixaValues(ativos) {
-    // ... (esta função permanece inalterada)
     if (ativos.length === 0) {
         return {};
     }
@@ -91,12 +104,6 @@ async function calculateRendaFixaValues(ativos) {
     return calculatedValues;
 }
 
-/**
- * --- FUNÇÃO ATUALIZADA ---
- * Renderiza o card de valorização do dia.
- * @param {number} patrimonioTotalHoje - O patrimônio total calculado para hoje.
- * @param {number} patrimonioTotalOntem - O patrimônio total salvo do dia anterior.
- */
 function renderRendaFixaDayValorization(patrimonioTotalHoje, patrimonioTotalOntem) {
     const valorizationReaisDiv = document.getElementById("rendafixa-valorization-reais");
     const valorizationPercentDiv = document.getElementById("rendafixa-valorization-percent");
@@ -127,7 +134,6 @@ function renderRendaFixaDayValorization(patrimonioTotalHoje, patrimonioTotalOnte
     valorizationPercentDiv.classList.add(corClasse);
 }
 
-// ... (renderRendaFixaSummary permanece inalterada) ...
 function renderRendaFixaSummary(patrimonioTotal, investidoTotal) {
     const rentabilidadeReais = patrimonioTotal - investidoTotal;
     const rentabilidadePercent = investidoTotal > 0 ? (rentabilidadeReais / investidoTotal) * 100 : 0;
@@ -152,8 +158,7 @@ function renderRendaFixaSummary(patrimonioTotal, investidoTotal) {
 
 
 /**
- * --- FUNÇÃO ATUALIZADA ---
- * Função principal que renderiza toda a aba de Renda Fixa.
+ * --- FUNÇÃO PRINCIPAL ATUALIZADA ---
  */
 export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDiretoPrices) {
     const rendaFixaListaDiv = document.getElementById("rendafixa-lista");
@@ -162,7 +167,7 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
     rendaFixaListaDiv.innerHTML = `<p>Calculando rentabilidade da Renda Fixa...</p>`;
 
     const rfLancamentos = lancamentos.filter(l => ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo));
-    
+
     if (rfLancamentos.length === 0) {
         rendaFixaListaDiv.innerHTML = `<p>Nenhum ativo de Renda Fixa lançado ainda.</p>`;
         renderRendaFixaSummary(0, 0);
@@ -184,15 +189,13 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
         for (const ativo of tesouroDireto) {
             const precoInfo = allTesouroDiretoPrices[ativo.ativo];
             const valorMam = precoInfo ? precoInfo.valor * ativo.quantidade : ativo.valorAplicado;
-            let valorCurva = valorMam;
-            if (ativo.tipoRentabilidade === 'Prefixado') {
-                const tempResult = await calculateRendaFixaValues([ativo]);
-                valorCurva = tempResult[ativo.id]?.valorCurva || valorMam;
-            }
+
             patrimonioTotal += valorMam;
             investidoTotal += ativo.valorAplicado;
+
             const rentabilidadeMam = valorMam - ativo.valorAplicado;
             const rentabilidadePercentual = ativo.valorAplicado > 0 ? (rentabilidadeMam / ativo.valorAplicado) * 100 : 0;
+
             html += `
                 <div class="fii-card">
                     <div class="fii-card-ticker" style="background-color: rgba(90, 103, 216, 0.1); color: #818cf8;">
@@ -208,7 +211,6 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                     </div>
                     <div class="fii-card-details">
                         <div class="detail-item"><span>Valor Investido</span><span>${ativo.valorAplicado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
-                        <div class="detail-item"><span>Valor na Curva</span><span>${valorCurva.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
                         <div class="detail-item"><span>Taxa Contratada</span><span>${ativo.taxaContratada}</span></div>
                         <div class="detail-item"><span>Quantidade</span><span>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</span></div>
                         <div class="detail-item"><span>Vencimento</span><span>${new Date(ativo.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span></div>
@@ -254,8 +256,11 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
         });
 
         renderRendaFixaSummary(patrimonioTotal, investidoTotal);
-        renderRendaFixaDayValorization(patrimonioTotal, patrimonioAnterior); // Usa os totais calculados
+        renderRendaFixaDayValorization(patrimonioTotal, patrimonioAnterior);
         rendaFixaListaDiv.innerHTML = html;
+
+        // **NOVA LÓGICA:** Salva o valor calculado no cache para o backend usar.
+        await saveCurrentPatrimonioToCache(userID, 'Renda Fixa', patrimonioTotal);
 
     } catch (error) {
         console.error("Erro ao renderizar carteira de Renda Fixa:", error);
@@ -266,7 +271,6 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
 
 // --- EVENT LISTENERS PARA OS BOTÕES DE EDITAR/EXCLUIR ---
 document.getElementById('rendafixa-lista').addEventListener('click', async (e) => {
-    // ... (esta função permanece inalterada)
     const button = e.target.closest('button.btn-crud');
     if (!button) return;
     const docId = button.dataset.id;
