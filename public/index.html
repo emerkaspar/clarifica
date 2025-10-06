@@ -411,134 +411,110 @@
             </div>
 
             <div class="tab-pane" id="proventos">
-              <div class="content-container" style="max-width: 1200px">
-                <div class="content-header">
-                  <h3>Acompanhamento de Proventos</h3>
-                  <div style="display: flex; gap: 15px">
-                    <button
-                      id="btn-meta-proventos"
-                      class="btn-adicionar"
-                      style="background-color: #3a404d"
-                    >
-                      <i class="fas fa-bullseye"></i> Definir Meta
-                    </button>
-                    <button id="btn-lancamento-provento" class="btn-adicionar">
-                      <i class="fas fa-plus"></i> Lançar Provento
-                    </button>
-                  </div>
+    <div class="content-container" style="max-width: 1200px">
+        <div class="content-header">
+            <h3>Acompanhamento de Proventos</h3>
+            <div style="display: flex; gap: 15px">
+                <button id="btn-meta-proventos" class="btn-adicionar" style="background-color: #3a404d">
+                    <i class="fas fa-bullseye"></i> Definir Meta
+                </button>
+                <button id="btn-lancamento-provento" class="btn-adicionar">
+                    <i class="fas fa-plus"></i> Lançar Provento
+                </button>
+            </div>
+        </div>
+        <div class="proventos-dashboard">
+            <div class="summary-card">
+                <h4 class="card-title">Resumo</h4>
+                <div class="summary-metric">
+                    <div class="metric-header">
+                        <span>Média Mensal (últ. 6 meses)</span>
+                        <span id="meta-proventos-atingida">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="progress-bar-proventos" class="progress-bar"></div>
+                    </div>
+                    <div class="metric-footer">
+                        <span id="media-mensal-valor">R$ 0,00</span>
+                        <span id="meta-mensal-valor">Meta: R$ 0,00</span>
+                    </div>
                 </div>
-                <div class="proventos-dashboard">
-                  <div class="dashboard-left-column">
-                    <div class="summary-card">
-                      <h4 class="card-title">Resumo</h4>
-                      <div class="summary-metric">
-                        <div class="metric-header">
-                          <span>Média Mensal (últ. 6 meses)</span>
-                          <span id="meta-proventos-atingida">0%</span>
-                        </div>
-                        <div class="progress-bar-container">
-                          <div
-                            id="progress-bar-proventos"
-                            class="progress-bar"
-                          ></div>
-                        </div>
-                        <div class="metric-footer">
-                          <span id="media-mensal-valor">R$ 0,00</span>
-                          <span id="meta-mensal-valor">Meta: R$ 0,00</span>
-                        </div>
-                      </div>
-                      <div class="summary-divider"></div>
-                      <div class="summary-metric-row">
-                        <div class="summary-metric-simple">
-                          <label>Total de 12 meses</label>
-                          <span id="total-12-meses">R$ 0,00</span>
-                        </div>
-                        <div class="summary-metric-simple">
-                          <label>Total da carteira</label>
-                          <span id="total-carteira-proventos">R$ 0,00</span>
-                        </div>
-                      </div>
+                <div class="summary-divider"></div>
+                <div class="summary-metric-row">
+                    <div class="summary-metric-simple">
+                        <label>Total de 12 meses</label>
+                        <span id="total-12-meses">R$ 0,00</span>
                     </div>
-                    <div class="summary-card">
-                      <h4 class="card-title">Distribuição de proventos</h4>
-                      <div class="pie-charts-container">
-                        <div class="distribution-wrapper">
-                          <p class="chart-label">Por Ativo</p>
-                          <div class="chart-canvas-container">
+                    <div class="summary-metric-simple">
+                        <label>Total da carteira</label>
+                        <span id="total-carteira-proventos">R$ 0,00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <h4 class="card-title">Distribuição de proventos</h4>
+                <div class="pie-charts-container">
+                    <div class="distribution-wrapper">
+                        <p class="chart-label">Por Ativo</p>
+                        <div class="chart-canvas-container">
                             <canvas id="proventos-por-ativo-chart"></canvas>
-                          </div>
                         </div>
-                        <div class="distribution-wrapper">
-                          <p class="chart-label">Por Tipo (Ações/FIIs)</p>
-                          <div id="dist-por-tipo-container"></div>
-                        </div>
-                      </div>
                     </div>
-                  </div>
-                  <div class="dashboard-right-column">
-                    <div class="summary-card">
-                      <div class="evolution-header">
-                        <h4 class="card-title" style="margin: 0">
-                          Evolução de Proventos
-                        </h4>
-                        <div class="evolution-filters">
-                          <div
-                            id="intervalo-filter-group"
-                            class="filter-btn-group"
-                          >
-                            <button
-                              class="filter-btn active"
-                              data-intervalo="Mensal"
-                            >
-                              Mensal
+                    <div class="distribution-wrapper">
+                        <p class="chart-label">Por Tipo (Ações/FIIs)</p>
+                        <div id="dist-por-tipo-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-card" style="grid-column: 1 / -1;">
+                <div class="evolution-header">
+                    <h4 class="card-title" style="margin: 0">
+                        Evolução de Proventos
+                    </h4>
+                    <div class="evolution-filters">
+                        <div id="intervalo-filter-group" class="filter-btn-group">
+                            <button class="filter-btn active" data-intervalo="Mensal">
+                                Mensal
                             </button>
                             <button class="filter-btn" data-intervalo="Anual">
-                              Anual
+                                Anual
                             </button>
-                          </div>
-                          <select id="periodo-filter" class="filter-select">
+                        </div>
+                        <select id="periodo-filter" class="filter-select">
                             <option value="12m">Últimos 12 meses</option>
                             <option value="current_year">Ano atual</option>
                             <option value="5y">Últimos 5 anos</option>
-                          </select>
-                          <select id="tipo-ativo-filter" class="filter-select">
+                        </select>
+                        <select id="tipo-ativo-filter" class="filter-select">
                             <option value="Todos">Todos os Tipos</option>
                             <option value="Ações">Ações</option>
                             <option value="FIIs">FIIs</option>
-                          </select>
-                          <select id="ativo-filter" class="filter-select">
+                        </select>
+                        <select id="ativo-filter" class="filter-select">
                             <option value="Todos">Todos os Ativos</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div class="evolution-chart-container">
-                        <canvas id="proventos-evolucao-chart"></canvas>
-                      </div>
-                    </div>
-
-                    
+                        </select>
                     </div>
                 </div>
-                <div class="summary-card" style="margin-top: 20px;">
-                        <h4 class="card-title">Proventos Recebidos por Ativo (R$)</h4>
-                        <div class="evolution-chart-container" style="height: 400px;">
-                            <canvas id="proventos-por-ativo-bar-chart"></canvas>
-                        </div>
-                    </div>
-                <div class="lista-wrapper" style="margin-top: 30px">
-                  <div
-                    class="lista-header"
-                    style="
-                      grid-template-columns: 2fr 1fr 1.5fr 1.5fr 1.5fr auto;
-                      min-width: 600px;
-                    "
-                  >
-                    
-                  </div>
-                  <div id="proventos-lista"></div>
+                <div class="evolution-chart-container">
+                    <canvas id="proventos-evolucao-chart"></canvas>
                 </div>
-              </div>
             </div>
+        </div>
+
+        <div class="summary-card" style="margin-top: 20px;">
+            <h4 class="card-title">Proventos Recebidos por Ativo (R$)</h4>
+            <div class="evolution-chart-container" style="height: 400px;">
+                <canvas id="proventos-por-ativo-bar-chart"></canvas>
+            </div>
+        </div>
+        
+        <div class="lista-wrapper" style="margin-top: 30px">
+            <div id="proventos-lista"></div>
+        </div>
+    </div>
+</div>
 
             <div class="tab-pane" id="acoes">
               <div class="content-container" style="max-width: none">
