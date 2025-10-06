@@ -1,44 +1,49 @@
-/**
- * Formata uma data para o padrão 'dd/MM/yyyy' exigido pela API do Banco Central.
- * @param {Date | string} dateInput - A data a ser formatada.
- * @returns {string | null} A data formatada ou null se a entrada for inválida.
- */
-const formatDateForBCB = (dateInput) => {
-    const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput + 'T00:00:00');
-    if (isNaN(d.getTime())) return null;
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-};
+import { db } from '../firebase-config.js';
+import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 /**
- * Busca os dados históricos de indexadores (CDI e IPCA) no Banco Central
- * entre duas datas.
+ * Busca os dados históricos de indexadores (CDI e IPCA) do Firestore.
  * @param {string} dataInicial - A data de início no formato 'yyyy-MM-dd'.
  * @param {string} dataFinal - A data final no formato 'yyyy-MM-dd'.
  * @returns {Promise<{historicoCDI: any[], historicoIPCA: any[]}>} Um objeto com os históricos de CDI e IPCA.
  */
 export async function fetchIndexers(dataInicial, dataFinal) {
-    const dataInicialBCB = formatDateForBCB(dataInicial);
-    const dataFinalBCB = formatDateForBCB(dataFinal);
-
-    if (!dataInicialBCB || !dataFinalBCB) {
-        throw new Error('Datas fornecidas para a busca no BCB são inválidas.');
+    if (!dataInicial || !dataFinal) {
+        throw new Error('Datas de início e fim são obrigatórias para buscar indexadores.');
     }
 
-    // Códigos SGS: 12 para CDI (Selic), 433 para IPCA
-    const [cdiResponse, ipcaResponse] = await Promise.all([
-        fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicialBCB}&dataFinal=${dataFinalBCB}`),
-        fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial=${dataInicialBCB}&dataFinal=${dataFinalBCB}`)
+    const fetchIndexData = async (indexName) => {
+        try {
+            const q = query(
+                collection(db, "indices"),
+                where("ticker", "==", indexName), // ✅ CORRIGIDO: Busca pelo campo padronizado 'ticker'
+                where("data", ">=", dataInicial),
+                where("data", "<=", dataFinal),
+                orderBy("data", "asc")
+            );
+            const querySnapshot = await getDocs(q);
+
+            // Transforma o resultado para o formato esperado pela aplicação (o mesmo da API do BCB)
+            return querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    data: new Date(data.data + 'T00:00:00').toLocaleDateString('pt-BR'), // Formato dd/MM/yyyy
+                    valor: data.valor.toString()
+                };
+            });
+        } catch (error) {
+            console.error(`Erro ao buscar ${indexName} do Firestore:`, error);
+            return [];
+        }
+    };
+
+    const [historicoCDI, historicoIPCA] = await Promise.all([
+        fetchIndexData('CDI'),
+        fetchIndexData('IPCA')
     ]);
-
-    if (!cdiResponse.ok || !ipcaResponse.ok) {
-        throw new Error('Falha ao buscar dados de indexadores do Banco Central.');
-    }
-
-    const historicoCDI = await cdiResponse.json();
-    const historicoIPCA = await ipcaResponse.json();
+    
+    if(historicoCDI.length === 0) console.warn("[BCB] Nenhum dado de CDI encontrado no Firestore para o período.");
+    if(historicoIPCA.length === 0) console.warn("[BCB] Nenhum dado de IPCA encontrado no Firestore para o período.");
 
     return { historicoCDI, historicoIPCA };
 }

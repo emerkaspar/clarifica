@@ -22,24 +22,12 @@ function createUniqueDocId(ticker) {
     return `${ticker}-${datePart}-${timePart}${secondsPart}`;
 }
 
-async function saveToFirestore(ticker, data) {
+async function saveData(collectionName, docId, data) {
     try {
-        if (!data || !data.results || data.results.length === 0) {
-            console.warn(`[Scheduler] Não salvando ${ticker}: dados inválidos.`);
-            return;
-        }
-        const priceData = data.results[0];
-        const docId = createUniqueDocId(ticker);
-        const timestamp = new Date().toISOString();
-        await db.collection("cotacoes").doc(docId).set({
-            ticker: ticker,
-            preco: priceData.regularMarketPrice,
-            data: timestamp,
-            raw: data,
-        });
-        console.log(`[Scheduler] Cotação de ${ticker} salva: ${docId}`);
+        await db.collection(collectionName).doc(docId).set(data);
+        console.log(`[Scheduler] Dado salvo em '${collectionName}' com ID '${docId}'`);
     } catch (error) {
-        console.error(`[Scheduler] Erro ao salvar ${ticker}:`, error);
+        console.error(`[Scheduler] Erro ao salvar em '${collectionName}':`, error);
     }
 }
 
@@ -51,13 +39,74 @@ async function fetchAndSaveCrypto(ticker) {
         const response = await axios.get(url);
         const price = response.data[coinGeckoId]?.brl;
         if (price) {
-            const brapiSimulado = { results: [{ symbol: ticker, regularMarketPrice: price }] };
-            await saveToFirestore(ticker, brapiSimulado);
+            const docId = createUniqueDocId(ticker);
+            const timestamp = new Date().toISOString();
+            const dataToSave = {
+                ticker: ticker,
+                preco: price,
+                data: timestamp,
+                raw: { results: [{ symbol: ticker, regularMarketPrice: price }] },
+            };
+            await saveData("cotacoes", docId, dataToSave);
         } else {
             console.warn(`[Scheduler] Não foi possível obter preço para cripto: ${ticker}`);
         }
     } catch (error) {
         console.error(`[Scheduler] Erro ao chamar CoinGecko para ${ticker}: ${error.message}`);
+    }
+}
+
+async function fetchAndSaveRVIndex(ticker) {
+    const url = `https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`;
+    try {
+        const response = await axios.get(url);
+        if (response.status === 200 && response.data && response.data.results) {
+            const result = response.data.results[0];
+            const dataHoje = new Date().toISOString().split('T')[0];
+            const docId = `${result.symbol.replace('^','')}-${dataHoje}`;
+            const dataToSave = {
+                ticker: result.symbol,
+                valor: result.regularMarketPrice,
+                data: dataHoje,
+                timestamp: new Date()
+            };
+            await saveData("indices", docId, dataToSave);
+        } else {
+            console.warn(`[Scheduler] Falha ou dado inválido para o índice ${ticker}. Status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error(`[Scheduler] Erro BRAPI para o índice ${ticker}: ${error.message}`);
+    }
+}
+
+async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
+    const hoje = new Date();
+    const dataFim = `${hoje.getDate()}/${hoje.getMonth() + 1}/${hoje.getFullYear()}`;
+    const dataAnterior = new Date();
+    dataAnterior.setDate(hoje.getDate() - 90);
+    const dataIni = `${dataAnterior.getDate()}/${dataAnterior.getMonth() + 1}/${dataAnterior.getFullYear()}`;
+
+    const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${codigoBCB}/dados?formato=json&dataInicial=${dataIni}&dataFinal=${dataFim}`;
+    try {
+        const response = await axios.get(url);
+        if (response.data && response.data.length > 0) {
+            const ultimoValor = response.data[response.data.length - 1];
+            const [dia, mes, ano] = ultimoValor.data.split('/');
+            const dataISO = `${ano}-${mes}-${dia}`;
+            const docId = `${nomeIndice}-${dataISO}`;
+            
+            const dataToSave = {
+                ticker: nomeIndice, // ✅ CORREÇÃO: Padronizado para 'ticker'
+                valor: parseFloat(ultimoValor.valor),
+                data: dataISO,
+                timestamp: new Date()
+            };
+            await saveData("indices", docId, dataToSave);
+        } else {
+             console.log(`[Scheduler] Nenhum dado novo encontrado para o índice ${nomeIndice} no período.`);
+        }
+    } catch (error) {
+        console.error(`[Scheduler] Erro ao buscar ${nomeIndice} do BCB:`, error.message);
     }
 }
 
@@ -67,6 +116,7 @@ exports.scheduledBrapiUpdate = functions.pubsub.schedule('0,30 * * * *')
         const lancamentosSnapshot = await db.collection("lancamentos").get();
         const tickersBrapi = new Set();
         const tickersCrypto = new Set();
+        
         lancamentosSnapshot.forEach(doc => {
             const data = doc.data();
             const ativo = data.ativo;
@@ -78,14 +128,23 @@ exports.scheduledBrapiUpdate = functions.pubsub.schedule('0,30 * * * *')
                 }
             }
         });
+
         console.log(`Tickers BRAPI a atualizar: ${Array.from(tickersBrapi).join(', ')}`);
         console.log(`Tickers CRIPTO a atualizar: ${Array.from(tickersCrypto).join(', ')}`);
+
         const brapiPromises = Array.from(tickersBrapi).map(async (ticker) => {
             const url = `https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`;
             try {
                 const response = await axios.get(url);
                 if (response.status === 200 && response.data && response.data.results) {
-                    await saveToFirestore(ticker, response.data);
+                    const docId = createUniqueDocId(ticker);
+                    const dataToSave = {
+                        ticker: ticker,
+                        preco: response.data.results[0].regularMarketPrice,
+                        data: new Date().toISOString(),
+                        raw: response.data,
+                    };
+                    await saveData("cotacoes", docId, dataToSave);
                 } else {
                     console.warn(`[Scheduler] Falha ou dado inválido para ${ticker}. Status: ${response.status}`);
                 }
@@ -93,18 +152,23 @@ exports.scheduledBrapiUpdate = functions.pubsub.schedule('0,30 * * * *')
                 console.error(`[Scheduler] Erro BRAPI para ${ticker}: ${error.message}`);
             }
         });
+
         const cryptoPromises = Array.from(tickersCrypto).map(ticker => fetchAndSaveCrypto(ticker));
-        await Promise.all([...brapiPromises, ...cryptoPromises]);
+
+        const indexPromises = [
+            fetchAndSaveRVIndex('^BVSP'),
+            fetchAndSaveRVIndex('IVVB11'),
+            fetchAndSaveRFIndex(12, 'CDI'),
+            fetchAndSaveRFIndex(433, 'IPCA')
+        ];
+
+        await Promise.all([...brapiPromises, ...cryptoPromises, ...indexPromises]);
+
         console.log("Rotina de atualização agendada concluída.");
         return null;
     });
 
-
-// --- INÍCIO DAS NOVAS FUNÇÕES ---
-
-/**
- * Busca o valor do patrimônio pré-calculado pelo frontend.
- */
+// ... (O restante do seu arquivo, como a função scheduledPortfolioSnapshot, permanece aqui sem alterações)
 async function getCachedPatrimonio(userID, tipoAtivo) {
     try {
         const docRef = db.collection('patrimonioCache').doc(`${userID}_${tipoAtivo}`);
@@ -120,9 +184,6 @@ async function getCachedPatrimonio(userID, tipoAtivo) {
     }
 }
 
-/**
- * Calcula o patrimônio para ativos de Renda Variável.
- */
 async function calcularPatrimonioRendaVariavel(lancamentosDoTipo) {
     let patrimonioTotal = 0;
     if (!lancamentosDoTipo || lancamentosDoTipo.length === 0) {
@@ -153,8 +214,6 @@ async function calcularPatrimonioRendaVariavel(lancamentosDoTipo) {
     return patrimonioTotal;
 }
 
-
-// --- FUNÇÃO PRINCIPAL CORRIGIDA ---
 exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('05 18 * * *')
     .timeZone('America/Sao_Paulo')
     .onRun(async (context) => {
@@ -189,10 +248,8 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('05 18 * * *')
 
                     if (hasAssets) {
                         if (tipoAtivo === 'Renda Fixa') {
-                            // **NOVA LÓGICA:** Busca o valor do cache salvo pelo frontend.
                             patrimonio = await getCachedPatrimonio(userID, 'Renda Fixa');
                         } else {
-                            // Lógica antiga para Renda Variável permanece.
                             patrimonio = await calcularPatrimonioRendaVariavel(ativosPorTipo[tipoAtivo]);
                         }
                     }

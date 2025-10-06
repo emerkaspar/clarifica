@@ -1,16 +1,17 @@
 import { fetchHistoricalData } from './api/brapi.js';
 import { fetchIndexers } from './api/bcb.js';
+import { db } from './firebase-config.js';
+import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
 let performanceChart = null;
-let consolidatedPerformanceChart = null; // Variável para controlar a instância do gráfico
-let proventosPorAtivoBarChart = null; // <-- VARIÁVEL ADICIONADA
-let isChartRendering = false; // Variável de "trava" para evitar race condition
+let consolidatedPerformanceChart = null;
+let proventosPorAtivoBarChart = null;
+let isChartRendering = false;
 
-// ... (as funções renderMovimentacaoChart, renderPieCharts, renderEvolutionChart, renderPerformanceChart permanecem inalteradas) ...
-
+// ... (Suas outras funções como renderMovimentacaoChart, etc., permanecem aqui intactas) ...
 export function renderMovimentacaoChart(lancamentos) {
     const chartCanvas = document.getElementById("movimentacao-chart");
     if (!chartCanvas || typeof Chart === "undefined") return;
@@ -163,40 +164,31 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
     if (!canvas) { container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Erro interno: Não foi possível criar o elemento do gráfico.</p>`; return }
     const ctx = canvas.getContext('2d');
     if (lancamentosDoAtivo.length === 0) { container.innerHTML = '<p style="color: #a0a7b3; text-align: center;">Sem lançamentos para gerar gráfico de performance.</p>'; return }
-    let dadosAtivo, dadosCDI, dadosIBOV, dadosIVVB11;
     try {
         const lancamentosOrdenados = [...lancamentosDoAtivo].sort((a, b) => new Date(a.data) - new Date(b.data));
         const dataInicio = lancamentosOrdenados[0].data;
         const hojeDate = new Date();
-        const ontemDate = new Date(hojeDate);
-        ontemDate.setDate(hojeDate.getDate() - 1);
-        const dataFinalParaAPI = ontemDate.toISOString().split('T')[0];
-        const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm";
-        const RANGE = '3mo';
-        const [ativoResponse, cdiResponse, ibovResponse, ivvb11Response] = await Promise.all([
-            fetch(`https://brapi.dev/api/quote/${ticker}?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
-            fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dataInicio.split('-').reverse().join('/')}&dataFinal=${dataFinalParaAPI.split('-').reverse().join('/')}`),
-            fetch(`https://brapi.dev/api/quote/^BVSP?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`),
-            fetch(`https://brapi.dev/api/quote/IVVB11?range=${RANGE}&interval=1d&token=${BRAAPI_TOKEN}`)
+        const dataFinalParaAPI = hojeDate.toISOString().split('T')[0];
+
+        const [dadosAtivo, { historicoCDI }, dadosIBOV, dadosIVVB11] = await Promise.all([
+            fetchHistoricalData(ticker, '3mo'),
+            fetchIndexers(dataInicio, dataFinalParaAPI),
+            fetchHistoricalData('^BVSP', '3mo'),
+            fetchHistoricalData('IVVB11', '3mo')
         ]);
-        if (!ativoResponse.ok) throw new Error(`Falha ao buscar ${ticker}`);
-        dadosAtivo = await ativoResponse.json();
-        if (dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) throw new Error(`Dados indisponíveis para ${ticker}`);
-        if (!cdiResponse.ok) throw new Error(`Erro ao buscar dados do CDI`);
-        dadosCDI = await cdiResponse.json();
-        if (!ibovResponse.ok) throw new Error(`Falha ao buscar IBOV`);
-        dadosIBOV = await ibovResponse.json();
-        if (!ivvb11Response.ok) throw new Error(`Falha ao buscar IVVB11`);
-        dadosIVVB11 = await ivvb11Response.json();
-        if (dadosIBOV.error || !dadosIBOV.results || dadosIBOV.results.length === 0) console.warn("Dados do IBOV indisponíveis.");
-        if (dadosIVVB11.error || !dadosIVVB11.results || dadosIVVB11.results.length === 0) console.warn("Dados do IVVB11 indisponíveis.");
+
+        if (!dadosAtivo || dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) throw new Error(`Dados indisponíveis para ${ticker}`);
+        if (!dadosIBOV || dadosIBOV.error || !dadosIBOV.results || dadosIBOV.results.length === 0) console.warn("Dados do IBOV indisponíveis.");
+        if (!dadosIVVB11 || dadosIVVB11.error || !dadosIVVB11.results || dadosIVVB11.results.length === 0) console.warn("Dados do IVVB11 indisponíveis.");
+
         const historicoPrecos = dadosAtivo.results[0].historicalDataPrice.reduce((acc, item) => { const data = new Date(item.date * 1000).toISOString().split('T')[0]; acc[data] = item.close; return acc }, {});
         const dataInicialLancamento = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
         const dataInicioStr = dataInicialLancamento.toISOString().split('T')[0];
         let cdiAcumulado = 1;
         const historicoCDIIndex = {};
         let cdiIndexStartFactor = 1;
-        dadosCDI.forEach(item => { const data = item.data.split('/').reverse().join('-'); cdiAcumulado *= (1 + (parseFloat(item.valor) / 100)); historicoCDIIndex[data] = cdiAcumulado; if (data === dataInicioStr) { cdiIndexStartFactor = cdiAcumulado } });
+        historicoCDI.forEach(item => { const data = item.data.split('/').reverse().join('-'); cdiAcumulado *= (1 + (parseFloat(item.valor) / 100)); historicoCDIIndex[data] = cdiAcumulado; if (data === dataInicioStr) { cdiIndexStartFactor = cdiAcumulado } });
+        
         const normalizarIndice = (dadosIndice, dataInicioStr) => {
             if (!dadosIndice || !dadosIndice.results || dadosIndice.results.length === 0) return {};
             const precosHistoricos = dadosIndice.results[0].historicalDataPrice;
@@ -206,6 +198,7 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
             const valorBase = primeiroPrecoDisponivel.close;
             return precosHistoricos.reduce((acc, item) => { const data = new Date(item.date * 1000).toISOString().split('T')[0]; acc[data] = ((item.close / valorBase) - 1) * 100; return acc }, {});
         };
+
         const historicoIBOV = normalizarIndice(dadosIBOV, dataInicioStr);
         const historicoIVVB11 = normalizarIndice(dadosIVVB11, dataInicioStr);
         const labels = [];
@@ -231,8 +224,7 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
             const ivvb11Gain = historicoIVVB11[dataAtualStr];
             if (typeof ivvb11Gain === 'number') { dataIVVB11.push(ivvb11Gain) } else if (dataIVVB11.length > 0) { dataIVVB11.push(dataIVVB11[dataIVVB11.length - 1]) } else { dataIVVB11.push(0) }
         }
-        const baseCustoInicial = lancamentosOrdenados[0].valorTotal;
-        const baseValor = baseCustoInicial > 0 ? baseCustoInicial : 1;
+        
         const dataCarteiraNormalizada = dataCarteira.map((v, i) => { const cost = costBasisArray[i]; if (cost > 0) { return ((v / cost) - 1) * 100 } return 0 });
         performanceChart = new Chart(ctx, {
             type: 'line',
@@ -249,15 +241,51 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
     } catch (error) { console.error("Erro ao buscar dados para o gráfico de performance:", error); container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Não foi possível carregar os dados de performance.<br><small>${error.message}</small></p>` }
 }
 
+
 /**
- * GRÁFICO DE PERFORMANCE CONSOLIDADO 
- * Renderiza um gráfico de LINHA comparando a performance da carteira vs. benchmarks.
+ * --- FUNÇÃO DE DEPURAÇÃO ---
+ * Busca o histórico de qualquer índice diretamente do Firestore e exibe no console.
+ */
+async function fetchIndexDataFromFirestore(indexTicker, dataInicial, dataFinal) {
+    try {
+        // Log 1: O que estamos buscando?
+        console.log(`[DEBUG] Buscando no Firestore: ticker=${indexTicker}, de=${dataInicial}, ate=${dataFinal}`);
+
+        const q = query(
+            collection(db, "indices"),
+            where("ticker", "==", indexTicker),
+            where("data", ">=", dataInicial),
+            where("data", "<=", dataFinal),
+            orderBy("data", "asc")
+        );
+        const querySnapshot = await getDocs(q);
+        
+        // Log 2: O que o Firebase retornou?
+        console.log(`[DEBUG] Resultado para ${indexTicker}: Encontrados ${querySnapshot.size} documentos.`);
+
+        // Log 3 (Opcional): O que há dentro dos documentos?
+        if (!querySnapshot.empty) {
+            // Mostra apenas o primeiro documento para não poluir o console
+            console.log(`[DEBUG] Exemplo de doc para ${indexTicker}:`, querySnapshot.docs[0].data());
+        }
+
+        return querySnapshot.docs.reduce((acc, doc) => {
+            const data = doc.data();
+            acc[data.data] = data.valor;
+            return acc;
+        }, {});
+    } catch (error) {
+        console.error(`[Charts] Erro ao buscar dados do índice ${indexTicker} do Firestore:`, error);
+        return {};
+    }
+}
+
+
+/**
+ * --- GRÁFICO DE PERFORMANCE CONSOLIDADO (FUNÇÃO ATUALIZADA) ---
  */
 export async function renderConsolidatedPerformanceChart(lancamentos, proventos) {
-    // --- FIX: Trava para evitar renderização duplicada ---
-    if (isChartRendering) {
-        return;
-    }
+    if (isChartRendering) return;
     isChartRendering = true;
 
     const canvas = document.getElementById('consolidated-performance-chart');
@@ -265,9 +293,7 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         isChartRendering = false;
         return;
     }
-    const container = canvas.parentElement;
-
-    // --- FIX: Garante que a instância anterior seja destruída ---
+    
     if (consolidatedPerformanceChart) {
         consolidatedPerformanceChart.destroy();
     }
@@ -290,24 +316,24 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
 
     try {
         const lancamentosOrdenados = [...lancamentos].sort((a, b) => new Date(a.data) - new Date(b.data));
-        const dataInicioAbsoluta = new Date(lancamentosOrdenados[0].data);
         const hoje = new Date();
         const tresMesesAtras = new Date();
         tresMesesAtras.setMonth(hoje.getMonth() - 3);
-
-        const dataInicio = dataInicioAbsoluta > tresMesesAtras ? dataInicioAbsoluta : tresMesesAtras;
+        const dataInicio = new Date(lancamentosOrdenados[0].data) > tresMesesAtras ? new Date(lancamentosOrdenados[0].data) : tresMesesAtras;
         const dataInicioStr = dataInicio.toISOString().split('T')[0];
         const dataFinalStr = hoje.toISOString().split('T')[0];
 
         const tickers = [...new Set(lancamentos.filter(l => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo)).map(l => l.ativo))];
-        const benchmarkTickers = ['^BVSP', 'IVVB11'];
-        const apiPromises = [...tickers, ...benchmarkTickers].map(t => fetchHistoricalData(t, '3mo'));
-        apiPromises.push(fetchIndexers(dataInicioStr, dataFinalStr));
-
-        const results = await Promise.all(apiPromises);
-
+        
+        const [assetResults, cdiData, ibovData, ivvb11Data] = await Promise.all([
+            Promise.all(tickers.map(t => fetchHistoricalData(t, '3mo'))),
+            fetchIndexDataFromFirestore('CDI', dataInicioStr, dataFinalStr),
+            fetchIndexDataFromFirestore('^BVSP', dataInicioStr, dataFinalStr),
+            fetchIndexDataFromFirestore('IVVB11', dataInicioStr, dataFinalStr)
+        ]);
+        
         const historicoPrecos = {};
-        results.slice(0, -1).forEach(res => {
+        assetResults.forEach(res => {
             if (res && res.results && res.results[0]) {
                 const ticker = res.results[0].symbol;
                 historicoPrecos[ticker] = res.results[0].historicalDataPrice.reduce((acc, item) => {
@@ -316,10 +342,9 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
                 }, {});
             }
         });
-        const dadosCDI = results[results.length - 1].historicoCDI;
 
-        const normalizarIndice = (ticker, dataInicioStr) => {
-            const precosHistoricos = historicoPrecos[ticker] || {};
+        const normalizarIndice = (precosHistoricos, dataInicioStr) => {
+            if (!precosHistoricos || Object.keys(precosHistoricos).length === 0) return {};
             const datas = Object.keys(precosHistoricos).sort();
             const dataBase = datas.find(d => d >= dataInicioStr) || datas[0];
             const valorBase = precosHistoricos[dataBase];
@@ -330,33 +355,16 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
             }, {});
         };
 
-        const historicoIBOV = normalizarIndice('^BVSP', dataInicioStr);
-        const historicoIVVB11 = normalizarIndice('IVVB11', dataInicioStr);
-
-        const historicoCDIIndex = {};
-        let cdiIndexStartFactor = 1;
-        let cdiAcumulado = 1;
-        let cdiStarted = false;
-
-        dadosCDI.forEach(item => {
-            const data = item.data.split('/').reverse().join('-');
-            cdiAcumulado *= (1 + (parseFloat(item.valor) / 100));
-            if (data >= dataInicioStr && !cdiStarted) {
-                cdiIndexStartFactor = cdiAcumulado;
-                cdiStarted = true;
-            }
-            if (cdiStarted) {
-                historicoCDIIndex[data] = cdiAcumulado;
-            }
-        });
-
+        const historicoIBOV = normalizarIndice(ibovData, dataInicioStr);
+        const historicoIVVB11 = normalizarIndice(ivvb11Data, dataInicioStr);
+        
         const labels = [];
         const dataCarteira = [];
         const costBasisArray = [];
-        const proventosArray = []; // <<< FIX
+        const proventosArray = [];
         const carteiraDiaria = {};
         let custoBaseAcumulado = 0;
-        let proventosAcumulados = 0; // <<< FIX
+        let proventosAcumulados = 0;
         let patrimonioDiaAnterior = {};
 
         const lancamentosAntes = lancamentosOrdenados.filter(l => new Date(l.data) < dataInicio);
@@ -396,14 +404,13 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
                 }
             });
 
-            // --- FIX: Acumula proventos ---
             proventos.filter(p => p.dataPagamento === dataAtualStr).forEach(p => proventosAcumulados += p.valor);
             proventosArray.push(proventosAcumulados);
 
             let patrimonioDoDia = 0;
             for (const ticker in carteiraDiaria) {
                 const ativo = carteiraDiaria[ticker];
-                if (ativo.quantidade > 0.000001) { // Evita poeira de ativos vendidos
+                if (ativo.quantidade > 1e-8) {
                     const precoDoDia = historicoPrecos[ticker]?.[dataAtualStr]
                     if (precoDoDia) {
                         patrimonioDiaAnterior[ticker] = ativo.quantidade * precoDoDia;
@@ -411,12 +418,10 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
                     patrimonioDoDia += patrimonioDiaAnterior[ticker] || ativo.custoTotal;
                 }
             }
-
             dataCarteira.push(patrimonioDoDia);
             costBasisArray.push(custoBaseAcumulado);
         }
 
-        // --- FIX: Fórmula de performance corrigida para incluir proventos ---
         const dataCarteiraNormalizada = dataCarteira.map((v, i) => {
             const custo = costBasisArray[i];
             const proventos = proventosArray[i];
@@ -427,10 +432,34 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         });
 
         const dataCDI = [];
+        let cdiAcumulado = 1;
+        let cdiValorBase = null;
+
+        // Encontra o primeiro valor base para o CDI no período
+        for (const l of labels) {
+            const cdiDoDia = cdiData[l];
+            if (cdiDoDia !== undefined) {
+                if(cdiValorBase === null) {
+                    cdiValorBase = cdiAcumulado;
+                }
+                cdiAcumulado *= (1 + (cdiDoDia / 100));
+            }
+        }
+        
+        // Reseta para o cálculo final
+        cdiAcumulado = cdiValorBase || 1;
+        
         labels.forEach(l => {
-            const idx = historicoCDIIndex[l];
-            const lastValue = dataCDI.length > 0 ? dataCDI[dataCDI.length - 1] : 0;
-            dataCDI.push(idx ? ((idx / cdiIndexStartFactor) - 1) * 100 : lastValue);
+            const cdiDoDia = cdiData[l];
+            if (cdiDoDia !== undefined) {
+                 cdiAcumulado *= (1 + (cdiDoDia / 100));
+            }
+
+            if (cdiValorBase) {
+                dataCDI.push(((cdiAcumulado / cdiValorBase) - 1) * 100);
+            } else {
+                dataCDI.push(0);
+            }
         });
 
         const dataIBOV = [];
@@ -499,11 +528,10 @@ export async function renderConsolidatedPerformanceChart(lancamentos, proventos)
         ctx.fillText(error.message, canvas.width / 2, canvas.height / 2 + 10);
         ctx.restore();
     } finally {
-        isChartRendering = false; // --- FIX: Libera a trava ---
+        isChartRendering = false;
     }
 }
 
-// --- INÍCIO DA NOVA FUNÇÃO ---
 export function renderProventosPorAtivoBarChart(proventos) {
     const canvas = document.getElementById("proventos-por-ativo-bar-chart");
     if (!canvas) return;
@@ -512,19 +540,16 @@ export function renderProventosPorAtivoBarChart(proventos) {
         proventosPorAtivoBarChart.destroy();
     }
 
-    // 1. Agrega os valores por ativo
     const porAtivo = proventos.reduce((acc, p) => {
         acc[p.ativo] = (acc[p.ativo] || 0) + p.valor;
         return acc;
     }, {});
 
-    // 2. Ordena do maior para o menor
     const sortedData = Object.entries(porAtivo).sort(([, a], [, b]) => b - a);
 
     const labels = sortedData.map(item => item[0]);
     const data = sortedData.map(item => item[1]);
 
-    // 3. Cria o gráfico de barras horizontais
     proventosPorAtivoBarChart = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -539,7 +564,7 @@ export function renderProventosPorAtivoBarChart(proventos) {
             }]
         },
         options: {
-            indexAxis: 'y', // <-- Isso torna o gráfico horizontal
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -573,5 +598,4 @@ export function renderProventosPorAtivoBarChart(proventos) {
             }
         }
     });
-};
-// --- FIM DA NOVA FUNÇÃO ---
+}
