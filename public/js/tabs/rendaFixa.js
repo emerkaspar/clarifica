@@ -247,7 +247,7 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
             investidoTotal += ativo.valorAplicado;
             const rentabilidadeLiquida = valorCurva - ativo.valorAplicado;
             const rentabilidadePercentual = ativo.valorAplicado > 0 ? (rentabilidadeLiquida / ativo.valorAplicado) * 100 : 0;
-            
+
             const variacaoDiaReais = valorCurva - valorCurvaOntem;
             const variacaoDiaPercent = valorCurvaOntem > 0 ? (variacaoDiaReais / valorCurvaOntem) * 100 : 0;
 

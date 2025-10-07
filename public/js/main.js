@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { collection, doc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { collection, doc, onSnapshot, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { auth, db } from './firebase-config.js';
 import { initializeAuth } from './auth.js';
 import { initializeUI } from './ui.js';
@@ -93,7 +93,7 @@ function initializeDataListeners(userID) {
         const precosEInfos = await fetchCurrentPrices(tickersAtivos);
         window.precosEInfos = precosEInfos;
 
-        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos);
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos, allTesouroDiretoPrices);
 
         renderHistorico(allLancamentos, precosEInfos);
         renderMovimentacaoChart(allLancamentos);
@@ -121,7 +121,7 @@ function initializeDataListeners(userID) {
         const precosEInfos = await fetchCurrentPrices(tickersAtivos);
         window.precosEInfos = precosEInfos;
 
-        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos);
+        const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos, allTesouroDiretoPrices);
 
         updateProventosTab(allProventos, currentProventosMeta, precosEInfos, allLancamentos); // E aqui também
         renderAcoesCarteira(allLancamentos, allProventos);

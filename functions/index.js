@@ -81,34 +81,44 @@ async function fetchAndSaveRVIndex(ticker) {
 
 async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
     const hoje = new Date();
-    const dataFim = `${hoje.getDate()}/${hoje.getMonth() + 1}/${hoje.getFullYear()}`;
+    const dataFim = `${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}`;
     const dataAnterior = new Date();
-    dataAnterior.setDate(hoje.getDate() - 90);
-    const dataIni = `${dataAnterior.getDate()}/${dataAnterior.getMonth() + 1}/${dataAnterior.getFullYear()}`;
+    dataAnterior.setDate(hoje.getDate() - 90); // Busca os últimos 90 dias para garantir o preenchimento
+    const dataIni = `${dataAnterior.getDate().toString().padStart(2, '0')}/${(dataAnterior.getMonth() + 1).toString().padStart(2, '0')}/${dataAnterior.getFullYear()}`;
 
     const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${codigoBCB}/dados?formato=json&dataInicial=${dataIni}&dataFinal=${dataFim}`;
     try {
         const response = await axios.get(url);
-        if (response.data && response.data.length > 0) {
-            const ultimoValor = response.data[response.data.length - 1];
-            const [dia, mes, ano] = ultimoValor.data.split('/');
-            const dataISO = `${ano}-${mes}-${dia}`;
-            const docId = `${nomeIndice}-${dataISO}`;
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+            const batch = db.batch();
+            response.data.forEach(valorDiario => {
+                if (valorDiario.data && valorDiario.valor) {
+                    const [dia, mes, ano] = valorDiario.data.split('/');
+                    const dataISO = `${ano}-${mes}-${dia}`;
+                    const docId = `${nomeIndice}-${dataISO}`;
+                    const docRef = db.collection("indices").doc(docId);
 
-            const dataToSave = {
-                ticker: nomeIndice,
-                valor: parseFloat(ultimoValor.valor),
-                data: dataISO,
-                timestamp: new Date()
-            };
-            await saveData("indices", docId, dataToSave);
+                    const dataToSave = {
+                        ticker: nomeIndice,
+                        valor: parseFloat(valorDiario.valor),
+                        data: dataISO,
+                        timestamp: new Date()
+                    };
+                    // Usar set com merge em um batch garante que salvaremos todos os dados de forma eficiente
+                    batch.set(docRef, dataToSave, { merge: true });
+                }
+            });
+            await batch.commit();
+            console.log(`[Scheduler] Processados ${response.data.length} registros para o índice ${nomeIndice}.`);
         } else {
             console.log(`[Scheduler] Nenhum dado novo encontrado para o índice ${nomeIndice} no período.`);
         }
     } catch (error) {
-        console.error(`[Scheduler] Erro ao buscar ${nomeIndice} do BCB:`, error.message);
+        const errorMessage = error.response ? `Status ${error.response.status}: ${JSON.stringify(error.response.data)}` : error.message;
+        console.error(`[Scheduler] Erro ao buscar ${nomeIndice} do BCB:`, errorMessage);
     }
 }
+
 
 const updateAllAssets = async () => {
     console.log("Iniciando rotina de atualização de ativos...");
@@ -246,7 +256,7 @@ async function calcularPatrimonioRendaVariavel(lancamentosDoTipo, batch, dateStr
 
 const createDailySnapshot = async (dateStr, isBackfill = false) => {
     console.log(`[Snapshot] Iniciando rotina para salvar o patrimônio de ${dateStr}.`);
-     try {
+    try {
         const lancamentosSnapshot = await db.collection("lancamentos").get();
         const todosLancamentos = [];
         lancamentosSnapshot.forEach(doc => {
@@ -295,7 +305,7 @@ const createDailySnapshot = async (dateStr, isBackfill = false) => {
                     console.log(`[Snapshot] Patrimônio de ${tipoAtivo} para usuário ${userID} preparado para batch: ${patrimonio}`);
                 }
             }
-            
+
             await batch.commit();
             console.log(`[Snapshot] Batch para usuário ${userID} em ${dateStr} concluído.`);
         }
@@ -319,7 +329,7 @@ exports.backfillYesterdaySnapshot = functions.https.onRequest(async (req, res) =
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
-        
+
         await createDailySnapshot(yesterdayStr, true);
 
         res.status(200).send(`Backfill para o dia ${yesterdayStr} foi concluído com sucesso!`);
