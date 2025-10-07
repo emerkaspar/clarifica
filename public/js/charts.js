@@ -11,7 +11,7 @@ let consolidatedPerformanceChart = null;
 let proventosPorAtivoBarChart = null;
 let isChartRendering = false;
 
-// ... (Suas outras funções como renderMovimentacaoChart, etc., permanecem aqui intactas) ...
+// ... (renderMovimentacaoChart, renderPieCharts, renderEvolutionChart, renderPerformanceChart - sem alterações)
 export function renderMovimentacaoChart(lancamentos) {
     const chartCanvas = document.getElementById("movimentacao-chart");
     if (!chartCanvas || typeof Chart === "undefined") return;
@@ -241,13 +241,6 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
     } catch (error) { console.error("Erro ao buscar dados para o gráfico de performance:", error); container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Não foi possível carregar os dados de performance.<br><small>${error.message}</small></p>` }
 }
 
-
-/**
- * Busca os dados históricos de performance do Firebase para um dado período.
- * @param {string} userId - ID do usuário logado.
- * @param {Date} startDate - Data de início para a busca.
- * @returns {Promise<object>} - Objeto com as séries de dados para cada item.
- */
 async function fetchPerformanceData(userId, startDate) {
     const dataInicioStr = startDate.toISOString().split('T')[0];
 
@@ -286,14 +279,6 @@ async function fetchPerformanceData(userId, startDate) {
     };
 }
 
-
-/**
- * Processa as séries de dados, preenchendo dias faltantes e calculando a rentabilidade acumulada.
- * @param {object} seriesData - Dados brutos do Firebase.
- * @param {Date} startDate - Data de início do período.
- * @param {Date} endDate - Data de fim do período.
- * @returns {object} - Dados prontos para serem usados no gráfico.
- */
 function processAndCalculatePerformance(seriesData, startDate, endDate) {
     const labels = [];
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -358,13 +343,6 @@ function processAndCalculatePerformance(seriesData, startDate, endDate) {
     };
 }
 
-
-/**
- * Renderiza o novo gráfico de performance consolidada.
- * @param {string} period - O período a ser exibido (e.g., '6m', '1y').
- * @param {string} mainIndex - O índice principal para comparação.
- * @returns {Promise<object>} - Os dados processados do gráfico.
- */
 export async function renderConsolidatedPerformanceChart(period = '6m', mainIndex = 'IBOV') {
     const canvas = document.getElementById('consolidated-performance-chart');
     if (!canvas || !auth.currentUser) return;
@@ -436,7 +414,6 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
 
     return chartData;
 }
-
 
 export function renderProventosPorAtivoBarChart(proventos) {
     const canvas = document.getElementById("proventos-por-ativo-bar-chart");

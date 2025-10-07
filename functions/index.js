@@ -96,7 +96,7 @@ async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
             const docId = `${nomeIndice}-${dataISO}`;
 
             const dataToSave = {
-                ticker: nomeIndice, // ✅ CORREÇÃO: Padronizado para 'ticker'
+                ticker: nomeIndice,
                 valor: parseFloat(ultimoValor.valor),
                 data: dataISO,
                 timestamp: new Date()
@@ -168,7 +168,6 @@ exports.scheduledBrapiUpdate = functions.pubsub.schedule('0 19 * * *')
         return null;
     });
 
-// ... (O restante do seu arquivo, como a função scheduledPortfolioSnapshot, permanece aqui sem alterações)
 async function getCachedPatrimonio(userID, tipoAtivo) {
     try {
         const docRef = db.collection('patrimonioCache').doc(`${userID}_${tipoAtivo}`);
@@ -184,7 +183,7 @@ async function getCachedPatrimonio(userID, tipoAtivo) {
     }
 }
 
-async function calcularPatrimonioRendaVariavel(lancamentosDoTipo) {
+async function calcularPatrimonioRendaVariavel(lancamentosDoTipo, batch, todayStr, userID) {
     let patrimonioTotal = 0;
     if (!lancamentosDoTipo || lancamentosDoTipo.length === 0) {
         return 0;
@@ -192,7 +191,7 @@ async function calcularPatrimonioRendaVariavel(lancamentosDoTipo) {
 
     const carteira = {};
     lancamentosDoTipo.forEach(l => {
-        if (!carteira[l.ativo]) { carteira[l.ativo] = { quantidade: 0 }; }
+        if (!carteira[l.ativo]) { carteira[l.ativo] = { quantidade: 0, tipoAtivo: l.tipoAtivo }; }
         if (l.tipoOperacao === 'compra') {
             carteira[l.ativo].quantidade += l.quantidade;
         } else if (l.tipoOperacao === 'venda') {
@@ -206,15 +205,28 @@ async function calcularPatrimonioRendaVariavel(lancamentosDoTipo) {
             const q = db.collection("cotacoes").where("ticker", "==", ticker).orderBy("data", "desc").limit(1);
             const cotacaoSnapshot = await q.get();
             if (!cotacaoSnapshot.empty) {
-                const preco = cotacaoSnapshot.docs[0].data().preco;
+                const cotacaoData = cotacaoSnapshot.docs[0].data();
+                const preco = cotacaoData.preco;
                 patrimonioTotal += ativo.quantidade * preco;
+
+                // **NOVA LÓGICA: Salvar o preço individual do ativo**
+                const docId = `${userID}_${ticker}_${todayStr}`;
+                const historicoPrecoRef = db.collection("historicoPrecosDiario").doc(docId);
+                batch.set(historicoPrecoRef, {
+                    userID: userID,
+                    ticker: ticker,
+                    tipoAtivo: ativo.tipoAtivo,
+                    valor: preco,
+                    data: todayStr,
+                    timestamp: new Date()
+                });
             }
         }
     }
     return patrimonioTotal;
 }
 
-exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 23 * * *')
+exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('05 19 * * *')
     .timeZone('America/Sao_Paulo')
     .onRun(async (context) => {
         console.log('[Snapshot] Iniciando rotina para salvar o patrimônio diário.');
@@ -232,6 +244,7 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 23 * * *')
             }, {});
 
             for (const userID in lancamentosPorUsuario) {
+                const batch = db.batch(); // Inicia um batch para cada usuário
                 const lancamentosDoUsuario = lancamentosPorUsuario[userID];
                 const ativosPorTipo = lancamentosDoUsuario.reduce((acc, l) => {
                     const tipo = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
@@ -250,22 +263,28 @@ exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 23 * * *')
                         if (tipoAtivo === 'Renda Fixa') {
                             patrimonio = await getCachedPatrimonio(userID, 'Renda Fixa');
                         } else {
-                            patrimonio = await calcularPatrimonioRendaVariavel(ativosPorTipo[tipoAtivo]);
+                            // Passa o batch para a função de cálculo
+                            patrimonio = await calcularPatrimonioRendaVariavel(ativosPorTipo[tipoAtivo], batch, todayStr, userID);
                         }
                     }
 
                     if (hasAssets) {
                         const docId = `${userID}_${tipoAtivo}_${todayStr}`;
-                        await db.collection("historicoPatrimonioDiario").doc(docId).set({
+                        const historicoPatrimonioRef = db.collection("historicoPatrimonioDiario").doc(docId);
+                        batch.set(historicoPatrimonioRef, {
                             userID: userID,
                             tipoAtivo: tipoAtivo,
                             valorPatrimonio: patrimonio,
                             data: todayStr,
                             timestamp: new Date()
                         });
-                        console.log(`[Snapshot] Patrimônio de ${tipoAtivo} para usuário ${userID} salvo: ${patrimonio}`);
+                        console.log(`[Snapshot] Patrimônio de ${tipoAtivo} para usuário ${userID} preparado para batch: ${patrimonio}`);
                     }
                 }
+
+                // Commita todas as operações (patrimônio e preços individuais) para o usuário de uma vez
+                await batch.commit();
+                console.log(`[Snapshot] Batch para usuário ${userID} concluído.`);
             }
         } catch (error) {
             console.error('[Snapshot] Erro ao executar a rotina de snapshot:', error);

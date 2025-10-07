@@ -270,6 +270,52 @@
               </div>
             </div>
             <div class="tab-pane" id="rentabilidade">
+              <div class="valorization-header">
+                <div id="rentabilidade-valorization-card" class="valorization-card">
+                  <div class="valorization-title">
+                    <i class="fas fa-arrow-trend-up"></i>
+                    <span>Valorização do dia (Carteira)</span>
+                  </div>
+                  <div class="valorization-main">
+                    <span id="rentabilidade-consolidada-valorization-reais" class="valorization-value">Calculando...</span>
+                    <span id="rentabilidade-consolidada-valorization-percent" class="valorization-pill"></span>
+                  </div>
+                  <div class="highlights-container">
+                    <div class="highlight-block">
+                      <div class="highlight-title">
+                        <i class="fas fa-calendar-day"></i>
+                        <span>Destaques do Dia</span>
+                      </div>
+                      <div id="rentabilidade-highlights-day" class="highlight-content"></div>
+                    </div>
+                  </div>
+                </div>
+                <div id="rentabilidade-summary-card" class="valorization-card summary-card-details">
+                  <div class="valorization-title">
+                    <i class="fas fa-wallet"></i>
+                    <span>Resumo da Carteira</span>
+                  </div>
+                  <div class="summary-details-grid">
+                    <div class="summary-item">
+                      <span class="summary-label">Total Investido</span>
+                      <span id="rentabilidade-consolidada-total-investido" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Patrimônio Atual</span>
+                      <span id="rentabilidade-consolidada-patrimonio-atual" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Rentabilidade Total</span>
+                      <span id="rentabilidade-consolidada-rentabilidade-reais" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Rentabilidade</span>
+                      <span id="rentabilidade-consolidada-rentabilidade-percent" class="summary-value">0,00%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="performance-box">
                 <div class="performance-header">
                   <div class="performance-summary">
@@ -302,29 +348,30 @@
                   <canvas id="consolidated-performance-chart"></canvas>
                 </div>
               </div>
+
               <div class="performance-box" style="margin-top: 40px;">
                 <div class="evolution-header" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0;">Variação Diária do Patrimônio</h3> <div class="evolution-filters">
-
+                  <h3 style="margin: 0;">Variação Diária do Patrimônio</h3>
+                  <div class="evolution-filters">
                     <div id="daily-variation-interval-filter" class="filter-btn-group">
-                        <button class="filter-btn active" data-intervalo="Diário">Diário</button>
-                        <button class="filter-btn" data-intervalo="Mensal">Mensal</button>
-                        <button class="filter-btn" data-intervalo="Anual">Anual</button>
+                      <button class="filter-btn active" data-intervalo="Diário">Diário</button>
+                      <button class="filter-btn" data-intervalo="Mensal">Mensal</button>
+                      <button class="filter-btn" data-intervalo="Anual">Anual</button>
                     </div>
                     <select id="daily-variation-asset-filter" class="filter-select">
-                        <option value="Todos">Carteira Consolidada</option>
-                        <option value="Ações">Ações</option>
-                        <option value="FIIs">FIIs</option>
-                        <option value="ETF">ETFs</option>
-                        <option value="Cripto">Criptomoedas</option>
-                        <option value="Renda Fixa">Renda Fixa</option>
+                      <option value="Todos">Carteira Consolidada</option>
+                      <option value="Ações">Ações</option>
+                      <option value="FIIs">FIIs</option>
+                      <option value="ETF">ETFs</option>
+                      <option value="Cripto">Criptomoedas</option>
+                      <option value="Renda Fixa">Renda Fixa</option>
                     </select>
+                  </div>
                 </div>
-            </div>
-            <div class="performance-chart-container">
-                <canvas id="daily-variation-chart"></canvas>
-            </div>
-            </div>
+                <div class="performance-chart-container">
+                    <canvas id="daily-variation-chart"></canvas>
+                </div>
+              </div>
             </div>
 
             <div class="tab-pane" id="proventos">

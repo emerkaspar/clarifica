@@ -1,48 +1,67 @@
 import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
-// --- NOVAS IMPORTAÇÕES ---
 import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 
-// --- NOVA FUNÇÃO ---
 /**
- * Busca no Firestore o último valor de patrimônio salvo para a classe de ativo "ETF".
+ * Busca os preços de fechamento do dia anterior para uma lista de tickers.
  * @param {string} userID - O ID do usuário logado.
- * @returns {Promise<number>} - O valor do patrimônio do dia anterior, ou 0 se não encontrado.
+ * @param {Array<string>} tickers - A lista de tickers a serem buscados.
+ * @returns {Promise<object>} - Um objeto mapeando ticker para o preço do dia anterior.
  */
-async function fetchPatrimonioAnterior(userID) {
-    if (!userID) return 0;
+async function fetchPreviousDayPrices(userID, tickers) {
+    if (!userID || !tickers || tickers.length === 0) return {};
+
     try {
-        const q = query(
-            collection(db, "historicoPatrimonioDiario"),
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const precosAnteriores = {};
+
+        const qLastDate = query(
+            collection(db, "historicoPrecosDiario"),
             where("userID", "==", userID),
-            where("tipoAtivo", "==", "ETF"),
+            where("data", "<", hojeStr),
             orderBy("data", "desc"),
             limit(1)
         );
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
-            console.warn("Nenhum registro de patrimônio anterior encontrado para ETFs.");
-            return 0;
+
+        const lastDateSnapshot = await getDocs(qLastDate);
+        if (lastDateSnapshot.empty) {
+            console.warn("[ETF] Nenhum registro de preço de dias anteriores encontrado.");
+            return {};
         }
-        const ultimoRegistro = querySnapshot.docs[0].data();
-        return ultimoRegistro.valorPatrimonio || 0;
+
+        const ultimoDia = lastDateSnapshot.docs[0].data().data;
+
+        const qPrices = query(
+            collection(db, "historicoPrecosDiario"),
+            where("userID", "==", userID),
+            where("data", "==", ultimoDia),
+            where("ticker", "in", tickers)
+        );
+
+        const priceSnapshot = await getDocs(qPrices);
+        priceSnapshot.forEach(doc => {
+            const data = doc.data();
+            precosAnteriores[data.ticker] = data.valor;
+        });
+
+        return precosAnteriores;
+
     } catch (error) {
-        console.error("Erro ao buscar patrimônio anterior de ETFs:", error);
-        return 0;
+        if (error.code === 'failed-precondition') {
+            console.warn("[ETF] Erro ao buscar preços: O índice para 'historicoPrecosDiario' ainda está sendo criado no Firestore. Tente novamente em alguns minutos.");
+        } else {
+            console.error("[ETF] Erro ao buscar preços do dia anterior:", error);
+        }
+        return {};
     }
 }
 
 
 /**
- * --- FUNÇÃO ATUALIZADA ---
  * Calcula e renderiza a valorização do dia para a carteira de ETFs.
- * @param {Array<string>} tickers - A lista de tickers de ETFs na carteira.
- * @param {object} carteira - O objeto da carteira consolidada.
- * @param {object} precosAtuais - Objeto com os preços atuais para os tickers.
- * @param {number} patrimonioAnterior - O valor do patrimônio de ETFs no fechamento do dia anterior.
  */
-async function renderEtfDayValorization(tickers, carteira, precosAtuais, patrimonioAnterior) {
+async function renderEtfDayValorization(tickers, carteira, precosAtuais) {
     const valorizationReaisDiv = document.getElementById("etf-valorization-reais");
     const valorizationPercentDiv = document.getElementById("etf-valorization-percent");
 
@@ -53,38 +72,42 @@ async function renderEtfDayValorization(tickers, carteira, precosAtuais, patrimo
     valorizationPercentDiv.className = 'valorization-pill';
 
     try {
-        if (patrimonioAnterior <= 0) {
+        const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
+
+        let patrimonioTotalHoje = 0;
+        let patrimonioTotalOntem = 0;
+
+        tickers.forEach(ticker => {
+            const ativo = carteira[ticker];
+            const precoHoje = precosAtuais[ticker]?.price;
+            const precoOntem = precosDiaAnterior[ticker];
+
+            if (ativo && ativo.quantidade > 0) {
+                if (precoHoje) {
+                    patrimonioTotalHoje += ativo.quantidade * precoHoje;
+                }
+                patrimonioTotalOntem += ativo.quantidade * (precoOntem || precoHoje || 0);
+            }
+        });
+
+        if (patrimonioTotalOntem <= 0) {
             valorizationReaisDiv.textContent = "N/A";
             valorizationPercentDiv.innerHTML = "-";
             return;
         }
 
-        let patrimonioTotalHoje = 0;
-        tickers.forEach(ticker => {
-            if (carteira[ticker] && precosAtuais[ticker]) {
-                const quantidade = carteira[ticker].quantidade;
-                const precoAtual = precosAtuais[ticker].price;
-                if (quantidade > 0 && precoAtual > 0) {
-                    patrimonioTotalHoje += quantidade * precoAtual;
-                }
-            }
-        });
-
-        const totalValorizacaoReais = patrimonioTotalHoje - patrimonioAnterior;
-        const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioAnterior) * 100;
+        const totalValorizacaoReais = patrimonioTotalHoje - patrimonioTotalOntem;
+        const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioTotalOntem) * 100;
 
         const isPositive = totalValorizacaoReais >= 0;
         const sinal = isPositive ? '+' : '';
         const corClasse = isPositive ? 'positive' : 'negative';
         const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
 
-        const valorizacaoReaisFormatada = totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        const percentualFormatado = `${variacaoPercentualFinal.toFixed(2)}%`;
-
-        valorizationReaisDiv.textContent = `${sinal}${valorizacaoReaisFormatada}`;
+        valorizationReaisDiv.textContent = `${sinal}${totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
         valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
 
-        valorizationPercentDiv.innerHTML = `${sinal}${percentualFormatado} ${iconeSeta}`;
+        valorizationPercentDiv.innerHTML = `${sinal}${variacaoPercentualFinal.toFixed(2)}% ${iconeSeta}`;
         valorizationPercentDiv.classList.add(corClasse);
 
     } catch (error) {
@@ -95,19 +118,17 @@ async function renderEtfDayValorization(tickers, carteira, precosAtuais, patrimo
 
 /**
  * Calcula e renderiza o resumo da carteira de ETFs.
- * @param {object} carteira - O objeto da carteira consolidada.
- * @param {object} precosAtuais - Objeto com os preços atuais dos ativos.
  */
 function renderEtfSummary(carteira, precosAtuais) {
     let totalInvestido = 0;
     let patrimonioAtual = 0;
-    let totalProventos = 0; 
+    let totalProventos = 0;
 
     Object.values(carteira).forEach(ativo => {
         if (ativo.quantidade > 0) {
             const precoAtual = precosAtuais[ativo.ativo]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
-            
+
             totalInvestido += precoMedio * ativo.quantidade;
             patrimonioAtual += precoAtual * ativo.quantidade;
             totalProventos += ativo.proventos;
@@ -131,7 +152,7 @@ function renderEtfSummary(carteira, precosAtuais) {
             }
         }
     };
-    
+
     updateField('etf-total-investido', totalInvestido);
     updateField('etf-patrimonio-atual', patrimonioAtual);
     updateField('etf-rentabilidade-reais', rentabilidadeReais, true, true);
@@ -140,7 +161,6 @@ function renderEtfSummary(carteira, precosAtuais) {
 
 
 /**
- * --- FUNÇÃO ATUALIZADA ---
  * Renderiza os cards da carteira de ETFs.
  * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
  * @param {Array<object>} proventos - A lista completa de todos os proventos.
@@ -199,11 +219,9 @@ export async function renderEtfCarteira(lancamentos, proventos) {
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
-        
-        // --- LÓGICA ATUALIZADA ---
-        const patrimonioAnterior = await fetchPatrimonioAnterior(auth.currentUser.uid);
-        await renderEtfDayValorization(tickers, carteira, precosAtuais, patrimonioAnterior);
-        
+
+        await renderEtfDayValorization(tickers, carteira, precosAtuais);
+
         renderEtfSummary(carteira, precosAtuais);
 
         const html = tickers.map(ticker => {
@@ -212,7 +230,7 @@ export async function renderEtfCarteira(lancamentos, proventos) {
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
-            
+
             const variacaoReais = valorPosicaoAtual - valorInvestido;
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
             const rentabilidadeReais = variacaoReais + ativo.proventos;

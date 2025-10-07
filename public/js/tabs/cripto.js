@@ -1,32 +1,65 @@
 import { fetchCurrentPrices } from '../api/brapi.js';
-// --- NOVAS IMPORTAÇÕES ---
 import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// --- NOVA FUNÇÃO ---
-async function fetchPatrimonioAnterior(userID) {
-    if (!userID) return 0;
+/**
+ * Busca os preços de fechamento do dia anterior para uma lista de tickers.
+ * @param {string} userID - O ID do usuário logado.
+ * @param {Array<string>} tickers - A lista de tickers a serem buscados.
+ * @returns {Promise<object>} - Um objeto mapeando ticker para o preço do dia anterior.
+ */
+async function fetchPreviousDayPrices(userID, tickers) {
+    if (!userID || !tickers || tickers.length === 0) return {};
+
     try {
-        const q = query(
-            collection(db, "historicoPatrimonioDiario"),
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const precosAnteriores = {};
+
+        const qLastDate = query(
+            collection(db, "historicoPrecosDiario"),
             where("userID", "==", userID),
-            where("tipoAtivo", "==", "Cripto"),
+            where("data", "<", hojeStr),
             orderBy("data", "desc"),
             limit(1)
         );
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
-            console.warn("Nenhum registro de patrimônio anterior encontrado para Cripto.");
-            return 0;
+
+        const lastDateSnapshot = await getDocs(qLastDate);
+        if (lastDateSnapshot.empty) {
+            console.warn("[Cripto] Nenhum registro de preço de dias anteriores encontrado.");
+            return {};
         }
-        return querySnapshot.docs[0].data().valorPatrimonio || 0;
+
+        const ultimoDia = lastDateSnapshot.docs[0].data().data;
+
+        const qPrices = query(
+            collection(db, "historicoPrecosDiario"),
+            where("userID", "==", userID),
+            where("data", "==", ultimoDia),
+            where("ticker", "in", tickers)
+        );
+
+        const priceSnapshot = await getDocs(qPrices);
+        priceSnapshot.forEach(doc => {
+            const data = doc.data();
+            precosAnteriores[data.ticker] = data.valor;
+        });
+
+        return precosAnteriores;
+
     } catch (error) {
-        console.error("Erro ao buscar patrimônio anterior de Cripto:", error);
-        return 0;
+        if (error.code === 'failed-precondition') {
+            console.warn("[Cripto] Erro ao buscar preços: O índice para 'historicoPrecosDiario' ainda está sendo criado no Firestore. Tente novamente em alguns minutos.");
+        } else {
+            console.error("[Cripto] Erro ao buscar preços do dia anterior:", error);
+        }
+        return {};
     }
 }
 
-// --- NOVA FUNÇÃO ---
+
+/**
+ * Calcula e renderiza a valorização do dia para a carteira de Criptos.
+ */
 function renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior) {
     const valorizationReaisDiv = document.getElementById("cripto-valorization-reais");
     const valorizationPercentDiv = document.getElementById("cripto-valorization-percent");
@@ -64,13 +97,13 @@ function renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior) {
 function renderCriptoSummary(carteira, precosAtuais) {
     let totalInvestido = 0;
     let patrimonioAtual = 0;
-    let totalProventos = 0; 
+    let totalProventos = 0;
 
     Object.values(carteira).forEach(ativo => {
         if (ativo.quantidade > 0) {
             const precoAtual = precosAtuais[ativo.ativo]?.price || 0;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
-            
+
             totalInvestido += precoMedio * ativo.quantidade;
             patrimonioAtual += precoAtual * ativo.quantidade;
             totalProventos += ativo.proventos;
@@ -94,18 +127,17 @@ function renderCriptoSummary(carteira, precosAtuais) {
             }
         }
     };
-    
+
     updateField('cripto-total-investido', totalInvestido);
     updateField('cripto-patrimonio-atual', patrimonioAtual);
     updateField('cripto-rentabilidade-reais', rentabilidadeReais, true, true);
     updateField('cripto-rentabilidade-percent', rentabilidadePercent, false, true);
-    
-    return patrimonioAtual; // Retorna o valor para ser usado na valorização diária
+
+    return patrimonioAtual;
 }
 
 
 /**
- * --- FUNÇÃO ATUALIZADA ---
  * Renderiza os cards da carteira de Criptomoedas.
  */
 export async function renderCriptoCarteira(lancamentos, proventos) {
@@ -162,9 +194,16 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
         const patrimonioAtual = renderCriptoSummary(carteira, precosAtuais);
-        
-        // --- LÓGICA ATUALIZADA ---
-        const patrimonioAnterior = await fetchPatrimonioAnterior(auth.currentUser.uid);
+
+        const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
+        let patrimonioAnterior = 0;
+        tickers.forEach(ticker => {
+            const ativo = carteira[ticker];
+            if (ativo && ativo.quantidade > 0) {
+                patrimonioAnterior += ativo.quantidade * (precosDiaAnterior[ticker] || precosAtuais[ticker]?.price || 0);
+            }
+        });
+
         renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior);
 
 
