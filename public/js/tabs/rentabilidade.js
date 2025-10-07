@@ -210,9 +210,7 @@ async function fetchHistoricoPatrimonio(intervalo) {
         allHistoricoPatrimonio = [];
     }
 }
-
 function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
-    // Agrupa o patrimônio por dia a partir do histórico
     const patrimonioPorDia = allHistoricoPatrimonio.reduce((acc, registro) => {
         const { data, tipoAtivo, valorPatrimonio } = registro;
         if (!acc[data]) {
@@ -225,7 +223,6 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
         return acc;
     }, {});
 
-    // Agrupa os lançamentos (compras/vendas) por dia
     const operacoesPorDia = (lancamentos || []).reduce((acc, l) => {
         const tipoMapeado = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
         if (!acc[l.data]) acc[l.data] = {};
@@ -282,7 +279,6 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
                 const aportes = opsDoTipo.compra;
                 const vendas = opsDoTipo.venda;
 
-                // **NOVO CÁLCULO DA VARIAÇÃO**
                 const variacao = (valorAtual - valorAnterior) - aportes + vendas;
 
                 variacoes[tipo].push(variacao);
@@ -297,7 +293,6 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
 
     return { labels, variacoes };
 }
-
 async function renderVariacaoDiariaChart(lancamentos) {
     const canvas = document.getElementById('daily-variation-chart');
     if (!canvas) return;

@@ -9,9 +9,10 @@ let proventosEvolucaoChart = null;
 let performanceChart = null;
 let consolidatedPerformanceChart = null;
 let proventosPorAtivoBarChart = null;
+let dividendYieldChart = null;
 let isChartRendering = false;
 
-// ... (renderMovimentacaoChart, renderPieCharts, renderEvolutionChart, renderPerformanceChart - sem alterações)
+// ... (Outras funções de renderização de gráficos permanecem iguais)
 export function renderMovimentacaoChart(lancamentos) {
     const chartCanvas = document.getElementById("movimentacao-chart");
     if (!chartCanvas || typeof Chart === "undefined") return;
@@ -190,9 +191,9 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
         historicoCDI.forEach(item => { const data = item.data.split('/').reverse().join('-'); cdiAcumulado *= (1 + (parseFloat(item.valor) / 100)); historicoCDIIndex[data] = cdiAcumulado; if (data === dataInicioStr) { cdiIndexStartFactor = cdiAcumulado } });
 
         const normalizarIndice = (dadosIndice, dataInicioStr) => {
-            if (!dadosIndice || !dadosIndice.results || dadosIndice.results.length === 0) return {};
+            if (!dadosIndice || !dadosIndice.results || !dadosIndice.results.length) return {};
             const precosHistoricos = dadosIndice.results[0].historicalDataPrice;
-            if (!precosHistoricos || precosHistoricos.length === 0) return {};
+            if (!precosHistoricos || !precosHistoricos.length) return {};
             const primeiroPrecoDisponivel = precosHistoricos.find(item => new Date(item.date * 1000).toISOString().split('T')[0] >= dataInicioStr);
             if (!primeiroPrecoDisponivel) { console.warn(`Não foi possível encontrar um preço base para normalizar o índice ${dadosIndice.results[0].symbol}`); return {} }
             const valorBase = primeiroPrecoDisponivel.close;
@@ -262,7 +263,6 @@ async function fetchPerformanceData(userId, startDate) {
         fetchData("indices", "ticker", "CDI")
     ]);
 
-    // Agrega o patrimônio total da carteira por dia
     const carteiraGrouped = carteiraRaw.reduce((acc, curr) => {
         acc[curr.data] = (acc[curr.data] || 0) + curr.valorPatrimonio;
         return acc;
@@ -321,7 +321,7 @@ function processAndCalculatePerformance(seriesData, startDate, endDate) {
         let foundStart = false;
 
         for (const date of labels) {
-            if (!foundStart && date < series[0].date) {
+            if (!foundStart && series[0] && date < series[0].date) {
                 performanceData.push(null);
                 continue;
             }
@@ -347,72 +347,86 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
     const canvas = document.getElementById('consolidated-performance-chart');
     if (!canvas || !auth.currentUser) return;
 
-    if (consolidatedPerformanceChart) {
-        consolidatedPerformanceChart.destroy();
+    if (isChartRendering) {
+        console.warn("Renderização de gráfico já em progresso, pulando nova requisição.");
+        return;
     }
+    isChartRendering = true;
 
-    const endDate = new Date();
-    const startDate = new Date();
+    try {
+        if (consolidatedPerformanceChart) {
+            consolidatedPerformanceChart.destroy();
+            consolidatedPerformanceChart = null;
+        }
 
-    switch (period) {
-        case '30d': startDate.setDate(endDate.getDate() - 30); break;
-        case '6m': startDate.setMonth(endDate.getMonth() - 6); break;
-        case 'ytd': startDate.setMonth(0, 1); break;
-        case '1y': startDate.setFullYear(endDate.getFullYear() - 1); break;
-        case '2y': startDate.setFullYear(endDate.getFullYear() - 2); break;
-        case '5y': startDate.setFullYear(endDate.getFullYear() - 5); break;
-        case 'all': startDate.setFullYear(endDate.getFullYear() - 10); break; // Limite de 10 anos
-    }
+        const endDate = new Date();
+        const startDate = new Date();
 
-    const rawData = await fetchPerformanceData(auth.currentUser.uid, startDate);
-    const chartData = processAndCalculatePerformance(rawData, startDate, endDate);
+        switch (period) {
+            case '30d': startDate.setDate(endDate.getDate() - 30); break;
+            case '6m': startDate.setMonth(endDate.getMonth() - 6); break;
+            case 'ytd': startDate.setMonth(0, 1); break;
+            case '1y': startDate.setFullYear(endDate.getFullYear() - 1); break;
+            case '2y': startDate.setFullYear(endDate.getFullYear() - 2); break;
+            case '5y': startDate.setFullYear(endDate.getFullYear() - 5); break;
+            case 'all': startDate.setFullYear(endDate.getFullYear() - 10); break;
+        }
 
-    const datasets = [
-        { label: 'Carteira', data: chartData.carteira, borderColor: '#00d9c3', tension: 0.1, pointRadius: 0, borderWidth: 2.5 },
-        { label: 'CDI', data: chartData.cdi, borderColor: '#a0a7b3', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] }
-    ];
+        const rawData = await fetchPerformanceData(auth.currentUser.uid, startDate);
+        const chartData = processAndCalculatePerformance(rawData, startDate, endDate);
 
-    if (mainIndex === 'IBOV') {
-        datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
-        datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
-    } else {
-        datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
-        datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
-    }
+        const datasets = [
+            { label: 'Carteira', data: chartData.carteira, borderColor: '#00d9c3', tension: 0.1, pointRadius: 0, borderWidth: 2.5 },
+            { label: 'CDI', data: chartData.cdi, borderColor: '#a0a7b3', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] }
+        ];
 
-    consolidatedPerformanceChart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: chartData.labels,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
+        if (mainIndex === 'IBOV') {
+            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
+        } else {
+            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
+            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+        }
+
+        consolidatedPerformanceChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: datasets
             },
-            plugins: {
-                legend: { position: 'top', align: 'center', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8, padding: 20 } },
-                tooltip: {
-                    callbacks: {
-                        label: (context) => {
-                            const value = context.parsed.y;
-                            if (value === null) return null;
-                            return `${context.dataset.label}: ${value.toFixed(2)}%`;
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { position: 'top', align: 'center', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8, padding: 20 } },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const value = context.parsed.y;
+                                if (value === null) return null;
+                                return `${context.dataset.label}: ${value.toFixed(2)}%`;
+                            }
                         }
                     }
+                },
+                scales: {
+                    y: { ticks: { color: '#a0a7b3', callback: value => value.toFixed(1) + '%' }, grid: { color: '#2a2c30' } },
+                    x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd/MM/yy', displayFormats: { day: 'dd/MM' } }, ticks: { color: '#a0a7b3', major: { enabled: true } }, grid: { display: false } }
                 }
-            },
-            scales: {
-                y: { ticks: { color: '#a0a7b3', callback: value => value.toFixed(1) + '%' }, grid: { color: '#2a2c30' } },
-                x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd/MM/yy' }, ticks: { color: '#a0a7b3' }, grid: { display: false } }
             }
-        }
-    });
+        });
 
-    return chartData;
+        return chartData;
+
+    } catch (error) {
+        console.error("Erro ao renderizar gráfico de performance consolidado:", error);
+    } finally {
+        isChartRendering = false;
+    }
 }
 
 export function renderProventosPorAtivoBarChart(proventos) {
@@ -480,5 +494,163 @@ export function renderProventosPorAtivoBarChart(proventos) {
                 }
             }
         }
+    });
+}
+
+/**
+ * Renderiza o novo gráfico de Dividend Yield por Ativo.
+ */
+export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
+    const canvas = document.getElementById('dividend-yield-chart');
+    if (!canvas) return;
+
+    if (dividendYieldChart) {
+        dividendYieldChart.destroy();
+    }
+
+    // --- LÓGICA DE CÁLCULO ---
+    const periodo = document.getElementById('dy-periodo-filter').value;
+    const tipoAtivoFiltro = document.getElementById('dy-tipo-ativo-filter').value;
+
+    const hoje = new Date();
+    const dataInicio = new Date();
+    if (periodo === '12m') dataInicio.setFullYear(hoje.getFullYear() - 1);
+    else if (periodo === '6m') dataInicio.setMonth(hoje.getMonth() - 6);
+    else if (periodo === 'ytd') dataInicio.setMonth(0, 1);
+    else if (periodo === '5y') dataInicio.setFullYear(hoje.getFullYear() - 5);
+
+    let proventosFiltrados = proventos.filter(p => new Date(p.dataPagamento) >= dataInicio);
+    if (tipoAtivoFiltro !== 'Todos') {
+        proventosFiltrados = proventosFiltrados.filter(p => p.tipoAtivo === tipoAtivoFiltro);
+    }
+
+    const proventosPorAtivo = proventosFiltrados.reduce((acc, p) => {
+        if (!acc[p.ativo]) {
+            acc[p.ativo] = { total: 0, tipoAtivo: p.tipoAtivo };
+        }
+        acc[p.ativo].total += p.valor;
+        return acc;
+    }, {});
+
+    const carteira = (lancamentos || []).reduce((acc, l) => {
+        if (!acc[l.ativo]) {
+            acc[l.ativo] = { quantidade: 0 };
+        }
+        if (l.tipoOperacao === 'compra') acc[l.ativo].quantidade += l.quantidade;
+        else if (l.tipoOperacao === 'venda') acc[l.ativo].quantidade -= l.quantidade;
+        return acc;
+    }, {});
+
+    let dyData = Object.keys(proventosPorAtivo).map(ticker => {
+        const proventoInfo = proventosPorAtivo[ticker];
+        const posicao = carteira[ticker];
+        const precoAtual = precosEInfos[ticker]?.price || 0;
+
+        if (!posicao || posicao.quantidade <= 0 || precoAtual <= 0) {
+            return null;
+        }
+
+        const valorDeMercado = posicao.quantidade * precoAtual;
+        const dividendYield = (proventoInfo.total / valorDeMercado) * 100;
+
+        return {
+            ticker,
+            dividendYield,
+            tipoAtivo: proventoInfo.tipoAtivo,
+            totalProventos: proventoInfo.total
+        };
+    }).filter(Boolean);
+
+    dyData.sort((a, b) => b.dividendYield - a.dividendYield);
+
+    // --- LÓGICA DE RENDERIZAÇÃO ---
+    const labels = dyData.map(d => d.ticker);
+    const data = dyData.map(d => d.dividendYield);
+
+    const colors = {
+        'Ações': 'rgba(0, 217, 195, 0.7)',
+        'FIIs': 'rgba(90, 103, 216, 0.7)',
+        'ETF': 'rgba(237, 100, 166, 0.7)'
+    };
+    const defaultColor = 'rgba(160, 167, 179, 0.7)';
+    const backgroundColors = dyData.map(d => colors[d.tipoAtivo] || defaultColor);
+
+    // Plugin customizado para desenhar os valores ao lado das barras
+    const dataLabelsPlugin = {
+        id: 'customDataLabels',
+        afterDatasetsDraw(chart, args, options) {
+            const { ctx } = chart;
+            ctx.save();
+
+            ctx.font = '500 11px "Open Sans"';
+            ctx.fillStyle = '#e0e0e0';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+
+            chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+                const value = chart.data.datasets[0].data[index];
+                if (value === null || value <= 0) return;
+
+                const text = value.toFixed(2) + '%';
+                const xPosition = datapoint.x + 4;
+                const yPosition = datapoint.y;
+
+                if (xPosition + ctx.measureText(text).width < chart.chartArea.right - 5) {
+                    ctx.fillText(text, xPosition, yPosition);
+                }
+            });
+            ctx.restore();
+        }
+    };
+
+    dividendYieldChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Dividend Yield (%)',
+                data: data,
+                backgroundColor: backgroundColors,
+                borderColor: backgroundColors.map(c => c.replace('0.7', '1')),
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (context) => context[0].label,
+                        label: (context) => {
+                            const item = dyData[context.dataIndex];
+                            return `DY: ${item.dividendYield.toFixed(2)}%`;
+                        },
+                        afterBody: (context) => {
+                            const item = dyData[context.dataIndex];
+                            return [
+                                `Total Recebido: ${item.totalProventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+                                `Tipo: ${item.tipoAtivo}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: "#2a2c30" },
+                    ticks: { color: "#a0a7b3", callback: (value) => value.toFixed(1) + '%' }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: "#a0a7b3" }
+                }
+            }
+        },
+        plugins: [dataLabelsPlugin] // Registra o plugin customizado
     });
 }

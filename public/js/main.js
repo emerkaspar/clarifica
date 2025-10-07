@@ -103,6 +103,7 @@ function initializeDataListeners(userID) {
         renderCriptoCarteira(allLancamentos, allProventos);
         renderRendaFixaCarteira(allLancamentos, userID, allTesouroDiretoPrices);
         renderClassificacao(allLancamentos, allClassificacoes);
+        updateProventosTab(allProventos, currentProventosMeta, precosEInfos, allLancamentos); // Passa allLancamentos aqui
         renderPatrimonioTab(allLancamentos, allProventos);
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
         renderAnalisesTab(allLancamentos, allProventos, allClassificacoes);
@@ -122,7 +123,7 @@ function initializeDataListeners(userID) {
 
         const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos);
 
-        updateProventosTab(allProventos, currentProventosMeta, precosEInfos);
+        updateProventosTab(allProventos, currentProventosMeta, precosEInfos, allLancamentos); // E aqui também
         renderAcoesCarteira(allLancamentos, allProventos);
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
@@ -143,7 +144,7 @@ function initializeDataListeners(userID) {
     const metaDocRef = doc(db, "metas", userID);
     onSnapshot(metaDocRef, (doc) => {
         currentProventosMeta = doc.exists() ? doc.data() : null;
-        updateProventosTab(allProventos, currentProventosMeta, window.precosEInfos || {});
+        updateProventosTab(allProventos, currentProventosMeta, window.precosEInfos || {}, allLancamentos); // E aqui
     });
 
     const qTesouroPrices = query(collection(db, "tesouroDiretoPrices"), where("userID", "==", userID), orderBy("timestamp", "desc"));

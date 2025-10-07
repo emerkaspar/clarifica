@@ -1,10 +1,11 @@
 import { db } from '../firebase-config.js';
 import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { renderPieCharts, renderEvolutionChart, renderProventosPorAtivoBarChart } from '../charts.js';
+import { renderPieCharts, renderEvolutionChart, renderProventosPorAtivoBarChart, renderDividendYieldChart } from '../charts.js';
 
 // --- ELEMENTOS DA UI ---
 const proventosListaDiv = document.getElementById("proventos-lista");
 const filtroAtivoSelect = document.getElementById("ativo-filter");
+const dyChartFilters = document.getElementById("dy-chart-filters");
 
 /**
  * Renderiza a lista de proventos em formato de cards agrupados por ativo.
@@ -124,6 +125,7 @@ const renderSummary = (proventos, meta) => {
  * @param {Array<object>} proventos - A lista completa de proventos.
  */
 const populateAssetFilter = (proventos) => {
+    if (!filtroAtivoSelect) return;
     const tickersUnicos = [...new Set(proventos.map((p) => p.ativo))].sort();
     const valorAtual = filtroAtivoSelect.value;
     filtroAtivoSelect.innerHTML = '<option value="Todos">Todos os Ativos</option>';
@@ -141,59 +143,58 @@ const populateAssetFilter = (proventos) => {
  * @param {Array<object>} proventos - A lista de proventos.
  * @param {object | null} meta - O objeto da meta do usuário.
  * @param {object} precosEInfos - Objeto com preços e logos dos ativos.
+ * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos.
  */
-export function updateProventosTab(proventos, meta, precosEInfos) {
+export function updateProventosTab(proventos, meta, precosEInfos, lancamentos) {
     renderProventosList(proventos, precosEInfos);
     populateAssetFilter(proventos);
     renderSummary(proventos, meta);
     renderPieCharts(proventos);
     renderEvolutionChart(proventos);
     renderProventosPorAtivoBarChart(proventos);
+    renderDividendYieldChart(proventos, lancamentos, precosEInfos);
 }
 
 // --- EVENT LISTENERS ---
 
-// Listener unificado para a lista de proventos (cards)
-proventosListaDiv.addEventListener("click", async (e) => {
-    const header = e.target.closest(".provento-group-header");
-    const deleteButton = e.target.closest("button.btn-excluir-provento");
-    const editButton = e.target.closest("button.btn-editar-provento");
+if (proventosListaDiv) {
+    proventosListaDiv.addEventListener("click", async (e) => {
+        const header = e.target.closest(".provento-group-header");
+        const deleteButton = e.target.closest("button.btn-excluir-provento");
+        const editButton = e.target.closest("button.btn-editar-provento");
 
-    // Ação: Expandir/Recolher card
-    if (header) {
-        const content = header.nextElementSibling;
-        const icon = header.querySelector('.group-toggle-icon');
-        content.classList.toggle('collapsed');
-        icon.style.transform = content.classList.contains('collapsed') ? 'rotate(0deg)' : 'rotate(180deg)';
-        return;
-    }
-
-    // Ação: Excluir provento
-    if (deleteButton) {
-        const docId = deleteButton.dataset.id;
-        if (confirm("Tem certeza que deseja excluir este provento?")) {
-            await deleteDoc(doc(db, "proventos", docId)).catch(
-                (err) => alert("Erro ao excluir: " + err.message)
-            );
+        if (header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.group-toggle-icon');
+            content.classList.toggle('collapsed');
+            icon.style.transform = content.classList.contains('collapsed') ? 'rotate(0deg)' : 'rotate(180deg)';
+            return;
         }
-        return;
-    }
 
-    // Ação: Editar provento
-    if (editButton) {
-        const docId = editButton.dataset.id;
-        const docRef = doc(db, 'proventos', docId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && typeof window.openProventoModal === 'function') {
-            window.openProventoModal(docSnap.data(), docId);
+        if (deleteButton) {
+            const docId = deleteButton.dataset.id;
+            if (confirm("Tem certeza que deseja excluir este provento?")) {
+                await deleteDoc(doc(db, "proventos", docId)).catch(
+                    (err) => alert("Erro ao excluir: " + err.message)
+                );
+            }
+            return;
         }
-        return;
-    }
-});
+
+        if (editButton) {
+            const docId = editButton.dataset.id;
+            const docRef = doc(db, 'proventos', docId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && typeof window.openProventoModal === 'function') {
+                window.openProventoModal(docSnap.data(), docId);
+            }
+            return;
+        }
+    });
+}
 
 
-const evolutionFilters = document.querySelectorAll(".filter-select, #intervalo-filter-group .filter-btn");
-
+const evolutionFilters = document.querySelectorAll("#proventos .filter-select, #intervalo-filter-group .filter-btn");
 evolutionFilters.forEach((el) => {
     const eventType = el.tagName === 'BUTTON' ? 'click' : 'change';
 
@@ -208,3 +209,12 @@ evolutionFilters.forEach((el) => {
         }
     });
 });
+
+// Listener para os filtros do novo gráfico de Dividend Yield
+if (dyChartFilters) {
+    dyChartFilters.addEventListener('change', () => {
+        if (window.allProventos && window.allLancamentos && window.precosEInfos) {
+            renderDividendYieldChart(window.allProventos, window.allLancamentos, window.precosEInfos);
+        }
+    });
+}
