@@ -226,7 +226,7 @@ async function calcularPatrimonioRendaVariavel(lancamentosDoTipo, batch, todaySt
     return patrimonioTotal;
 }
 
-exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('05 19 * * *')
+exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 23 * * *')
     .timeZone('America/Sao_Paulo')
     .onRun(async (context) => {
         console.log('[Snapshot] Iniciando rotina para salvar o patrimônio diário.');

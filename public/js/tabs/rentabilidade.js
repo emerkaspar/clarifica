@@ -19,7 +19,6 @@ function renderConsolidatedSummary(summaryData) {
 
     const { patrimonioTotal, valorInvestidoTotal, lucroTotal, ganhoCapital } = summaryData;
     const rentabilidadePercent = valorInvestidoTotal > 0 ? (lucroTotal / valorInvestidoTotal) * 100 : 0;
-    const valorizacaoPercent = valorInvestidoTotal > 0 ? (ganhoCapital / valorInvestidoTotal) * 100 : 0;
 
     const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -27,9 +26,6 @@ function renderConsolidatedSummary(summaryData) {
     document.getElementById('rentabilidade-consolidada-patrimonio-atual').textContent = formatCurrency(patrimonioTotal);
     document.getElementById('rentabilidade-consolidada-rentabilidade-reais').textContent = formatCurrency(lucroTotal);
     document.getElementById('rentabilidade-consolidada-rentabilidade-percent').textContent = `${rentabilidadePercent.toFixed(2)}%`;
-
-    // Remove a atualização do campo de valorização que foi removido do HTML
-    // document.getElementById('rentabilidade-consolidada-valorizacao-percent').textContent = `${valorizacaoPercent.toFixed(2)}%`;
 }
 
 /**
@@ -38,31 +34,58 @@ function renderConsolidatedSummary(summaryData) {
 async function fetchConsolidatedPreviousDayPatrimonio(userID) {
     if (!userID) return 0;
     try {
+        const assetTypes = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
+        let latestDate = null;
+        const hojeStr = new Date().toISOString().split('T')[0];
+
+        const datePromises = assetTypes.map(type => {
+            const q = query(
+                collection(db, "historicoPatrimonioDiario"),
+                where("userID", "==", userID),
+                where("tipoAtivo", "==", type),
+                orderBy("data", "desc"),
+                limit(1)
+            );
+            return getDocs(q);
+        });
+
+        const dateSnapshots = await Promise.all(datePromises);
+        dateSnapshots.forEach(snapshot => {
+            if (!snapshot.empty) {
+                const date = snapshot.docs[0].data().data;
+                if (date < hojeStr && (!latestDate || date > latestDate)) {
+                    latestDate = date;
+                }
+            }
+        });
+
+        if (!latestDate) {
+            console.warn("Nenhum registro de patrimônio de dias anteriores encontrado.");
+            return 0;
+        }
+
         const q = query(
             collection(db, "historicoPatrimonioDiario"),
             where("userID", "==", userID),
-            orderBy("data", "desc"),
-            limit(10) // Pega os últimos registros para garantir que achamos o dia anterior
+            where("data", "==", latestDate)
         );
         const querySnapshot = await getDocs(q);
+
         if (querySnapshot.empty) return 0;
 
-        const patrimonioPorDia = {};
-        querySnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            patrimonioPorDia[data.data] = (patrimonioPorDia[data.data] || 0) + data.valorPatrimonio;
+        let totalPatrimonioAnterior = 0;
+        querySnapshot.forEach(doc => {
+            totalPatrimonioAnterior += doc.data().valorPatrimonio || 0;
         });
 
-        const hojeStr = new Date().toISOString().split('T')[0];
-        const diasAnteriores = Object.keys(patrimonioPorDia).filter(d => d < hojeStr).sort().reverse();
-
-        return diasAnteriores.length > 0 ? patrimonioPorDia[diasAnteriores[0]] : 0;
+        return totalPatrimonioAnterior;
 
     } catch (error) {
         console.error("Erro ao buscar patrimônio consolidado anterior:", error);
         return 0;
     }
 }
+
 
 /**
  * Renderiza o card de "Valorização do Dia" consolidado.
@@ -187,7 +210,9 @@ async function fetchHistoricoPatrimonio(intervalo) {
         allHistoricoPatrimonio = [];
     }
 }
-function processarVariacaoDiaria(tipoAtivoFiltro, intervalo) {
+
+function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
+    // Agrupa o patrimônio por dia a partir do histórico
     const patrimonioPorDia = allHistoricoPatrimonio.reduce((acc, registro) => {
         const { data, tipoAtivo, valorPatrimonio } = registro;
         if (!acc[data]) {
@@ -197,6 +222,15 @@ function processarVariacaoDiaria(tipoAtivoFiltro, intervalo) {
             acc[data][tipoAtivo] += valorPatrimonio;
         }
         acc[data].total += valorPatrimonio;
+        return acc;
+    }, {});
+
+    // Agrupa os lançamentos (compras/vendas) por dia
+    const operacoesPorDia = (lancamentos || []).reduce((acc, l) => {
+        const tipoMapeado = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
+        if (!acc[l.data]) acc[l.data] = {};
+        if (!acc[l.data][tipoMapeado]) acc[l.data][tipoMapeado] = { compra: 0, venda: 0 };
+        acc[l.data][tipoMapeado][l.tipoOperacao] += (l.valorTotal || 0);
         return acc;
     }, {});
 
@@ -225,7 +259,6 @@ function processarVariacaoDiaria(tipoAtivoFiltro, intervalo) {
         const keyAnterior = sortedKeys[i - 1];
 
         const valorTotalAnterior = dadosAgregados[keyAnterior].total;
-
         if (valorTotalAnterior > 0) {
             let label;
             if (intervalo === 'Diário') {
@@ -239,22 +272,33 @@ function processarVariacaoDiaria(tipoAtivoFiltro, intervalo) {
             labels.push(label);
 
             let variacaoTotalDia = 0;
+            const operacoesDoDia = operacoesPorDia[keyAtual] || {};
+
             assetTypes.forEach(tipo => {
                 const valorAtual = dadosAgregados[keyAtual][tipo] || 0;
                 const valorAnterior = dadosAgregados[keyAnterior][tipo] || 0;
-                const variacao = valorAtual - valorAnterior;
+
+                const opsDoTipo = operacoesDoDia[tipo] || { compra: 0, venda: 0 };
+                const aportes = opsDoTipo.compra;
+                const vendas = opsDoTipo.venda;
+
+                // **NOVO CÁLCULO DA VARIAÇÃO**
+                const variacao = (valorAtual - valorAnterior) - aportes + vendas;
+
                 variacoes[tipo].push(variacao);
                 variacaoTotalDia += variacao;
             });
 
             variacoes.totalReais.push(variacaoTotalDia);
-            variacoes.totalPercent.push((variacaoTotalDia / valorTotalAnterior) * 100);
+            const basePercentual = valorTotalAnterior - (operacoesDoDia.total?.compra || 0) + (operacoesDoDia.total?.venda || 0);
+            variacoes.totalPercent.push(basePercentual > 0 ? (variacaoTotalDia / basePercentual) * 100 : 0);
         }
     }
 
     return { labels, variacoes };
 }
-async function renderVariacaoDiariaChart() {
+
+async function renderVariacaoDiariaChart(lancamentos) {
     const canvas = document.getElementById('daily-variation-chart');
     if (!canvas) return;
 
@@ -264,12 +308,12 @@ async function renderVariacaoDiariaChart() {
 
     await fetchHistoricoPatrimonio(filtroIntervalo);
 
-    const { labels, variacoes } = processarVariacaoDiaria(filtroAtivo, filtroIntervalo);
+    const { labels, variacoes } = processarVariacaoDiaria(lancamentos, filtroAtivo, filtroIntervalo);
 
     const titleEl = canvas.closest('.performance-box')?.querySelector('h3');
     if (titleEl) {
         const periodos = { 'Diário': '30 dias', 'Mensal': '12 meses', 'Anual': 'últimos anos' };
-        titleEl.textContent = `Variação ${filtroIntervalo} do Patrimônio (${periodos[filtroIntervalo]})`;
+        titleEl.textContent = `Variação Diária do Patrimônio (${periodos[filtroIntervalo]})`;
     }
 
     if (dailyVariationChart) {
@@ -379,24 +423,21 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
     if (!rentabilidadePane) return;
 
     if (!lancamentos || lancamentos.length === 0 || !summaryData) {
-        // ... (código de limpeza)
         return;
     }
 
-    // Renderiza os novos cards de resumo e valorização
     renderConsolidatedSummary(summaryData);
     await renderConsolidatedDayValorization(summaryData, lancamentos);
 
-    // Renderiza os gráficos
     await updatePerformanceChart();
-    await renderVariacaoDiariaChart();
+    await renderVariacaoDiariaChart(lancamentos);
 }
 
 
 // --- EVENT LISTENERS ---
 document.addEventListener('DOMContentLoaded', () => {
     const assetFilter = document.getElementById('daily-variation-asset-filter');
-    if (assetFilter) assetFilter.addEventListener('change', renderVariacaoDiariaChart);
+    if (assetFilter) assetFilter.addEventListener('change', () => renderVariacaoDiariaChart(window.allLancamentos));
 
     const intervalFilter = document.getElementById('daily-variation-interval-filter');
     if (intervalFilter) {
@@ -404,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.matches('.filter-btn')) {
                 intervalFilter.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
-                renderVariacaoDiariaChart();
+                renderVariacaoDiariaChart(window.allLancamentos);
             }
         });
     }
