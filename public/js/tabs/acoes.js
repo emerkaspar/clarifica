@@ -3,7 +3,8 @@ import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 /**
- * Busca os preços de fechamento do dia anterior para uma lista de tickers.
+ * Busca os preços de fechamento do dia anterior para uma lista de tickers,
+ * respeitando o limite de 10 itens do Firestore para o operador 'in'.
  * @param {string} userID - O ID do usuário logado.
  * @param {Array<string>} tickers - A lista de tickers a serem buscados.
  * @returns {Promise<object>} - Um objeto mapeando ticker para o preço do dia anterior.
@@ -15,6 +16,7 @@ async function fetchPreviousDayPrices(userID, tickers) {
         const hojeStr = new Date().toISOString().split('T')[0];
         const precosAnteriores = {};
 
+        // 1. Encontra a data do último registro de preço anterior a hoje
         const qLastDate = query(
             collection(db, "historicoPrecosDiario"),
             where("userID", "==", userID),
@@ -31,17 +33,30 @@ async function fetchPreviousDayPrices(userID, tickers) {
 
         const ultimoDia = lastDateSnapshot.docs[0].data().data;
 
-        const qPrices = query(
-            collection(db, "historicoPrecosDiario"),
-            where("userID", "==", userID),
-            where("data", "==", ultimoDia),
-            where("ticker", "in", tickers)
-        );
+        // 2. Quebra a lista de tickers em pacotes de até 10
+        const tickerChunks = [];
+        for (let i = 0; i < tickers.length; i += 10) {
+            tickerChunks.push(tickers.slice(i, i + 10));
+        }
 
-        const priceSnapshot = await getDocs(qPrices);
-        priceSnapshot.forEach(doc => {
-            const data = doc.data();
-            precosAnteriores[data.ticker] = data.valor;
+        // 3. Executa uma consulta para cada pacote de tickers
+        const promises = tickerChunks.map(chunk => {
+            const qPrices = query(
+                collection(db, "historicoPrecosDiario"),
+                where("userID", "==", userID),
+                where("data", "==", ultimoDia),
+                where("ticker", "in", chunk)
+            );
+            return getDocs(qPrices);
+        });
+
+        // 4. Aguarda todas as consultas e junta os resultados
+        const snapshots = await Promise.all(promises);
+        snapshots.forEach(priceSnapshot => {
+            priceSnapshot.forEach(doc => {
+                const data = doc.data();
+                precosAnteriores[data.ticker] = data.valor;
+            });
         });
 
         return precosAnteriores;
