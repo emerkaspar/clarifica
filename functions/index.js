@@ -83,7 +83,7 @@ async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
     const hoje = new Date();
     const dataFim = `${hoje.getDate().toString().padStart(2, '0')}/${(hoje.getMonth() + 1).toString().padStart(2, '0')}/${hoje.getFullYear()}`;
     const dataAnterior = new Date();
-    dataAnterior.setDate(hoje.getDate() - 90); // Busca os últimos 90 dias para garantir o preenchimento
+    dataAnterior.setDate(hoje.getDate() - 90);
     const dataIni = `${dataAnterior.getDate().toString().padStart(2, '0')}/${(dataAnterior.getMonth() + 1).toString().padStart(2, '0')}/${dataAnterior.getFullYear()}`;
 
     const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${codigoBCB}/dados?formato=json&dataInicial=${dataIni}&dataFinal=${dataFim}`;
@@ -104,7 +104,6 @@ async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
                         data: dataISO,
                         timestamp: new Date()
                     };
-                    // Usar set com merge em um batch garante que salvaremos todos os dados de forma eficiente
                     batch.set(docRef, dataToSave, { merge: true });
                 }
             });
@@ -305,6 +304,26 @@ const createDailySnapshot = async (dateStr, isBackfill = false) => {
                     console.log(`[Snapshot] Patrimônio de ${tipoAtivo} para usuário ${userID} preparado para batch: ${patrimonio}`);
                 }
             }
+
+            // --- INÍCIO DA NOVA LÓGICA ---
+            // Salva o snapshot individual dos ativos de Renda Fixa
+            const cacheSnapshot = await db.collection('patrimonioCache').where('userID', '==', userID).get();
+            cacheSnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.tipoAtivo === 'Renda Fixa' && data.ticker) {
+                    const individualDocId = `${userID}_${data.ticker}_${dateStr}`;
+                    const historicoRef = db.collection("historicoPatrimonioIndividualDiario").doc(individualDocId);
+                    batch.set(historicoRef, {
+                        userID: userID,
+                        ticker: data.ticker,
+                        valor: data.valorPatrimonio,
+                        data: dateStr,
+                        timestamp: new Date(dateStr)
+                    });
+                    console.log(`[Snapshot] Patrimônio Individual de ${data.ticker} para usuário ${userID} preparado para batch: ${data.valorPatrimonio}`);
+                }
+            });
+            // --- FIM DA NOVA LÓGICA ---
 
             await batch.commit();
             console.log(`[Snapshot] Batch para usuário ${userID} em ${dateStr} concluído.`);

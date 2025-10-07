@@ -2,10 +2,6 @@ import { fetchIndexers } from '../api/bcb.js';
 import { db, auth } from '../firebase-config.js';
 import { doc, deleteDoc, getDoc, collection, query, where, orderBy, limit, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-/**
- * Salva o valor de patrimônio calculado mais recente em um cache no Firestore.
- * A função de backend lerá daqui para criar o histórico diário.
- */
 async function saveCurrentPatrimonioToCache(userID, tipoAtivo, valor) {
     if (!userID || typeof valor !== 'number') return;
     try {
@@ -19,6 +15,73 @@ async function saveCurrentPatrimonioToCache(userID, tipoAtivo, valor) {
         console.log(`[Cache RF] Patrimônio de Renda Fixa (${valor}) salvo no cache para o backend.`);
     } catch (error) {
         console.error("[Cache RF] Erro ao salvar patrimônio no cache:", error);
+    }
+}
+
+async function saveIndividualPatrimonioToCache(userID, ticker, valor, tipoAtivo) {
+    if (!userID || !ticker || typeof valor !== 'number') return;
+    try {
+        // Usamos um ID de documento que inclui o ticker para o snapshot individual
+        const docRef = doc(db, 'patrimonioCache', `${userID}_RF_${ticker}`);
+        await setDoc(docRef, {
+            userID,
+            ticker,
+            tipoAtivo: 'Renda Fixa', // Tipo genérico para o backend identificar
+            valorPatrimonio: valor,
+            lastUpdated: serverTimestamp()
+        });
+    } catch (error) {
+        console.error(`[Cache RF Individual] Erro ao salvar patrimônio de ${ticker}:`, error);
+    }
+}
+
+async function fetchPreviousDayPricesRF(userID, tickers) {
+    if (!userID || !tickers || tickers.length === 0) return {};
+    try {
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const precosAnteriores = {};
+
+        const qLastDate = query(
+            collection(db, "historicoPatrimonioIndividualDiario"),
+            where("userID", "==", userID),
+            where("data", "<", hojeStr),
+            orderBy("data", "desc"),
+            limit(1)
+        );
+        const lastDateSnapshot = await getDocs(qLastDate);
+        if (lastDateSnapshot.empty) {
+            console.warn("[RF] Nenhum registro de preço individual de dias anteriores encontrado.");
+            return {};
+        }
+        const ultimoDia = lastDateSnapshot.docs[0].data().data;
+
+        const tickerChunks = [];
+        for (let i = 0; i < tickers.length; i += 30) { // Firestore 'in' query supports up to 30 items
+            tickerChunks.push(tickers.slice(i, i + 30));
+        }
+
+        const promises = tickerChunks.map(chunk => {
+            const qPrices = query(
+                collection(db, "historicoPatrimonioIndividualDiario"),
+                where("userID", "==", userID),
+                where("data", "==", ultimoDia),
+                where("ticker", "in", chunk)
+            );
+            return getDocs(qPrices);
+        });
+
+        const snapshots = await Promise.all(promises);
+        snapshots.forEach(priceSnapshot => {
+            priceSnapshot.forEach(doc => {
+                const data = doc.data();
+                precosAnteriores[data.ticker] = data.valor;
+            });
+        });
+
+        return precosAnteriores;
+    } catch (error) {
+        console.error("[RF] Erro ao buscar preços individuais do dia anterior:", error);
+        return {};
     }
 }
 
@@ -156,10 +219,6 @@ function renderRendaFixaSummary(patrimonioTotal, investidoTotal) {
     updateField('rendafixa-rentabilidade-percent', rentabilidadePercent, false, true);
 }
 
-
-/**
- * --- FUNÇÃO PRINCIPAL ATUALIZADA ---
- */
 export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDiretoPrices) {
     const rendaFixaListaDiv = document.getElementById("rendafixa-lista");
     if (!rendaFixaListaDiv) return;
@@ -180,16 +239,10 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
 
     try {
         const patrimonioAnterior = await fetchPatrimonioAnterior(userID);
+        const precosAnterioresIndividuais = await fetchPreviousDayPricesRF(userID, rfLancamentos.map(l => l.ativo));
 
         const hoje = new Date();
-        const ontem = new Date();
-        ontem.setDate(hoje.getDate() - 1);
-
-        const [calculatedValuesHoje, calculatedValuesOntem] = await Promise.all([
-            calculateRendaFixaValues(outrosRf, hoje),
-            calculateRendaFixaValues(outrosRf, ontem)
-        ]);
-
+        const calculatedValuesHoje = await calculateRendaFixaValues(outrosRf, hoje);
 
         let patrimonioTotal = 0;
         let investidoTotal = 0;
@@ -201,9 +254,14 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
 
             patrimonioTotal += valorMam;
             investidoTotal += ativo.valorAplicado;
+            await saveIndividualPatrimonioToCache(userID, ativo.ativo, valorMam);
 
             const rentabilidadeMam = valorMam - ativo.valorAplicado;
             const rentabilidadePercentual = ativo.valorAplicado > 0 ? (rentabilidadeMam / ativo.valorAplicado) * 100 : 0;
+
+            const precoOntem = precosAnterioresIndividuais[ativo.ativo];
+            const variacaoDiaReais = precoOntem ? valorMam - (precoOntem) : 0;
+            const variacaoDiaPercent = precoOntem > 0 ? (variacaoDiaReais / precoOntem) * 100 : 0;
 
             html += `
                 <div class="fii-card">
@@ -225,7 +283,9 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                         <div class="detail-item"><span>Vencimento</span><span>${new Date(ativo.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span></div>
                          <div class="detail-item">
                             <span>Variação (Dia)</span>
-                            <span>N/A</span>
+                            <span class="${variacaoDiaReais >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${variacaoDiaReais >= 0 ? '+' : ''}${variacaoDiaReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoDiaPercent.toFixed(2)}%)
+                            </span>
                         </div>
                     </div>
                      <div class="lista-acoes" style="width: 100%; border-top: 1px solid #2a2c30; padding-top: 15px; margin-top: 15px;">
@@ -235,13 +295,14 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                 </div>`;
         }
 
-        outrosRf.forEach(ativo => {
+        for (const ativo of outrosRf) {
             const valoresHoje = calculatedValuesHoje[ativo.id];
-            const valoresOntem = calculatedValuesOntem[ativo.id];
-            if (!valoresHoje) return;
+            if (!valoresHoje) continue;
 
             const { valorCurva, valorBruto, impostoDevido } = valoresHoje;
-            const valorCurvaOntem = valoresOntem ? valoresOntem.valorCurva : valorCurva;
+            await saveIndividualPatrimonioToCache(userID, ativo.ativo, valorCurva);
+
+            const valorCurvaOntem = precosAnterioresIndividuais[ativo.ativo] || valorCurva;
 
             patrimonioTotal += valorCurva;
             investidoTotal += ativo.valorAplicado;
@@ -280,13 +341,12 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                         <button class="btn-crud btn-excluir-rf" data-id="${ativo.id}" title="Excluir"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
                     </div>
                 </div>`;
-        });
+        }
 
         renderRendaFixaSummary(patrimonioTotal, investidoTotal);
         renderRendaFixaDayValorization(patrimonioTotal, patrimonioAnterior);
         rendaFixaListaDiv.innerHTML = html;
 
-        // **NOVA LÓGICA:** Salva o valor calculado no cache para o backend usar.
         await saveCurrentPatrimonioToCache(userID, 'Renda Fixa', patrimonioTotal);
 
     } catch (error) {
