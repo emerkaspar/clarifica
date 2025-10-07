@@ -570,7 +570,7 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
 
     const colors = {
         'Ações': 'rgba(0, 217, 195, 0.7)',
-        'FIIs': 'rgba(90, 103, 216, 0.7)',
+        'FIIs': 'rgba(156, 103, 154, 0.92)',
         'ETF': 'rgba(237, 100, 166, 0.7)'
     };
     const defaultColor = 'rgba(160, 167, 179, 0.7)';
