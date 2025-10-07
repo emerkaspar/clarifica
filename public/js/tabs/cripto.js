@@ -3,7 +3,8 @@ import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 /**
- * Busca os preços de fechamento do dia anterior para uma lista de tickers.
+ * Busca os preços de fechamento do dia anterior para uma lista de tickers,
+ * respeitando o limite de 10 itens do Firestore para o operador 'in'.
  * @param {string} userID - O ID do usuário logado.
  * @param {Array<string>} tickers - A lista de tickers a serem buscados.
  * @returns {Promise<object>} - Um objeto mapeando ticker para o preço do dia anterior.
@@ -15,6 +16,7 @@ async function fetchPreviousDayPrices(userID, tickers) {
         const hojeStr = new Date().toISOString().split('T')[0];
         const precosAnteriores = {};
 
+        // 1. Encontra a data do último registro de preço anterior a hoje
         const qLastDate = query(
             collection(db, "historicoPrecosDiario"),
             where("userID", "==", userID),
@@ -25,33 +27,42 @@ async function fetchPreviousDayPrices(userID, tickers) {
 
         const lastDateSnapshot = await getDocs(qLastDate);
         if (lastDateSnapshot.empty) {
-            console.warn("[Cripto] Nenhum registro de preço de dias anteriores encontrado.");
+            console.warn(`[Cripto] Nenhum registro de preço de dias anteriores encontrado.`);
             return {};
         }
 
         const ultimoDia = lastDateSnapshot.docs[0].data().data;
 
-        const qPrices = query(
-            collection(db, "historicoPrecosDiario"),
-            where("userID", "==", userID),
-            where("data", "==", ultimoDia),
-            where("ticker", "in", tickers)
-        );
+        // 2. Quebra a lista de tickers em pacotes de 10
+        const tickerChunks = [];
+        for (let i = 0; i < tickers.length; i += 10) {
+            tickerChunks.push(tickers.slice(i, i + 10));
+        }
 
-        const priceSnapshot = await getDocs(qPrices);
-        priceSnapshot.forEach(doc => {
-            const data = doc.data();
-            precosAnteriores[data.ticker] = data.valor;
+        // 3. Executa uma consulta para cada pacote de tickers
+        const promises = tickerChunks.map(chunk => {
+            const qPrices = query(
+                collection(db, "historicoPrecosDiario"),
+                where("userID", "==", userID),
+                where("data", "==", ultimoDia),
+                where("ticker", "in", chunk)
+            );
+            return getDocs(qPrices);
+        });
+
+        // 4. Aguarda todas as consultas e junta os resultados
+        const snapshots = await Promise.all(promises);
+        snapshots.forEach(priceSnapshot => {
+            priceSnapshot.forEach(doc => {
+                const data = doc.data();
+                precosAnteriores[data.ticker] = data.valor;
+            });
         });
 
         return precosAnteriores;
 
     } catch (error) {
-        if (error.code === 'failed-precondition') {
-            console.warn("[Cripto] Erro ao buscar preços: O índice para 'historicoPrecosDiario' ainda está sendo criado no Firestore. Tente novamente em alguns minutos.");
-        } else {
-            console.error("[Cripto] Erro ao buscar preços do dia anterior:", error);
-        }
+        console.error("[Cripto] Erro ao buscar preços do dia anterior:", error);
         return {};
     }
 }
@@ -60,15 +71,16 @@ async function fetchPreviousDayPrices(userID, tickers) {
 /**
  * Calcula e renderiza a valorização do dia para a carteira de Criptos.
  */
-function renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior) {
+function renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior, hasPreviousDayData) {
     const valorizationReaisDiv = document.getElementById("cripto-valorization-reais");
     const valorizationPercentDiv = document.getElementById("cripto-valorization-percent");
 
     if (!valorizationReaisDiv || !valorizationPercentDiv) return;
 
-    if (patrimonioAnterior <= 0) {
+    if (!hasPreviousDayData || patrimonioAnterior <= 0) {
         valorizationReaisDiv.textContent = "N/A";
-        valorizationPercentDiv.innerHTML = "";
+        valorizationPercentDiv.innerHTML = "-";
+        valorizationPercentDiv.className = 'valorization-pill';
         return;
     }
 
@@ -197,14 +209,20 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
         const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
         let patrimonioAnterior = 0;
+        let hasPreviousDayData = false;
+        
         tickers.forEach(ticker => {
             const ativo = carteira[ticker];
+            const precoOntem = precosDiaAnterior[ticker];
             if (ativo && ativo.quantidade > 0) {
-                patrimonioAnterior += ativo.quantidade * (precosDiaAnterior[ticker] || precosAtuais[ticker]?.price || 0);
+                if (precoOntem) {
+                    patrimonioAnterior += ativo.quantidade * precoOntem;
+                    hasPreviousDayData = true;
+                }
             }
         });
 
-        renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior);
+        renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior, hasPreviousDayData);
 
 
         const html = tickers.map(ticker => {

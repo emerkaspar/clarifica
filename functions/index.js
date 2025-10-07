@@ -1,295 +1,367 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-const axios = require('axios');
-const { getFirestore } = require('firebase-admin/firestore');
+import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
+import { db, auth } from '../firebase-config.js';
+import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// TOKEN CORRETO USADO NO SERVIDOR
-const BRAAPI_TOKEN = "1GPPnwHZgqXU4hbU7gwosm";
+/**
+ * Busca os preços de fechamento do dia anterior para uma lista de tickers,
+ * respeitando o limite de 10 itens do Firestore para o operador 'in'.
+ * @param {string} userID - O ID do usuário logado.
+ * @param {Array<string>} tickers - A lista de tickers a serem buscados.
+ * @returns {Promise<object>} - Um objeto mapeando ticker para o preço do dia anterior.
+ */
+async function fetchPreviousDayPrices(userID, tickers) {
+    if (!userID || !tickers || tickers.length === 0) return {};
 
-const tickerToCoinGeckoId = {
-    'BTC': 'bitcoin',
-    'ETH': 'ethereum',
-};
-
-admin.initializeApp();
-const db = getFirestore();
-
-function createUniqueDocId(ticker) {
-    const now = new Date();
-    const datePart = now.toISOString().split('T')[0].replace(/-/g, '');
-    const timePart = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(/:/g, '');
-    const secondsPart = String(now.getSeconds()).padStart(2, '0');
-    return `${ticker}-${datePart}-${timePart}${secondsPart}`;
-}
-
-async function saveData(collectionName, docId, data) {
     try {
-        await db.collection(collectionName).doc(docId).set(data);
-        console.log(`[Scheduler] Dado salvo em '${collectionName}' com ID '${docId}'`);
-    } catch (error) {
-        console.error(`[Scheduler] Erro ao salvar em '${collectionName}':`, error);
-    }
-}
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const precosAnteriores = {};
 
-async function fetchAndSaveCrypto(ticker) {
-    const coinGeckoId = tickerToCoinGeckoId[ticker];
-    if (!coinGeckoId) return;
-    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=brl`;
-    try {
-        const response = await axios.get(url);
-        const price = response.data[coinGeckoId]?.brl;
-        if (price) {
-            const docId = createUniqueDocId(ticker);
-            const timestamp = new Date().toISOString();
-            const dataToSave = {
-                ticker: ticker,
-                preco: price,
-                data: timestamp,
-                raw: { results: [{ symbol: ticker, regularMarketPrice: price }] },
-            };
-            await saveData("cotacoes", docId, dataToSave);
-        } else {
-            console.warn(`[Scheduler] Não foi possível obter preço para cripto: ${ticker}`);
+        // 1. Encontra a data do último registro de preço anterior a hoje
+        const qLastDate = query(
+            collection(db, "historicoPrecosDiario"),
+            where("userID", "==", userID),
+            where("data", "<", hojeStr),
+            orderBy("data", "desc"),
+            limit(1)
+        );
+
+        const lastDateSnapshot = await getDocs(qLastDate);
+        if (lastDateSnapshot.empty) {
+            console.warn(`[Ações] Nenhum registro de preço de dias anteriores encontrado.`);
+            return {};
         }
-    } catch (error) {
-        console.error(`[Scheduler] Erro ao chamar CoinGecko para ${ticker}: ${error.message}`);
-    }
-}
 
-async function fetchAndSaveRVIndex(ticker) {
-    const url = `https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`;
-    try {
-        const response = await axios.get(url);
-        if (response.status === 200 && response.data && response.data.results) {
-            const result = response.data.results[0];
-            const dataHoje = new Date().toISOString().split('T')[0];
-            const docId = `${result.symbol.replace('^', '')}-${dataHoje}`;
-            const dataToSave = {
-                ticker: result.symbol,
-                valor: result.regularMarketPrice,
-                data: dataHoje,
-                timestamp: new Date()
-            };
-            await saveData("indices", docId, dataToSave);
-        } else {
-            console.warn(`[Scheduler] Falha ou dado inválido para o índice ${ticker}. Status: ${response.status}`);
+        const ultimoDia = lastDateSnapshot.docs[0].data().data;
+
+        // 2. Quebra a lista de tickers em pacotes de 10
+        const tickerChunks = [];
+        for (let i = 0; i < tickers.length; i += 10) {
+            tickerChunks.push(tickers.slice(i, i + 10));
         }
+
+        // 3. Executa uma consulta para cada pacote de tickers
+        const promises = tickerChunks.map(chunk => {
+            const qPrices = query(
+                collection(db, "historicoPrecosDiario"),
+                where("userID", "==", userID),
+                where("data", "==", ultimoDia),
+                where("ticker", "in", chunk)
+            );
+            return getDocs(qPrices);
+        });
+
+        // 4. Aguarda todas as consultas e junta os resultados
+        const snapshots = await Promise.all(promises);
+        snapshots.forEach(priceSnapshot => {
+            priceSnapshot.forEach(doc => {
+                const data = doc.data();
+                precosAnteriores[data.ticker] = data.valor;
+            });
+        });
+
+        return precosAnteriores;
+
     } catch (error) {
-        console.error(`[Scheduler] Erro BRAPI para o índice ${ticker}: ${error.message}`);
+        console.error("[Ações] Erro ao buscar preços do dia anterior:", error);
+        return {};
     }
 }
 
-async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
-    const hoje = new Date();
-    const dataFim = `${hoje.getDate()}/${hoje.getMonth() + 1}/${hoje.getFullYear()}`;
-    const dataAnterior = new Date();
-    dataAnterior.setDate(hoje.getDate() - 90);
-    const dataIni = `${dataAnterior.getDate()}/${dataAnterior.getMonth() + 1}/${dataAnterior.getFullYear()}`;
 
-    const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${codigoBCB}/dados?formato=json&dataInicial=${dataIni}&dataFinal=${dataFim}`;
+/**
+ * Calcula e renderiza a valorização do dia para a carteira de Ações.
+ * @param {Array<string>} tickers - A lista de tickers de Ações na carteira.
+ * @param {object} carteira - O objeto da carteira consolidada.
+ * @param {object} precosAtuais - Objeto com os preços atuais para os tickers (intraday).
+ * @returns {Promise<Array<object>>} - Retorna a performance diária de cada ação.
+ */
+async function renderAcoesDayValorization(tickers, carteira, precosAtuais) {
+    const valorizationReaisDiv = document.getElementById("acoes-valorization-reais");
+    const valorizationPercentDiv = document.getElementById("acoes-valorization-percent");
+
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return [];
+
+    valorizationReaisDiv.textContent = "Calculando...";
+    valorizationPercentDiv.innerHTML = "";
+    valorizationPercentDiv.className = 'valorization-pill';
+
     try {
-        const response = await axios.get(url);
-        if (response.data && response.data.length > 0) {
-            const ultimoValor = response.data[response.data.length - 1];
-            const [dia, mes, ano] = ultimoValor.data.split('/');
-            const dataISO = `${ano}-${mes}-${dia}`;
-            const docId = `${nomeIndice}-${dataISO}`;
+        const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
 
-            const dataToSave = {
-                ticker: nomeIndice,
-                valor: parseFloat(ultimoValor.valor),
-                data: dataISO,
-                timestamp: new Date()
-            };
-            await saveData("indices", docId, dataToSave);
-        } else {
-            console.log(`[Scheduler] Nenhum dado novo encontrado para o índice ${nomeIndice} no período.`);
-        }
-    } catch (error) {
-        console.error(`[Scheduler] Erro ao buscar ${nomeIndice} do BCB:`, error.message);
-    }
-}
+        let patrimonioTotalHoje = 0;
+        let patrimonioTotalOntem = 0;
+        const dailyPerformance = [];
+        let hasPreviousDayData = false;
 
-exports.scheduledBrapiUpdate = functions.pubsub.schedule('0 19 * * *')
-    .onRun(async (context) => {
-        console.log("Iniciando rotina de atualização agendada...");
-        const lancamentosSnapshot = await db.collection("lancamentos").get();
-        const tickersBrapi = new Set();
-        const tickersCrypto = new Set();
+        tickers.forEach(ticker => {
+            const ativo = carteira[ticker];
+            const precoHoje = precosAtuais[ticker]?.price;
+            const precoOntem = precosDiaAnterior[ticker];
 
-        lancamentosSnapshot.forEach(doc => {
-            const data = doc.data();
-            const ativo = data.ativo;
-            if (ativo) {
-                if (['Ações', 'FIIs', 'ETF'].includes(data.tipoAtivo)) {
-                    tickersBrapi.add(ativo);
-                } else if (data.tipoAtivo === 'Cripto') {
-                    tickersCrypto.add(ativo);
+            if (ativo && ativo.quantidade > 0) {
+                if (precoHoje) {
+                    patrimonioTotalHoje += ativo.quantidade * precoHoje;
+                }
+                if (precoOntem) {
+                    patrimonioTotalOntem += ativo.quantidade * precoOntem;
+                    hasPreviousDayData = true;
+                }
+
+                if (precoHoje && precoOntem > 0) {
+                    dailyPerformance.push({ ticker, changePercent: ((precoHoje / precoOntem) - 1) * 100 });
                 }
             }
         });
 
-        console.log(`Tickers BRAPI a atualizar: ${Array.from(tickersBrapi).join(', ')}`);
-        console.log(`Tickers CRIPTO a atualizar: ${Array.from(tickersCrypto).join(', ')}`);
+        if (!hasPreviousDayData || patrimonioTotalOntem <= 0) {
+            valorizationReaisDiv.textContent = "N/A";
+            valorizationPercentDiv.innerHTML = "-";
+            return dailyPerformance;
+        }
 
-        const brapiPromises = Array.from(tickersBrapi).map(async (ticker) => {
-            const url = `https://brapi.dev/api/quote/${ticker}?token=${BRAAPI_TOKEN}`;
-            try {
-                const response = await axios.get(url);
-                if (response.status === 200 && response.data && response.data.results) {
-                    const docId = createUniqueDocId(ticker);
-                    const dataToSave = {
-                        ticker: ticker,
-                        preco: response.data.results[0].regularMarketPrice,
-                        data: new Date().toISOString(),
-                        raw: response.data,
-                    };
-                    await saveData("cotacoes", docId, dataToSave);
-                } else {
-                    console.warn(`[Scheduler] Falha ou dado inválido para ${ticker}. Status: ${response.status}`);
-                }
-            } catch (error) {
-                console.error(`[Scheduler] Erro BRAPI para ${ticker}: ${error.message}`);
-            }
-        });
+        const totalValorizacaoReais = patrimonioTotalHoje - patrimonioTotalOntem;
+        const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioTotalOntem) * 100;
 
-        const cryptoPromises = Array.from(tickersCrypto).map(ticker => fetchAndSaveCrypto(ticker));
+        const isPositive = totalValorizacaoReais >= 0;
+        const sinal = isPositive ? '+' : '';
+        const corClasse = isPositive ? 'positive' : 'negative';
+        const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
 
-        const indexPromises = [
-            fetchAndSaveRVIndex('^BVSP'),
-            fetchAndSaveRVIndex('IVVB11'),
-            fetchAndSaveRFIndex(12, 'CDI'),
-            fetchAndSaveRFIndex(433, 'IPCA')
-        ];
+        valorizationReaisDiv.textContent = `${sinal}${totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+        valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
 
-        await Promise.all([...brapiPromises, ...cryptoPromises, ...indexPromises]);
+        valorizationPercentDiv.innerHTML = `${sinal}${variacaoPercentualFinal.toFixed(2)}% ${iconeSeta}`;
+        valorizationPercentDiv.classList.add(corClasse);
 
-        console.log("Rotina de atualização agendada concluída.");
-        return null;
+        return dailyPerformance;
+
+    } catch (error) {
+        console.error("Erro ao calcular a valorização do dia para Ações:", error);
+        valorizationReaisDiv.textContent = "Erro";
+        return [];
+    }
+}
+
+function renderAcoesSummary(carteira, precosAtuais) {
+    let totalInvestido = 0;
+    let patrimonioAtual = 0;
+    let totalProventos = 0;
+
+    Object.values(carteira).forEach(ativo => {
+        if (ativo.quantidade > 0) {
+            const precoAtual = precosAtuais[ativo.ativo]?.price || 0;
+            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+
+            totalInvestido += precoMedio * ativo.quantidade;
+            patrimonioAtual += precoAtual * ativo.quantidade;
+            totalProventos += ativo.proventos;
+        }
     });
 
-async function getCachedPatrimonio(userID, tipoAtivo) {
-    try {
-        const docRef = db.collection('patrimonioCache').doc(`${userID}_${tipoAtivo}`);
-        const docSnap = await docRef.get();
-        if (docSnap.exists) {
-            return docSnap.data().valorPatrimonio || 0;
+    const rentabilidadeReais = patrimonioAtual - totalInvestido + totalProventos;
+    const valorizacaoPercent = totalInvestido > 0 ? ((patrimonioAtual / totalInvestido) - 1) * 100 : 0;
+    const rentabilidadePercent = totalInvestido > 0 ? (rentabilidadeReais / totalInvestido) * 100 : 0;
+
+    const formatCurrency = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const updateField = (id, value, isCurrency = true, addSign = false) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const formattedValue = isCurrency ? formatCurrency(value) : `${value.toFixed(2)}%`;
+            const sinal = value >= 0 ? '+' : '';
+            element.textContent = addSign ? `${sinal}${formattedValue}` : formattedValue;
+            element.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
+            if (id === 'acoes-total-investido' || id === 'acoes-patrimonio-atual') {
+                element.style.color = '#e0e0e0';
+            }
         }
-        console.warn(`[Snapshot] Nenhum cache de patrimônio encontrado para ${tipoAtivo} do usuário ${userID}.`);
-        return 0;
-    } catch (error) {
-        console.error(`[Snapshot] Erro ao buscar patrimônio em cache para ${tipoAtivo}:`, error);
-        return 0;
+    };
+
+    updateField('acoes-total-investido', totalInvestido);
+    updateField('acoes-patrimonio-atual', patrimonioAtual);
+    updateField('acoes-rentabilidade-reais', rentabilidadeReais, true, true);
+    updateField('acoes-valorizacao-percent', valorizacaoPercent, false, true);
+    updateField('acoes-rentabilidade-percent', rentabilidadePercent, false, true);
+}
+
+function renderAcoesHighlights(dailyPerformance, historicalPerformance) {
+    const dayContainer = document.getElementById("acoes-highlights-day");
+    const historyContainer = document.getElementById("acoes-highlights-history");
+
+    if (!dayContainer || !historyContainer) return;
+
+    const createHtml = (item) => {
+        if (!item || typeof item.changePercent !== 'number') {
+            return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+        }
+        const isPositive = item.changePercent >= 0;
+        const colorClass = isPositive ? 'positive' : 'negative';
+        const arrow = isPositive ? '↑' : '↓';
+        return `
+            <div class="highlight-item">
+                <span class="ticker">${item.ticker}</span>
+                <span class="value ${colorClass}">${item.changePercent.toFixed(2)}% ${arrow}</span>
+            </div>
+        `;
+    };
+
+    if (dailyPerformance && dailyPerformance.length > 0) {
+        dailyPerformance.sort((a, b) => b.changePercent - a.changePercent);
+        const highestDay = dailyPerformance[0];
+        const lowestDay = dailyPerformance.length > 1 ? dailyPerformance[dailyPerformance.length - 1] : highestDay;
+        dayContainer.innerHTML = createHtml(highestDay) + createHtml(lowestDay);
+    } else {
+        dayContainer.innerHTML = createHtml(null) + createHtml(null);
+    }
+
+    if (historicalPerformance && historicalPerformance.length > 0) {
+        historicalPerformance.sort((a, b) => b.changePercent - a.changePercent);
+        const highestHistory = historicalPerformance[0];
+        const lowestHistory = historicalPerformance.length > 1 ? historicalPerformance[historicalPerformance.length - 1] : highestHistory;
+        historyContainer.innerHTML = createHtml(highestHistory) + createHtml(lowestHistory);
+    } else {
+        historyContainer.innerHTML = createHtml(null) + createHtml(null);
     }
 }
 
-async function calcularPatrimonioRendaVariavel(lancamentosDoTipo, batch, todayStr, userID) {
-    let patrimonioTotal = 0;
-    if (!lancamentosDoTipo || lancamentosDoTipo.length === 0) {
-        return 0;
+
+/**
+ * Renderiza a aba de Ações.
+ */
+export async function renderAcoesCarteira(lancamentos, proventos) {
+    const acoesListaDiv = document.getElementById("acoes-lista");
+    if (!acoesListaDiv) return;
+
+    acoesListaDiv.innerHTML = `<p>Calculando e buscando cotações...</p>`;
+
+    const acoesLancamentos = lancamentos.filter(l => l.tipoAtivo === 'Ações');
+
+    if (acoesLancamentos.length === 0) {
+        acoesListaDiv.innerHTML = `<p>Nenhuma Ação lançada ainda.</p>`;
+        document.getElementById("acoes-valorization-reais").textContent = "N/A";
+        document.getElementById("acoes-valorization-percent").innerHTML = "";
+        document.getElementById("acoes-total-investido").textContent = "R$ 0,00";
+        document.getElementById("acoes-patrimonio-atual").textContent = "R$ 0,00";
+        document.getElementById("acoes-rentabilidade-reais").textContent = "R$ 0,00";
+        document.getElementById("acoes-valorizacao-percent").textContent = "0,00%";
+        document.getElementById("acoes-rentabilidade-percent").textContent = "0,00%";
+        renderAcoesHighlights([], []);
+        return;
     }
 
     const carteira = {};
-    lancamentosDoTipo.forEach(l => {
-        if (!carteira[l.ativo]) { carteira[l.ativo] = { quantidade: 0, tipoAtivo: l.tipoAtivo }; }
+    acoesLancamentos.forEach(l => {
+        if (!carteira[l.ativo]) {
+            carteira[l.ativo] = {
+                ativo: l.ativo,
+                quantidade: 0,
+                quantidadeComprada: 0,
+                valorTotalInvestido: 0,
+                proventos: 0,
+            };
+        }
         if (l.tipoOperacao === 'compra') {
             carteira[l.ativo].quantidade += l.quantidade;
+            carteira[l.ativo].quantidadeComprada += l.quantidade;
+            carteira[l.ativo].valorTotalInvestido += l.valorTotal;
         } else if (l.tipoOperacao === 'venda') {
             carteira[l.ativo].quantidade -= l.quantidade;
         }
     });
 
-    for (const ticker in carteira) {
-        const ativo = carteira[ticker];
-        if (ativo && ativo.quantidade > 0) {
-            const q = db.collection("cotacoes").where("ticker", "==", ticker).orderBy("data", "desc").limit(1);
-            const cotacaoSnapshot = await q.get();
-            if (!cotacaoSnapshot.empty) {
-                const cotacaoData = cotacaoSnapshot.docs[0].data();
-                const preco = cotacaoData.preco;
-                patrimonioTotal += ativo.quantidade * preco;
-
-                // **NOVA LÓGICA: Salvar o preço individual do ativo**
-                const docId = `${userID}_${ticker}_${todayStr}`;
-                const historicoPrecoRef = db.collection("historicoPrecosDiario").doc(docId);
-                batch.set(historicoPrecoRef, {
-                    userID: userID,
-                    ticker: ticker,
-                    tipoAtivo: ativo.tipoAtivo,
-                    valor: preco,
-                    data: todayStr,
-                    timestamp: new Date()
-                });
-            }
+    proventos.forEach(p => {
+        if (p.tipoAtivo === 'Ações' && carteira[p.ativo]) {
+            carteira[p.ativo].proventos += p.valor;
         }
+    });
+
+    const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
+    if (tickers.length === 0) {
+        acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
+        renderAcoesHighlights([], []);
+        return;
     }
-    return patrimonioTotal;
+
+    try {
+        const precosAtuais = await fetchCurrentPrices(tickers);
+
+        const dailyPerformance = await renderAcoesDayValorization(tickers, carteira, precosAtuais);
+
+        const historicalPerformance = [];
+
+        renderAcoesSummary(carteira, precosAtuais);
+
+        const html = tickers.map(ticker => {
+            const ativo = carteira[ticker];
+            const precoAtual = precosAtuais[ticker]?.price || 0;
+            const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
+            const valorPosicaoAtual = precoAtual * ativo.quantidade;
+            const valorInvestido = precoMedio * ativo.quantidade;
+
+            const variacaoReais = valorPosicaoAtual - valorInvestido;
+            const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
+
+            const rentabilidadeReais = variacaoReais + ativo.proventos;
+            const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
+
+            historicalPerformance.push({ ticker, changePercent: variacaoPercent });
+
+            return `
+                <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações">
+                    <div class="fii-card-ticker">${ativo.ativo}</div>
+                    
+                    <div class="fii-card-metric-main">
+                        <div class="label">Valor Atual da Posição</div>
+                        <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    </div>
+                    
+                    <div class="fii-card-results-container">
+                        <div class="fii-card-result ${variacaoReais >= 0 ? 'positive-change' : 'negative-change'}">
+                            Variação: ${variacaoReais >= 0 ? '+' : ''}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoPercent.toFixed(2)}%) ${variacaoReais >= 0 ? '↑' : '↓'}
+                        </div>
+                        <div class="fii-card-result ${rentabilidadeReais >= 0 ? 'positive-change' : 'negative-change'}">
+                            Rentabilidade: ${rentabilidadeReais >= 0 ? '+' : ''}${rentabilidadeReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${rentabilidadePercent.toFixed(2)}%) ${rentabilidadeReais >= 0 ? '↑' : '↓'}
+                        </div>
+                    </div>
+
+                    <div class="fii-card-details">
+                        <div class="detail-item">
+                            <span>Valor Investido</span>
+                            <span>${valorInvestido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                         <div class="detail-item">
+                            <span>Quantidade</span>
+                            <span>${ativo.quantidade.toLocaleString('pt-BR')}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Preço Médio</span>
+                            <span>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Preço Atual</span>
+                            <span>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                         <div class="detail-item">
+                            <span>Total Proventos</span>
+                            <span>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        acoesListaDiv.innerHTML = html;
+        renderAcoesHighlights(dailyPerformance, historicalPerformance);
+
+    } catch (error) {
+        console.error("Erro ao renderizar carteira de Ações:", error);
+        acoesListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;
+    }
 }
 
-exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 23 * * *')
-    .timeZone('America/Sao_Paulo')
-    .onRun(async (context) => {
-        console.log('[Snapshot] Iniciando rotina para salvar o patrimônio diário.');
-        const todayStr = new Date().toISOString().split('T')[0];
-        try {
-            const lancamentosSnapshot = await db.collection("lancamentos").get();
-            const todosLancamentos = [];
-            lancamentosSnapshot.forEach(doc => {
-                todosLancamentos.push({ id: doc.id, ...doc.data() });
-            });
-            const lancamentosPorUsuario = todosLancamentos.reduce((acc, l) => {
-                if (!acc[l.userID]) { acc[l.userID] = []; }
-                acc[l.userID].push(l);
-                return acc;
-            }, {});
-
-            for (const userID in lancamentosPorUsuario) {
-                const batch = db.batch(); // Inicia um batch para cada usuário
-                const lancamentosDoUsuario = lancamentosPorUsuario[userID];
-                const ativosPorTipo = lancamentosDoUsuario.reduce((acc, l) => {
-                    const tipo = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
-                    if (!acc[tipo]) { acc[tipo] = []; }
-                    acc[tipo].push(l);
-                    return acc;
-                }, {});
-
-                const assetTypesToProcess = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
-
-                for (const tipoAtivo of assetTypesToProcess) {
-                    let patrimonio = 0;
-                    const hasAssets = ativosPorTipo[tipoAtivo] && ativosPorTipo[tipoAtivo].length > 0;
-
-                    if (hasAssets) {
-                        if (tipoAtivo === 'Renda Fixa') {
-                            patrimonio = await getCachedPatrimonio(userID, 'Renda Fixa');
-                        } else {
-                            // Passa o batch para a função de cálculo
-                            patrimonio = await calcularPatrimonioRendaVariavel(ativosPorTipo[tipoAtivo], batch, todayStr, userID);
-                        }
-                    }
-
-                    if (hasAssets) {
-                        const docId = `${userID}_${tipoAtivo}_${todayStr}`;
-                        const historicoPatrimonioRef = db.collection("historicoPatrimonioDiario").doc(docId);
-                        batch.set(historicoPatrimonioRef, {
-                            userID: userID,
-                            tipoAtivo: tipoAtivo,
-                            valorPatrimonio: patrimonio,
-                            data: todayStr,
-                            timestamp: new Date()
-                        });
-                        console.log(`[Snapshot] Patrimônio de ${tipoAtivo} para usuário ${userID} preparado para batch: ${patrimonio}`);
-                    }
-                }
-
-                // Commita todas as operações (patrimônio e preços individuais) para o usuário de uma vez
-                await batch.commit();
-                console.log(`[Snapshot] Batch para usuário ${userID} concluído.`);
-            }
-        } catch (error) {
-            console.error('[Snapshot] Erro ao executar a rotina de snapshot:', error);
-            return null;
-        }
-        console.log('[Snapshot] Rotina de snapshot concluída.');
-        return null;
-    });
+document.getElementById("acoes-lista").addEventListener("click", (e) => {
+    const card = e.target.closest(".fii-card");
+    if (card && card.dataset.ticker && window.openAtivoDetalhesModal) {
+        window.openAtivoDetalhesModal(card.dataset.ticker, card.dataset.tipoAtivo);
+    }
+});
