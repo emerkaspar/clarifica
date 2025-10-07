@@ -63,7 +63,7 @@ async function fetchAndSaveRVIndex(ticker) {
         if (response.status === 200 && response.data && response.data.results) {
             const result = response.data.results[0];
             const dataHoje = new Date().toISOString().split('T')[0];
-            const docId = `${result.symbol.replace('^','')}-${dataHoje}`;
+            const docId = `${result.symbol.replace('^', '')}-${dataHoje}`;
             const dataToSave = {
                 ticker: result.symbol,
                 valor: result.regularMarketPrice,
@@ -94,7 +94,7 @@ async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
             const [dia, mes, ano] = ultimoValor.data.split('/');
             const dataISO = `${ano}-${mes}-${dia}`;
             const docId = `${nomeIndice}-${dataISO}`;
-            
+
             const dataToSave = {
                 ticker: nomeIndice, // ✅ CORREÇÃO: Padronizado para 'ticker'
                 valor: parseFloat(ultimoValor.valor),
@@ -103,20 +103,20 @@ async function fetchAndSaveRFIndex(codigoBCB, nomeIndice) {
             };
             await saveData("indices", docId, dataToSave);
         } else {
-             console.log(`[Scheduler] Nenhum dado novo encontrado para o índice ${nomeIndice} no período.`);
+            console.log(`[Scheduler] Nenhum dado novo encontrado para o índice ${nomeIndice} no período.`);
         }
     } catch (error) {
         console.error(`[Scheduler] Erro ao buscar ${nomeIndice} do BCB:`, error.message);
     }
 }
 
-exports.scheduledBrapiUpdate = functions.pubsub.schedule('0,30 * * * *')
+exports.scheduledBrapiUpdate = functions.pubsub.schedule('0 19 * * *')
     .onRun(async (context) => {
         console.log("Iniciando rotina de atualização agendada...");
         const lancamentosSnapshot = await db.collection("lancamentos").get();
         const tickersBrapi = new Set();
         const tickersCrypto = new Set();
-        
+
         lancamentosSnapshot.forEach(doc => {
             const data = doc.data();
             const ativo = data.ativo;
@@ -214,7 +214,7 @@ async function calcularPatrimonioRendaVariavel(lancamentosDoTipo) {
     return patrimonioTotal;
 }
 
-exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('05 18 * * *')
+exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 23 * * *')
     .timeZone('America/Sao_Paulo')
     .onRun(async (context) => {
         console.log('[Snapshot] Iniciando rotina para salvar o patrimônio diário.');

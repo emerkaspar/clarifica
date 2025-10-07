@@ -1,5 +1,4 @@
 // public/js/tabs/rentabilidade.js
-import { fetchIndexers } from '../api/bcb.js';
 import { renderConsolidatedPerformanceChart } from '../charts.js';
 import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -8,89 +7,10 @@ import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.
 let dailyVariationChart = null;
 let allHistoricoPatrimonio = []; // Cache para os dados do histórico
 
-// --- FUNÇÕES AUXILIARES DE FORMATAÇÃO ---
-const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const updateRentabilidadeField = (percentId, reaisId, percentValue, reaisValue) => {
-    const percentEl = document.getElementById(percentId);
-    const reaisEl = document.getElementById(reaisId);
-    const value = percentValue || 0;
-    if (percentEl) {
-        percentEl.textContent = `${value.toFixed(2)}%`;
-        percentEl.style.color = value >= 0 ? '#00d9c3' : '#ef4444';
-    }
-    if (reaisEl) {
-        reaisEl.textContent = formatCurrency(reaisValue || 0);
-    }
-};
+// --- FUNÇÕES DE RENTABILIDADE (ANTIGAS REMOVIDAS) ---
+// As funções de cálculo de card foram removidas para dar lugar à lógica do novo gráfico.
 
-// --- NOVA FUNÇÃO AUXILIAR PARA CÁLCULO DE PERÍODO ---
-/**
- * Calcula o lucro e a base de investimento para um determinado período.
- * @param {Date} startDate - A data de início do período.
- * @param {Array<object>} allLancamentos - Todos os lançamentos do usuário.
- * @param {Array<object>} allProventos - Todos os proventos do usuário.
- * @param {object} summaryData - Os dados consolidados atuais (lucro total, etc.).
- * @returns {object} - Contém o lucro e o percentual de rentabilidade do período.
- */
-function calculatePeriodMetrics(startDate, allLancamentos, allProventos, summaryData) {
-    const { lucroTotal } = summaryData;
-
-    // Calcula o lucro total acumulado ANTES do início do período
-    const proventosAntes = allProventos
-        .filter(p => new Date(p.dataPagamento) < startDate)
-        .reduce((acc, p) => acc + p.valor, 0);
-
-    // Simplificação: o ganho de capital antes do período é complexo.
-    // Vamos usar a diferença do lucro total e o que foi gerado no período.
-    // Isso é uma aproximação que funciona bem para o lucro em R$.
-    const lucroTotalInicioPeriodo = proventosAntes; // Simplificação, focando nos proventos como lucro passado.
-
-    // Calcula o lucro gerado DENTRO do período
-    const lucroNoPeriodo = lucroTotal - lucroTotalInicioPeriodo;
-
-    // Calcula o valor investido (custo) no INÍCIO do período
-    let investidoInicioPeriodo = 0;
-    const carteiraInicioPeriodo = {}; // Para rastrear PM de vendas
-
-    allLancamentos.filter(l => new Date(l.data) < startDate).forEach(l => {
-        if (!carteiraInicioPeriodo[l.ativo]) {
-            carteiraInicioPeriodo[l.ativo] = { qtdComprada: 0, valComprado: 0, qtdAtual: 0 };
-        }
-        const ativo = carteiraInicioPeriodo[l.ativo];
-        if (l.tipoOperacao === 'compra') {
-            ativo.qtdComprada += l.quantidade;
-            ativo.valComprado += l.valorTotal;
-            ativo.qtdAtual += l.quantidade;
-        } else { // Venda
-            ativo.qtdAtual -= l.quantidade;
-        }
-    });
-
-    // Calcula o custo da carteira no início do período
-    investidoInicioPeriodo = Object.values(carteiraInicioPeriodo).reduce((acc, ativo) => {
-        if (ativo.qtdAtual > 0 && ativo.qtdComprada > 0) {
-            const precoMedio = ativo.valComprado / ativo.qtdComprada;
-            return acc + (ativo.qtdAtual * precoMedio);
-        }
-        return acc;
-    }, 0);
-
-
-    // Aportes feitos DENTRO do período
-    const aportesNoPeriodo = allLancamentos
-        .filter(l => new Date(l.data) >= startDate && l.tipoOperacao === 'compra')
-        .reduce((acc, l) => acc + l.valorTotal, 0);
-
-    // A base de cálculo para o percentual é o que tinha no início mais o que foi aportado.
-    const baseCalculoPercentual = investidoInicioPeriodo + aportesNoPeriodo;
-
-    const rentabilidadePercent = baseCalculoPercentual > 0 ? (lucroNoPeriodo / baseCalculoPercentual) * 100 : 0;
-
-    return { lucro: lucroNoPeriodo, percentual: rentabilidadePercent };
-}
-
-
-// --- FUNÇÕES PARA O GRÁFICO DE VARIAÇÃO (permanecem as mesmas) ---
+// --- FUNÇÕES PARA O GRÁFICO DE VARIAÇÃO DIÁRIA (permanecem as mesmas) ---
 async function fetchHistoricoPatrimonio(intervalo) {
     if (!auth.currentUser || (allHistoricoPatrimonio.length > 0 && intervalo !== 'Anual')) return;
     try {
@@ -252,7 +172,7 @@ async function renderVariacaoDiariaChart() {
             maintainAspectRatio: false,
             scales: {
                 x: { stacked: isConsolidado, grid: { display: false }, ticks: { color: "#a0a7b3" } },
-                y: { stacked: isConsolidado, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => formatCurrency(value) } }
+                y: { stacked: isConsolidado, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) } }
             },
             plugins: {
                 legend: { display: isConsolidado, position: 'bottom', labels: { color: '#a0a7b3' } },
@@ -260,7 +180,7 @@ async function renderVariacaoDiariaChart() {
                     callbacks: {
                         label: function (context) {
                             const valorReal = context.raw;
-                            return `${context.dataset.label}: ${formatCurrency(valorReal)}`;
+                            return `${context.dataset.label}: ${valorReal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
                         },
                         footer: function (tooltipItems) {
                             if (!isConsolidado) return;
@@ -270,7 +190,7 @@ async function renderVariacaoDiariaChart() {
                             });
                             const index = tooltipItems[0].dataIndex;
                             const percent = variacoes.totalPercent.slice(-30)[index];
-                            return `Total: ${formatCurrency(sum)} (${percent.toFixed(2)}%)`;
+                            return `Total: ${sum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${percent.toFixed(2)}%)`;
                         }
                     }
                 }
@@ -279,11 +199,62 @@ async function renderVariacaoDiariaChart() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const assetFilter = document.getElementById('daily-variation-asset-filter');
-    if (assetFilter) {
-        assetFilter.addEventListener('change', renderVariacaoDiariaChart);
+
+// --- LÓGICA DO NOVO GRÁFICO DE PERFORMANCE ---
+
+/**
+ * Atualiza o gráfico de performance consolidada com base nos filtros selecionados.
+ */
+async function updatePerformanceChart() {
+    const periodFilter = document.querySelector("#perf-period-filter .filter-btn.active");
+    const period = periodFilter ? periodFilter.dataset.period : '6m';
+    const mainIndex = document.getElementById("perf-index-filter").value;
+
+    // A função principal agora reside em charts.js e retorna os dados calculados
+    const performanceData = await renderConsolidatedPerformanceChart(period, mainIndex);
+
+    // Atualiza os painéis de resumo com os dados retornados
+    if (performanceData && performanceData.carteira.length > 0) {
+        const lastValue = performanceData.carteira[performanceData.carteira.length - 1];
+        const rentPeriodoEl = document.getElementById('perf-rent-periodo');
+
+        rentPeriodoEl.textContent = `${lastValue.toFixed(2)}%`;
+        rentPeriodoEl.style.color = lastValue >= 0 ? '#00d9c3' : '#ef4444';
+
+        // A rentabilidade "Atual" e "Período" são as mesmas neste contexto
+        const rentAtualEl = document.getElementById('perf-rent-atual');
+        rentAtualEl.textContent = `${lastValue.toFixed(2)}%`;
+        rentAtualEl.style.color = lastValue >= 0 ? '#00d9c3' : '#ef4444';
     }
+}
+
+
+/**
+ * Função principal que inicializa a aba de Rentabilidade.
+ */
+export async function renderRentabilidadeTab(lancamentos, proventos, summaryData) {
+    const rentabilidadePane = document.getElementById('rentabilidade');
+    if (!rentabilidadePane) return;
+
+    // Limpa a UI se não houver dados
+    if (!lancamentos || lancamentos.length === 0) {
+        if (consolidatedPerformanceChart) consolidatedPerformanceChart.destroy();
+        if (dailyVariationChart) dailyVariationChart.destroy();
+        return;
+    }
+
+    // Renderiza os gráficos
+    await updatePerformanceChart();
+    await renderVariacaoDiariaChart();
+}
+
+
+// --- EVENT LISTENERS ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Listener para o gráfico de variação diária (existente)
+    const assetFilter = document.getElementById('daily-variation-asset-filter');
+    if (assetFilter) assetFilter.addEventListener('change', renderVariacaoDiariaChart);
+
     const intervalFilter = document.getElementById('daily-variation-interval-filter');
     if (intervalFilter) {
         intervalFilter.addEventListener('click', (e) => {
@@ -294,74 +265,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Listeners para o novo gráfico de performance consolidada
+    const periodFilterGroup = document.getElementById('perf-period-filter');
+    if (periodFilterGroup) {
+        periodFilterGroup.addEventListener('click', (e) => {
+            if (e.target.matches('.filter-btn')) {
+                periodFilterGroup.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                updatePerformanceChart();
+            }
+        });
+    }
+
+    const indexFilter = document.getElementById('perf-index-filter');
+    if (indexFilter) {
+        indexFilter.addEventListener('change', updatePerformanceChart);
+    }
 });
-
-
-/**
- * Função principal que calcula e renderiza todos os cards da aba de Rentabilidade.
- */
-export async function renderRentabilidadeTab(lancamentos, proventos, summaryData) {
-    const rentabilidadePane = document.getElementById('rentabilidade');
-    if (!rentabilidadePane) return;
-
-    // Reseta os campos
-    updateRentabilidadeField('rentabilidade-acumulada-percent', 'rentabilidade-acumulada-reais', 0, 0);
-    updateRentabilidadeField('rentabilidade-ano-percent', 'rentabilidade-ano-reais', 0, 0);
-    updateRentabilidadeField('rentabilidade-mes-percent', 'rentabilidade-mes-reais', 0, 0);
-    document.getElementById('rentabilidade-real-percent').textContent = '0,00%';
-    document.getElementById('rentabilidade-real-status').textContent = '...';
-
-    if (!lancamentos || lancamentos.length === 0 || !summaryData || !summaryData.lucroTotal) {
-        renderConsolidatedPerformanceChart(lancamentos, proventos);
-        if (dailyVariationChart) dailyVariationChart.destroy();
-        return;
-    }
-
-    // --- LÓGICA DE CÁLCULO ATUALIZADA ---
-    const { valorInvestidoTotal, lucroTotal } = summaryData;
-
-    // 1. Rentabilidade Acumulada (Total)
-    const rentabilidadeAcumuladaPercent = valorInvestidoTotal > 0 ? (lucroTotal / valorInvestidoTotal) * 100 : 0;
-    updateRentabilidadeField('rentabilidade-acumulada-percent', 'rentabilidade-acumulada-reais', rentabilidadeAcumuladaPercent, lucroTotal);
-
-    const hoje = new Date();
-    const inicioDoAno = new Date(hoje.getFullYear(), 0, 1);
-    const inicioDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-
-    // 2. Cálculo de Rentabilidade no Ano (YTD)
-    const metricsAno = calculatePeriodMetrics(inicioDoAno, lancamentos, proventos, summaryData);
-    updateRentabilidadeField('rentabilidade-ano-percent', 'rentabilidade-ano-reais', metricsAno.percentual, metricsAno.lucro);
-
-    // 3. Cálculo de Rentabilidade no Mês (MTD)
-    const metricsMes = calculatePeriodMetrics(inicioDoMes, lancamentos, proventos, summaryData);
-    updateRentabilidadeField('rentabilidade-mes-percent', 'rentabilidade-mes-reais', metricsMes.percentual, metricsMes.lucro);
-
-    // 4. Rentabilidade Real (vs IPCA)
-    try {
-        const { historicoIPCA } = await fetchIndexers(inicioDoAno.toISOString().split('T')[0], hoje.toISOString().split('T')[0]);
-        const ipcaAcumulado = historicoIPCA.reduce((acc, item) => acc * (1 + parseFloat(item.valor) / 100), 1);
-        const ipcaPercentual = (ipcaAcumulado - 1) * 100;
-        const rentabilidadeReal = metricsAno.percentual - ipcaPercentual;
-
-        const realPercentEl = document.getElementById('rentabilidade-real-percent');
-        realPercentEl.textContent = `${rentabilidadeReal.toFixed(2)}%`;
-        realPercentEl.style.color = rentabilidadeReal >= 0 ? '#00d9c3' : '#ef4444';
-
-        const statusEl = document.getElementById('rentabilidade-real-status');
-        if (rentabilidadeReal >= 0) {
-            statusEl.textContent = `Acima da inflação (${ipcaPercentual.toFixed(2)}%)`;
-            statusEl.style.color = '#00d9c3';
-        } else {
-            statusEl.textContent = `Abaixo da inflação (${ipcaPercentual.toFixed(2)}%)`;
-            statusEl.style.color = '#ef4444';
-        }
-
-    } catch (error) {
-        console.error("Erro ao buscar IPCA:", error);
-        document.getElementById('rentabilidade-real-status').textContent = 'Erro ao buscar IPCA';
-    }
-
-    // --- Renderiza os gráficos ---
-    renderConsolidatedPerformanceChart(lancamentos, proventos);
-    renderVariacaoDiariaChart();
-}

@@ -2358,3 +2358,57 @@ tbody.is-expanded .group-toggle-icon {
     grid-template-columns: 1fr; /* Muda para uma única coluna em telas menores */
   }
 }
+/* ... (todo o seu CSS existente) ... */
+
+/* --- NOVOS ESTILOS PARA GRÁFICO DE PERFORMANCE CONSOLIDADO --- */
+.performance-box {
+  background-color: #1a1b1e;
+  border: 1px solid #2a2c30;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.performance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.performance-summary {
+  display: flex;
+  gap: 30px;
+}
+
+.performance-summary > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.performance-summary .summary-label {
+  font-size: 0.8rem;
+  color: #a0a7b3;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.performance-summary .summary-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #00d9c3; /* Default positive */
+}
+
+.performance-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.performance-chart-container {
+  height: 350px;
+  width: 100%;
+}

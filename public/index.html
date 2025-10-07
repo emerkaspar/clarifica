@@ -270,144 +270,61 @@
               </div>
             </div>
             <div class="tab-pane" id="rentabilidade">
-              <div class="valorization-header">
-                <div class="valorization-card summary-card-details">
-                  <div class="valorization-title">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Rentabilidade Acumulada</span>
-                  </div>
-                  <div
-                    class="summary-details-grid"
-                    style="grid-template-columns: 1fr; gap: 5px"
-                  >
-                    <div class="summary-item">
-                      <span
-                        id="rentabilidade-acumulada-percent"
-                        class="summary-value"
-                        style="font-size: 1.75rem"
-                        >0,00%</span
-                      >
-                      <span
-                        id="rentabilidade-acumulada-reais"
-                        class="summary-label"
-                        style="font-size: 1rem"
-                        >R$ 0,00</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <div class="valorization-card summary-card-details">
-                  <div class="valorization-title">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Rentabilidade no Ano</span>
-                  </div>
-                  <div
-                    class="summary-details-grid"
-                    style="grid-template-columns: 1fr; gap: 5px"
-                  >
-                    <div class="summary-item">
-                      <span
-                        id="rentabilidade-ano-percent"
-                        class="summary-value"
-                        style="font-size: 1.75rem"
-                        >0,00%</span
-                      >
-                      <span
-                        id="rentabilidade-ano-reais"
-                        class="summary-label"
-                        style="font-size: 1rem"
-                        >R$ 0,00</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <div class="valorization-card summary-card-details">
-                  <div class="valorization-title">
-                    <i class="fas fa-calendar-day"></i>
-                    <span>Rentabilidade no Mês</span>
-                  </div>
-                  <div
-                    class="summary-details-grid"
-                    style="grid-template-columns: 1fr; gap: 5px"
-                  >
-                    <div class="summary-item">
-                      <span
-                        id="rentabilidade-mes-percent"
-                        class="summary-value"
-                        style="font-size: 1.75rem"
-                        >0,00%</span
-                      >
-                      <span
-                        id="rentabilidade-mes-reais"
-                        class="summary-label"
-                        style="font-size: 1rem"
-                        >R$ 0,00</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <div class="valorization-card summary-card-details">
-                  <div class="valorization-title">
-                    <i class="fas fa-seedling"></i>
-                    <span>Rentabilidade Real (vs IPCA)</span>
-                  </div>
-                  <div
-                    class="summary-details-grid"
-                    style="grid-template-columns: 1fr; gap: 5px"
-                  >
-                    <div class="summary-item">
-                      <span
-                        id="rentabilidade-real-percent"
-                        class="summary-value"
-                        style="font-size: 1.75rem"
-                        >0,00%</span
-                      >
-                      <span
-                        id="rentabilidade-real-status"
-                        class="summary-label"
-                        style="font-size: 1rem"
-                        >...</span
-                      >
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div class="performance-box">
-                <h3>Performance Consolidada (Últimos 3 meses)</h3>
+                <div class="performance-header">
+                  <div class="performance-summary">
+                    <div>
+                      <span class="summary-label">RENTABILIDADE ATUAL</span>
+                      <span id="perf-rent-atual" class="summary-value">0,00%</span>
+                    </div>
+                    <div>
+                      <span class="summary-label">RENTABILIDADE PERÍODO</span>
+                      <span id="perf-rent-periodo" class="summary-value">0,00%</span>
+                    </div>
+                  </div>
+                  <div class="performance-filters">
+                    <select id="perf-index-filter" class="filter-select" title="Selecionar índice para comparação principal">
+                      <option value="IBOV" selected>IBOV</option>
+                      <option value="IVVB11">IVVB11 (S&P 500)</option>
+                    </select>
+                    <div id="perf-period-filter" class="filter-btn-group">
+                      <button class="filter-btn" data-period="30d">30 dias</button>
+                      <button class="filter-btn active" data-period="6m">6 meses</button>
+                      <button class="filter-btn" data-period="ytd">Ano atual</button>
+                      <button class="filter-btn" data-period="1y">1 ano</button>
+                      <button class="filter-btn" data-period="2y">2 anos</button>
+                      <button class="filter-btn" data-period="5y">5 anos</button>
+                      <button class="filter-btn" data-period="all">Tudo</button>
+                    </div>
+                  </div>
+                </div>
                 <div class="performance-chart-container">
                   <canvas id="consolidated-performance-chart"></canvas>
                 </div>
               </div>
               <div class="performance-box" style="margin-top: 40px;">
-    <div class="evolution-header" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h3 style="margin: 0;">Variação Diária do Patrimônio</h3> <div class="evolution-filters">
+                <div class="evolution-header" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">Variação Diária do Patrimônio</h3> <div class="evolution-filters">
 
-        <div id="daily-variation-interval-filter" class="filter-btn-group">
-            <button class="filter-btn active" data-intervalo="Diário">Diário</button>
-            <button class="filter-btn" data-intervalo="Mensal">Mensal</button>
-            <button class="filter-btn" data-intervalo="Anual">Anual</button>
-        </div>
-        <select id="daily-variation-asset-filter" class="filter-select">
-            <option value="Todos">Carteira Consolidada</option>
-            <option value="Ações">Ações</option>
-            <option value="FIIs">FIIs</option>
-            <option value="ETF">ETFs</option>
-            <option value="Cripto">Criptomoedas</option>
-            <option value="Renda Fixa">Renda Fixa</option>
-        </select>
-    </div>
-</div>
-<div class="performance-chart-container">
-    <canvas id="daily-variation-chart"></canvas>
-</div>
-    <div class="performance-chart-container">
-        <canvas id="daily-variation-chart"></canvas>
-    </div>
-</div>
+                    <div id="daily-variation-interval-filter" class="filter-btn-group">
+                        <button class="filter-btn active" data-intervalo="Diário">Diário</button>
+                        <button class="filter-btn" data-intervalo="Mensal">Mensal</button>
+                        <button class="filter-btn" data-intervalo="Anual">Anual</button>
+                    </div>
+                    <select id="daily-variation-asset-filter" class="filter-select">
+                        <option value="Todos">Carteira Consolidada</option>
+                        <option value="Ações">Ações</option>
+                        <option value="FIIs">FIIs</option>
+                        <option value="ETF">ETFs</option>
+                        <option value="Cripto">Criptomoedas</option>
+                        <option value="Renda Fixa">Renda Fixa</option>
+                    </select>
+                </div>
+            </div>
+            <div class="performance-chart-container">
+                <canvas id="daily-variation-chart"></canvas>
+            </div>
+            </div>
             </div>
 
             <div class="tab-pane" id="proventos">

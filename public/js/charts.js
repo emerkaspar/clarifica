@@ -1,6 +1,6 @@
 import { fetchHistoricalData } from './api/brapi.js';
 import { fetchIndexers } from './api/bcb.js';
-import { db } from './firebase-config.js';
+import { db, auth } from './firebase-config.js';
 import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 let movimentacaoChart = null;
@@ -188,7 +188,7 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
         const historicoCDIIndex = {};
         let cdiIndexStartFactor = 1;
         historicoCDI.forEach(item => { const data = item.data.split('/').reverse().join('-'); cdiAcumulado *= (1 + (parseFloat(item.valor) / 100)); historicoCDIIndex[data] = cdiAcumulado; if (data === dataInicioStr) { cdiIndexStartFactor = cdiAcumulado } });
-        
+
         const normalizarIndice = (dadosIndice, dataInicioStr) => {
             if (!dadosIndice || !dadosIndice.results || dadosIndice.results.length === 0) return {};
             const precosHistoricos = dadosIndice.results[0].historicalDataPrice;
@@ -224,7 +224,7 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
             const ivvb11Gain = historicoIVVB11[dataAtualStr];
             if (typeof ivvb11Gain === 'number') { dataIVVB11.push(ivvb11Gain) } else if (dataIVVB11.length > 0) { dataIVVB11.push(dataIVVB11[dataIVVB11.length - 1]) } else { dataIVVB11.push(0) }
         }
-        
+
         const dataCarteiraNormalizada = dataCarteira.map((v, i) => { const cost = costBasisArray[i]; if (cost > 0) { return ((v / cost) - 1) * 100 } return 0 });
         performanceChart = new Chart(ctx, {
             type: 'line',
@@ -243,294 +243,200 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
 
 
 /**
- * --- FUNÇÃO DE DEPURAÇÃO ---
- * Busca o histórico de qualquer índice diretamente do Firestore e exibe no console.
+ * Busca os dados históricos de performance do Firebase para um dado período.
+ * @param {string} userId - ID do usuário logado.
+ * @param {Date} startDate - Data de início para a busca.
+ * @returns {Promise<object>} - Objeto com as séries de dados para cada item.
  */
-async function fetchIndexDataFromFirestore(indexTicker, dataInicial, dataFinal) {
-    try {
-        // Log 1: O que estamos buscando?
-        console.log(`[DEBUG] Buscando no Firestore: ticker=${indexTicker}, de=${dataInicial}, ate=${dataFinal}`);
+async function fetchPerformanceData(userId, startDate) {
+    const dataInicioStr = startDate.toISOString().split('T')[0];
 
+    const fetchData = async (collectionName, tickerField, tickerValue) => {
         const q = query(
-            collection(db, "indices"),
-            where("ticker", "==", indexTicker),
-            where("data", ">=", dataInicial),
-            where("data", "<=", dataFinal),
+            collection(db, collectionName),
+            where(tickerField, "==", tickerValue),
+            where("data", ">=", dataInicioStr),
             orderBy("data", "asc")
         );
-        const querySnapshot = await getDocs(q);
-        
-        // Log 2: O que o Firebase retornou?
-        console.log(`[DEBUG] Resultado para ${indexTicker}: Encontrados ${querySnapshot.size} documentos.`);
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data());
+    };
 
-        // Log 3 (Opcional): O que há dentro dos documentos?
-        if (!querySnapshot.empty) {
-            // Mostra apenas o primeiro documento para não poluir o console
-            console.log(`[DEBUG] Exemplo de doc para ${indexTicker}:`, querySnapshot.docs[0].data());
-        }
+    const [carteiraRaw, ibovRaw, ivvb11Raw, cdiRaw] = await Promise.all([
+        fetchData("historicoPatrimonioDiario", "userID", userId),
+        fetchData("indices", "ticker", "^BVSP"),
+        fetchData("indices", "ticker", "IVVB11"),
+        fetchData("indices", "ticker", "CDI")
+    ]);
 
-        return querySnapshot.docs.reduce((acc, doc) => {
-            const data = doc.data();
-            acc[data.data] = data.valor;
-            return acc;
-        }, {});
-    } catch (error) {
-        console.error(`[Charts] Erro ao buscar dados do índice ${indexTicker} do Firestore:`, error);
-        return {};
-    }
+    // Agrega o patrimônio total da carteira por dia
+    const carteiraGrouped = carteiraRaw.reduce((acc, curr) => {
+        acc[curr.data] = (acc[curr.data] || 0) + curr.valorPatrimonio;
+        return acc;
+    }, {});
+    const carteiraSeries = Object.entries(carteiraGrouped).map(([date, value]) => ({ date, value }));
+
+    const indexToSeries = (rawData) => rawData.map(d => ({ date: d.data, value: d.valor }));
+
+    return {
+        carteira: carteiraSeries,
+        ibov: indexToSeries(ibovRaw),
+        ivvb11: indexToSeries(ivvb11Raw),
+        cdi: indexToSeries(cdiRaw)
+    };
 }
 
 
 /**
- * --- GRÁFICO DE PERFORMANCE CONSOLIDADO (FUNÇÃO ATUALIZADA) ---
+ * Processa as séries de dados, preenchendo dias faltantes e calculando a rentabilidade acumulada.
+ * @param {object} seriesData - Dados brutos do Firebase.
+ * @param {Date} startDate - Data de início do período.
+ * @param {Date} endDate - Data de fim do período.
+ * @returns {object} - Dados prontos para serem usados no gráfico.
  */
-export async function renderConsolidatedPerformanceChart(lancamentos, proventos) {
-    if (isChartRendering) return;
-    isChartRendering = true;
-
-    const canvas = document.getElementById('consolidated-performance-chart');
-    if (!canvas) {
-        isChartRendering = false;
-        return;
+function processAndCalculatePerformance(seriesData, startDate, endDate) {
+    const labels = [];
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        labels.push(d.toISOString().split('T')[0]);
     }
-    
+
+    const fillAndNormalize = (series) => {
+        if (!series || series.length === 0) return new Array(labels.length).fill(null);
+
+        const seriesMap = new Map(series.map(s => [s.date, s.value]));
+        const filledValues = [];
+        let lastValue = null;
+        let baseValue = null;
+        let foundStart = false;
+
+        for (const date of labels) {
+            if (!foundStart && seriesMap.has(date)) {
+                foundStart = true;
+                baseValue = seriesMap.get(date);
+            }
+            if (!foundStart) {
+                filledValues.push(null);
+                continue;
+            }
+            lastValue = seriesMap.get(date) ?? lastValue;
+            filledValues.push(lastValue);
+        }
+
+        if (baseValue === null || baseValue === 0) return new Array(labels.length).fill(0);
+
+        return filledValues.map(v => v === null ? null : ((v / baseValue) - 1) * 100);
+    };
+
+    const processCDI = (series) => {
+        if (!series || series.length === 0) return new Array(labels.length).fill(null);
+
+        const seriesMap = new Map(series.map(s => [s.date, s.value]));
+        const performanceData = [];
+        let accumulatedIndex = 1;
+        let foundStart = false;
+
+        for (const date of labels) {
+            if (!foundStart && date < series[0].date) {
+                performanceData.push(null);
+                continue;
+            }
+            if (!foundStart) foundStart = true;
+
+            const rate = seriesMap.get(date) ?? 0;
+            accumulatedIndex *= (1 + rate / 100);
+            performanceData.push((accumulatedIndex - 1) * 100);
+        }
+        return performanceData;
+    };
+
+    return {
+        labels,
+        carteira: fillAndNormalize(seriesData.carteira),
+        ibov: fillAndNormalize(seriesData.ibov),
+        ivvb11: fillAndNormalize(seriesData.ivvb11),
+        cdi: processCDI(seriesData.cdi)
+    };
+}
+
+
+/**
+ * Renderiza o novo gráfico de performance consolidada.
+ * @param {string} period - O período a ser exibido (e.g., '6m', '1y').
+ * @param {string} mainIndex - O índice principal para comparação.
+ * @returns {Promise<object>} - Os dados processados do gráfico.
+ */
+export async function renderConsolidatedPerformanceChart(period = '6m', mainIndex = 'IBOV') {
+    const canvas = document.getElementById('consolidated-performance-chart');
+    if (!canvas || !auth.currentUser) return;
+
     if (consolidatedPerformanceChart) {
         consolidatedPerformanceChart.destroy();
     }
 
-    if (!lancamentos || lancamentos.length === 0) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#a0a7b3';
-        ctx.font = '16px "Open Sans"';
-        ctx.fillText('Sem dados suficientes para gerar o gráfico.', canvas.width / 2, canvas.height / 2);
-        ctx.restore();
-        isChartRendering = false;
-        return;
+    const endDate = new Date();
+    const startDate = new Date();
+
+    switch (period) {
+        case '30d': startDate.setDate(endDate.getDate() - 30); break;
+        case '6m': startDate.setMonth(endDate.getMonth() - 6); break;
+        case 'ytd': startDate.setMonth(0, 1); break;
+        case '1y': startDate.setFullYear(endDate.getFullYear() - 1); break;
+        case '2y': startDate.setFullYear(endDate.getFullYear() - 2); break;
+        case '5y': startDate.setFullYear(endDate.getFullYear() - 5); break;
+        case 'all': startDate.setFullYear(endDate.getFullYear() - 10); break; // Limite de 10 anos
     }
 
-    const ctx = canvas.getContext('2d');
+    const rawData = await fetchPerformanceData(auth.currentUser.uid, startDate);
+    const chartData = processAndCalculatePerformance(rawData, startDate, endDate);
 
-    try {
-        const lancamentosOrdenados = [...lancamentos].sort((a, b) => new Date(a.data) - new Date(b.data));
-        const hoje = new Date();
-        const tresMesesAtras = new Date();
-        tresMesesAtras.setMonth(hoje.getMonth() - 3);
-        const dataInicio = new Date(lancamentosOrdenados[0].data) > tresMesesAtras ? new Date(lancamentosOrdenados[0].data) : tresMesesAtras;
-        const dataInicioStr = dataInicio.toISOString().split('T')[0];
-        const dataFinalStr = hoje.toISOString().split('T')[0];
+    const datasets = [
+        { label: 'Carteira', data: chartData.carteira, borderColor: '#00d9c3', tension: 0.1, pointRadius: 0, borderWidth: 2.5 },
+        { label: 'CDI', data: chartData.cdi, borderColor: '#a0a7b3', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] }
+    ];
 
-        const tickers = [...new Set(lancamentos.filter(l => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo)).map(l => l.ativo))];
-        
-        const [assetResults, cdiData, ibovData, ivvb11Data] = await Promise.all([
-            Promise.all(tickers.map(t => fetchHistoricalData(t, '3mo'))),
-            fetchIndexDataFromFirestore('CDI', dataInicioStr, dataFinalStr),
-            fetchIndexDataFromFirestore('^BVSP', dataInicioStr, dataFinalStr),
-            fetchIndexDataFromFirestore('IVVB11', dataInicioStr, dataFinalStr)
-        ]);
-        
-        const historicoPrecos = {};
-        assetResults.forEach(res => {
-            if (res && res.results && res.results[0]) {
-                const ticker = res.results[0].symbol;
-                historicoPrecos[ticker] = res.results[0].historicalDataPrice.reduce((acc, item) => {
-                    acc[new Date(item.date * 1000).toISOString().split('T')[0]] = item.close;
-                    return acc;
-                }, {});
-            }
-        });
+    if (mainIndex === 'IBOV') {
+        datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+        datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
+    } else {
+        datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
+        datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+    }
 
-        const normalizarIndice = (precosHistoricos, dataInicioStr) => {
-            if (!precosHistoricos || Object.keys(precosHistoricos).length === 0) return {};
-            const datas = Object.keys(precosHistoricos).sort();
-            const dataBase = datas.find(d => d >= dataInicioStr) || datas[0];
-            const valorBase = precosHistoricos[dataBase];
-            if (!valorBase) return {};
-            return datas.reduce((acc, data) => {
-                acc[data] = ((precosHistoricos[data] / valorBase) - 1) * 100;
-                return acc;
-            }, {});
-        };
-
-        const historicoIBOV = normalizarIndice(ibovData, dataInicioStr);
-        const historicoIVVB11 = normalizarIndice(ivvb11Data, dataInicioStr);
-        
-        const labels = [];
-        const dataCarteira = [];
-        const costBasisArray = [];
-        const proventosArray = [];
-        const carteiraDiaria = {};
-        let custoBaseAcumulado = 0;
-        let proventosAcumulados = 0;
-        let patrimonioDiaAnterior = {};
-
-        const lancamentosAntes = lancamentosOrdenados.filter(l => new Date(l.data) < dataInicio);
-        lancamentosAntes.forEach(l => {
-            if (!carteiraDiaria[l.ativo]) carteiraDiaria[l.ativo] = { quantidade: 0, custoTotal: 0 };
-            const ativo = carteiraDiaria[l.ativo];
-            if (l.tipoOperacao === 'compra') {
-                ativo.quantidade += l.quantidade;
-                ativo.custoTotal += l.valorTotal;
-            } else {
-                const precoMedio = ativo.quantidade > 0 ? ativo.custoTotal / ativo.quantidade : 0;
-                ativo.custoTotal -= l.quantidade * precoMedio;
-                ativo.quantidade -= l.quantidade;
-            }
-        });
-        custoBaseAcumulado = Object.values(carteiraDiaria).reduce((acc, ativo) => acc + ativo.custoTotal, 0);
-        proventosAcumulados = proventos.filter(p => new Date(p.dataPagamento) < dataInicio).reduce((acc, p) => acc + p.valor, 0);
-
-
-        for (let d = new Date(dataInicio); d <= hoje; d.setDate(d.getDate() + 1)) {
-            const dataAtualStr = d.toISOString().split('T')[0];
-            labels.push(dataAtualStr);
-
-            lancamentosOrdenados.filter(l => l.data === dataAtualStr).forEach(l => {
-                if (!carteiraDiaria[l.ativo]) carteiraDiaria[l.ativo] = { quantidade: 0, custoTotal: 0 };
-                const ativo = carteiraDiaria[l.ativo];
-                if (l.tipoOperacao === 'compra') {
-                    ativo.quantidade += l.quantidade;
-                    ativo.custoTotal += l.valorTotal;
-                    custoBaseAcumulado += l.valorTotal;
-                } else {
-                    const precoMedio = ativo.quantidade > 0 ? ativo.custoTotal / ativo.quantidade : 0;
-                    const custoDaVenda = l.quantidade * precoMedio;
-                    ativo.custoTotal -= custoDaVenda;
-                    ativo.quantidade -= l.quantidade;
-                    custoBaseAcumulado -= custoDaVenda;
-                }
-            });
-
-            proventos.filter(p => p.dataPagamento === dataAtualStr).forEach(p => proventosAcumulados += p.valor);
-            proventosArray.push(proventosAcumulados);
-
-            let patrimonioDoDia = 0;
-            for (const ticker in carteiraDiaria) {
-                const ativo = carteiraDiaria[ticker];
-                if (ativo.quantidade > 1e-8) {
-                    const precoDoDia = historicoPrecos[ticker]?.[dataAtualStr]
-                    if (precoDoDia) {
-                        patrimonioDiaAnterior[ticker] = ativo.quantidade * precoDoDia;
-                    }
-                    patrimonioDoDia += patrimonioDiaAnterior[ticker] || ativo.custoTotal;
-                }
-            }
-            dataCarteira.push(patrimonioDoDia);
-            costBasisArray.push(custoBaseAcumulado);
-        }
-
-        const dataCarteiraNormalizada = dataCarteira.map((v, i) => {
-            const custo = costBasisArray[i];
-            const proventos = proventosArray[i];
-            if (custo > 0.01) {
-                return (((v + proventos) / custo) - 1) * 100;
-            }
-            return 0;
-        });
-
-        const dataCDI = [];
-        let cdiAcumulado = 1;
-        let cdiValorBase = null;
-
-        // Encontra o primeiro valor base para o CDI no período
-        for (const l of labels) {
-            const cdiDoDia = cdiData[l];
-            if (cdiDoDia !== undefined) {
-                if(cdiValorBase === null) {
-                    cdiValorBase = cdiAcumulado;
-                }
-                cdiAcumulado *= (1 + (cdiDoDia / 100));
-            }
-        }
-        
-        // Reseta para o cálculo final
-        cdiAcumulado = cdiValorBase || 1;
-        
-        labels.forEach(l => {
-            const cdiDoDia = cdiData[l];
-            if (cdiDoDia !== undefined) {
-                 cdiAcumulado *= (1 + (cdiDoDia / 100));
-            }
-
-            if (cdiValorBase) {
-                dataCDI.push(((cdiAcumulado / cdiValorBase) - 1) * 100);
-            } else {
-                dataCDI.push(0);
-            }
-        });
-
-        const dataIBOV = [];
-        labels.forEach(l => {
-            const lastValue = dataIBOV.length > 0 ? dataIBOV[dataIBOV.length - 1] : 0;
-            dataIBOV.push(historicoIBOV[l] ?? lastValue);
-        });
-
-        const dataIVVB11 = [];
-        labels.forEach(l => {
-            const lastValue = dataIVVB11.length > 0 ? dataIVVB11[dataIVVB11.length - 1] : 0;
-            dataIVVB11.push(historicoIVVB11[l] ?? lastValue);
-        });
-
-        consolidatedPerformanceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Carteira', data: dataCarteiraNormalizada, borderColor: '#00d9c3', fill: false, tension: 0.1, pointRadius: 0 },
-                    { label: 'IBOV', data: dataIBOV, borderColor: '#ECC94B', fill: false, tension: 0.1, pointRadius: 0 },
-                    { label: 'CDI', data: dataCDI, borderColor: '#a0a7b3', borderDash: [5, 5], fill: false, tension: 0.1, pointRadius: 0 },
-                    { label: 'IVVB11', data: dataIVVB11, borderColor: '#5A67D8', fill: false, tension: 0.1, pointRadius: 0 }
-                ]
+    consolidatedPerformanceChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { color: '#a0a7b3' } },
-                    title: { display: false },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`
+            plugins: {
+                legend: { position: 'top', align: 'center', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8, padding: 20 } },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const value = context.parsed.y;
+                            if (value === null) return null;
+                            return `${context.dataset.label}: ${value.toFixed(2)}%`;
                         }
                     }
-                },
-                scales: {
-                    y: {
-                        ticks: { color: '#a0a7b3', callback: value => value.toFixed(1) + '%' },
-                        grid: { color: '#2a2c30' }
-                    },
-                    x: {
-                        type: 'time',
-                        time: { unit: 'month' },
-                        ticks: { color: '#a0a7b3' },
-                        grid: { display: false }
-                    }
                 }
+            },
+            scales: {
+                y: { ticks: { color: '#a0a7b3', callback: value => value.toFixed(1) + '%' }, grid: { color: '#2a2c30' } },
+                x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd/MM/yy' }, ticks: { color: '#a0a7b3' }, grid: { display: false } }
             }
-        });
-    } catch (error) {
-        console.error("Erro ao renderizar gráfico de performance consolidado:", error);
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#ef4444';
-        ctx.font = '16px "Open Sans"';
-        ctx.fillText('Erro ao carregar dados de performance.', canvas.width / 2, canvas.height / 2 - 10);
-        ctx.fillStyle = '#a0a7b3';
-        ctx.font = '12px "Open Sans"';
-        ctx.fillText(error.message, canvas.width / 2, canvas.height / 2 + 10);
-        ctx.restore();
-    } finally {
-        isChartRendering = false;
-    }
+        }
+    });
+
+    return chartData;
 }
+
 
 export function renderProventosPorAtivoBarChart(proventos) {
     const canvas = document.getElementById("proventos-por-ativo-bar-chart");
