@@ -71,12 +71,13 @@ async function fetchPreviousDayPrices(userID, tickers) {
 
 /**
  * Calcula e renderiza a valorização do dia para a carteira de ETFs.
+ * @returns {Promise<object>} Retorna os preços do dia anterior.
  */
 async function renderEtfDayValorization(tickers, carteira, precosAtuais) {
     const valorizationReaisDiv = document.getElementById("etf-valorization-reais");
     const valorizationPercentDiv = document.getElementById("etf-valorization-percent");
 
-    if (!valorizationReaisDiv || !valorizationPercentDiv) return;
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return {};
 
     valorizationReaisDiv.textContent = "Calculando...";
     valorizationPercentDiv.innerHTML = "";
@@ -108,7 +109,7 @@ async function renderEtfDayValorization(tickers, carteira, precosAtuais) {
         if (!hasPreviousDayData || patrimonioTotalOntem <= 0) {
             valorizationReaisDiv.textContent = "N/A";
             valorizationPercentDiv.innerHTML = "-";
-            return;
+            return precosDiaAnterior;
         }
 
         const totalValorizacaoReais = patrimonioTotalHoje - patrimonioTotalOntem;
@@ -125,9 +126,12 @@ async function renderEtfDayValorization(tickers, carteira, precosAtuais) {
         valorizationPercentDiv.innerHTML = `${sinal}${variacaoPercentualFinal.toFixed(2)}% ${iconeSeta}`;
         valorizationPercentDiv.classList.add(corClasse);
 
+        return precosDiaAnterior;
+
     } catch (error) {
         console.error("Erro ao calcular a valorização do dia para ETFs:", error);
         valorizationReaisDiv.textContent = "Erro ao carregar";
+        return {};
     }
 }
 
@@ -234,14 +238,14 @@ export async function renderEtfCarteira(lancamentos, proventos) {
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
-
-        await renderEtfDayValorization(tickers, carteira, precosAtuais);
+        const precosDiaAnterior = await renderEtfDayValorization(tickers, carteira, precosAtuais);
 
         renderEtfSummary(carteira, precosAtuais);
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker]?.price || 0;
+            const precoOntem = precosDiaAnterior[ticker] || precoAtual;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
@@ -250,6 +254,9 @@ export async function renderEtfCarteira(lancamentos, proventos) {
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
             const rentabilidadeReais = variacaoReais + ativo.proventos;
             const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
+            
+            const variacaoDiaReais = (precoAtual - precoOntem) * ativo.quantidade;
+            const variacaoDiaPercent = precoOntem > 0 ? ((precoAtual - precoOntem) / precoOntem) * 100 : 0;
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="ETF">
@@ -286,6 +293,12 @@ export async function renderEtfCarteira(lancamentos, proventos) {
                          <div class="detail-item">
                             <span>Total Proventos</span>
                             <span>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>Variação (Dia)</span>
+                            <span class="${variacaoDiaReais >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${variacaoDiaReais >= 0 ? '+' : ''}${variacaoDiaReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoDiaPercent.toFixed(2)}%)
+                            </span>
                         </div>
                     </div>
                 </div>

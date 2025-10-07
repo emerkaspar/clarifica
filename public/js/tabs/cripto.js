@@ -70,33 +70,68 @@ async function fetchPreviousDayPrices(userID, tickers) {
 
 /**
  * Calcula e renderiza a valorização do dia para a carteira de Criptos.
+ * @returns {Promise<object>} Retorna o objeto com os preços do dia anterior.
  */
-function renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior, hasPreviousDayData) {
+async function renderCriptoDayValorization(tickers, carteira, precosAtuais) {
     const valorizationReaisDiv = document.getElementById("cripto-valorization-reais");
     const valorizationPercentDiv = document.getElementById("cripto-valorization-percent");
 
-    if (!valorizationReaisDiv || !valorizationPercentDiv) return;
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return {};
 
-    if (!hasPreviousDayData || patrimonioAnterior <= 0) {
-        valorizationReaisDiv.textContent = "N/A";
-        valorizationPercentDiv.innerHTML = "-";
-        valorizationPercentDiv.className = 'valorization-pill';
-        return;
+    valorizationReaisDiv.textContent = "Calculando...";
+    valorizationPercentDiv.innerHTML = "";
+    valorizationPercentDiv.className = 'valorization-pill';
+
+    try {
+        const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
+
+        let patrimonioTotalHoje = 0;
+        let patrimonioTotalOntem = 0;
+        let hasPreviousDayData = false;
+        
+        tickers.forEach(ticker => {
+            const ativo = carteira[ticker];
+            const precoHoje = precosAtuais[ticker]?.price;
+            const precoOntem = precosDiaAnterior[ticker];
+
+            if (ativo && ativo.quantidade > 0) {
+                if (precoHoje) {
+                    patrimonioTotalHoje += ativo.quantidade * precoHoje;
+                }
+                if (precoOntem) {
+                    patrimonioTotalOntem += ativo.quantidade * precoOntem;
+                    hasPreviousDayData = true;
+                }
+            }
+        });
+
+        if (!hasPreviousDayData || patrimonioTotalOntem <= 0) {
+            valorizationReaisDiv.textContent = "N/A";
+            valorizationPercentDiv.innerHTML = "-";
+            return precosDiaAnterior;
+        }
+
+        const totalValorizacaoReais = patrimonioTotalHoje - patrimonioTotalOntem;
+        const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioTotalOntem) * 100;
+
+        const isPositive = totalValorizacaoReais >= 0;
+        const sinal = isPositive ? '+' : '';
+        const corClasse = isPositive ? 'positive' : 'negative';
+        const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
+
+        valorizationReaisDiv.textContent = `${sinal}${totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+        valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
+
+        valorizationPercentDiv.innerHTML = `${sinal}${variacaoPercentualFinal.toFixed(2)}% ${iconeSeta}`;
+        valorizationPercentDiv.className = `valorization-pill ${corClasse}`;
+
+        return precosDiaAnterior;
+
+    } catch (error) {
+        console.error("Erro ao calcular valorização do dia para Cripto:", error);
+        valorizationReaisDiv.textContent = "Erro";
+        return {};
     }
-
-    const totalValorizacaoReais = patrimonioAtual - patrimonioAnterior;
-    const variacaoPercentualFinal = (totalValorizacaoReais / patrimonioAnterior) * 100;
-
-    const isPositive = totalValorizacaoReais >= 0;
-    const sinal = isPositive ? '+' : '';
-    const corClasse = isPositive ? 'positive' : 'negative';
-    const iconeSeta = isPositive ? '<i class="fas fa-arrow-up"></i>' : '<i class="fas fa-arrow-down"></i>';
-
-    valorizationReaisDiv.textContent = `${sinal}${totalValorizacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
-    valorizationReaisDiv.style.color = isPositive ? '#00d9c3' : '#ef4444';
-
-    valorizationPercentDiv.innerHTML = `${sinal}${variacaoPercentualFinal.toFixed(2)}% ${iconeSeta}`;
-    valorizationPercentDiv.className = `valorization-pill ${corClasse}`;
 }
 
 
@@ -205,29 +240,15 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
-        const patrimonioAtual = renderCriptoSummary(carteira, precosAtuais);
+        renderCriptoSummary(carteira, precosAtuais);
 
-        const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
-        let patrimonioAnterior = 0;
-        let hasPreviousDayData = false;
-        
-        tickers.forEach(ticker => {
-            const ativo = carteira[ticker];
-            const precoOntem = precosDiaAnterior[ticker];
-            if (ativo && ativo.quantidade > 0) {
-                if (precoOntem) {
-                    patrimonioAnterior += ativo.quantidade * precoOntem;
-                    hasPreviousDayData = true;
-                }
-            }
-        });
-
-        renderCriptoDayValorization(patrimonioAtual, patrimonioAnterior, hasPreviousDayData);
+        const precosDiaAnterior = await renderCriptoDayValorization(tickers, carteira, precosAtuais);
 
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker]?.price || 0;
+            const precoOntem = precosDiaAnterior[ticker] || precoAtual;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
@@ -236,6 +257,10 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
             const rentabilidadeReais = variacaoReais + ativo.proventos;
             const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
+
+            const variacaoDiaReais = (precoAtual - precoOntem) * ativo.quantidade;
+            const variacaoDiaPercent = precoOntem > 0 ? ((precoAtual - precoOntem) / precoOntem) * 100 : 0;
+
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Cripto">
@@ -268,6 +293,12 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
                         <div class="detail-item">
                             <span>Preço Atual</span>
                             <span>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                         <div class="detail-item">
+                            <span>Variação (Dia)</span>
+                             <span class="${variacaoDiaReais >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${variacaoDiaReais >= 0 ? '+' : ''}${variacaoDiaReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoDiaPercent.toFixed(2)}%)
+                            </span>
                         </div>
                     </div>
                 </div>

@@ -45,11 +45,11 @@ async function fetchPatrimonioAnterior(userID) {
     }
 }
 
-async function calculateRendaFixaValues(ativos) {
+async function calculateRendaFixaValues(ativos, referenceDate = new Date()) {
     if (ativos.length === 0) {
         return {};
     }
-    const hoje = new Date();
+    const hoje = referenceDate;
     const dataMaisAntiga = ativos.reduce((min, p) => (new Date(p.data) < new Date(min) ? p.data : min), ativos[0].data);
     if (new Date(dataMaisAntiga) > hoje) {
         return {};
@@ -180,7 +180,16 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
 
     try {
         const patrimonioAnterior = await fetchPatrimonioAnterior(userID);
-        const calculatedValuesOutros = await calculateRendaFixaValues(outrosRf);
+
+        const hoje = new Date();
+        const ontem = new Date();
+        ontem.setDate(hoje.getDate() - 1);
+
+        const [calculatedValuesHoje, calculatedValuesOntem] = await Promise.all([
+            calculateRendaFixaValues(outrosRf, hoje),
+            calculateRendaFixaValues(outrosRf, ontem)
+        ]);
+
 
         let patrimonioTotal = 0;
         let investidoTotal = 0;
@@ -214,6 +223,10 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                         <div class="detail-item"><span>Taxa Contratada</span><span>${ativo.taxaContratada}</span></div>
                         <div class="detail-item"><span>Quantidade</span><span>${ativo.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</span></div>
                         <div class="detail-item"><span>Vencimento</span><span>${new Date(ativo.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span></div>
+                         <div class="detail-item">
+                            <span>Variação (Dia)</span>
+                            <span>N/A</span>
+                        </div>
                     </div>
                      <div class="lista-acoes" style="width: 100%; border-top: 1px solid #2a2c30; padding-top: 15px; margin-top: 15px;">
                         <button class="btn-crud btn-editar-rf" data-id="${ativo.id}" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
@@ -223,13 +236,21 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
         }
 
         outrosRf.forEach(ativo => {
-            const valores = calculatedValuesOutros[ativo.id];
-            if (!valores) return;
-            const { valorCurva, valorBruto, impostoDevido } = valores;
+            const valoresHoje = calculatedValuesHoje[ativo.id];
+            const valoresOntem = calculatedValuesOntem[ativo.id];
+            if (!valoresHoje) return;
+
+            const { valorCurva, valorBruto, impostoDevido } = valoresHoje;
+            const valorCurvaOntem = valoresOntem ? valoresOntem.valorCurva : valorCurva;
+
             patrimonioTotal += valorCurva;
             investidoTotal += ativo.valorAplicado;
             const rentabilidadeLiquida = valorCurva - ativo.valorAplicado;
             const rentabilidadePercentual = ativo.valorAplicado > 0 ? (rentabilidadeLiquida / ativo.valorAplicado) * 100 : 0;
+            
+            const variacaoDiaReais = valorCurva - valorCurvaOntem;
+            const variacaoDiaPercent = valorCurvaOntem > 0 ? (variacaoDiaReais / valorCurvaOntem) * 100 : 0;
+
             html += `
                 <div class="fii-card">
                      <div class="fii-card-ticker" style="background-color: rgba(90, 103, 216, 0.1); color: #818cf8;">${ativo.ativo}</div>
@@ -247,6 +268,12 @@ export async function renderRendaFixaCarteira(lancamentos, userID, allTesouroDir
                         <div class="detail-item"><span>Taxa</span><span>${ativo.taxaContratada}</span></div>
                         <div class="detail-item"><span>Vencimento</span><span>${new Date(ativo.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span></div>
                         <div class="detail-item"><span>Imposto (IR)</span><span class="${impostoDevido > 0 ? 'negative-change' : ''}">- ${impostoDevido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                         <div class="detail-item">
+                            <span>Variação (Dia)</span>
+                            <span class="${variacaoDiaReais >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${variacaoDiaReais >= 0 ? '+' : ''}${variacaoDiaReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoDiaPercent.toFixed(2)}%)
+                            </span>
+                        </div>
                     </div>
                     <div class="lista-acoes" style="width: 100%; border-top: 1px solid #2a2c30; padding-top: 15px; margin-top: 15px;">
                         <button class="btn-crud btn-editar-rf" data-id="${ativo.id}" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2-2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
