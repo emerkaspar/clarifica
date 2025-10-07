@@ -31,43 +31,36 @@ function renderConsolidatedSummary(summaryData) {
 /**
  * Busca o patrimônio total consolidado do dia anterior no Firestore.
  */
+/**
+ * Busca o patrimônio total consolidado do dia anterior no Firestore de forma mais eficiente.
+ */
 async function fetchConsolidatedPreviousDayPatrimonio(userID) {
     if (!userID) return 0;
     try {
-        const assetTypes = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
-        let latestDate = null;
         const hojeStr = new Date().toISOString().split('T')[0];
 
-        const datePromises = assetTypes.map(type => {
-            const q = query(
-                collection(db, "historicoPatrimonioDiario"),
-                where("userID", "==", userID),
-                where("tipoAtivo", "==", type),
-                orderBy("data", "desc"),
-                limit(1)
-            );
-            return getDocs(q);
-        });
+        // 1. Encontra a data do último registro de patrimônio ANTES de hoje
+        const qLastDate = query(
+            collection(db, "historicoPatrimonioDiario"),
+            where("userID", "==", userID),
+            where("data", "<", hojeStr),
+            orderBy("data", "desc"),
+            limit(1)
+        );
 
-        const dateSnapshots = await Promise.all(datePromises);
-        dateSnapshots.forEach(snapshot => {
-            if (!snapshot.empty) {
-                const date = snapshot.docs[0].data().data;
-                if (date < hojeStr && (!latestDate || date > latestDate)) {
-                    latestDate = date;
-                }
-            }
-        });
-
-        if (!latestDate) {
+        const lastDateSnapshot = await getDocs(qLastDate);
+        if (lastDateSnapshot.empty) {
             console.warn("Nenhum registro de patrimônio de dias anteriores encontrado.");
             return 0;
         }
+        
+        const ultimoDiaComDados = lastDateSnapshot.docs[0].data().data;
 
+        // 2. Busca todos os registros daquela data e soma os valores
         const q = query(
             collection(db, "historicoPatrimonioDiario"),
             where("userID", "==", userID),
-            where("data", "==", latestDate)
+            where("data", "==", ultimoDiaComDados)
         );
         const querySnapshot = await getDocs(q);
 
