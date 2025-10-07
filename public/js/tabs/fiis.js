@@ -75,13 +75,13 @@ async function fetchPreviousDayPrices(userID, tickers) {
  * @param {Array<string>} tickers - A lista de tickers de FIIs na carteira.
  * @param {object} carteira - O objeto da carteira consolidada.
  * @param {object} precosAtuais - Objeto com os preços atuais para os tickers (intraday).
- * @returns {Promise<Array<object>>} - Retorna uma lista com a performance diária de cada FII.
+ * @returns {Promise<object>} - Retorna uma lista com a performance diária de cada FII e os preços do dia anterior.
  */
 async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
     const valorizationReaisDiv = document.getElementById("fiis-valorization-reais");
     const valorizationPercentDiv = document.getElementById("fiis-valorization-percent");
 
-    if (!valorizationReaisDiv || !valorizationPercentDiv) return [];
+    if (!valorizationReaisDiv || !valorizationPercentDiv) return { dailyPerformance: [], precosDiaAnterior: {} };
 
     valorizationReaisDiv.textContent = "Calculando...";
     valorizationPercentDiv.innerHTML = "";
@@ -118,7 +118,7 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
         if (!hasPreviousDayData || patrimonioTotalOntem <= 0) {
             valorizationReaisDiv.textContent = "N/A";
             valorizationPercentDiv.innerHTML = "-";
-            return dailyPerformance;
+            return { dailyPerformance, precosDiaAnterior };
         }
 
         const totalValorizacaoReais = patrimonioTotalHoje - patrimonioTotalOntem;
@@ -135,12 +135,12 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
         valorizationPercentDiv.innerHTML = `${sinal}${variacaoPercentualFinal.toFixed(2)}% ${iconeSeta}`;
         valorizationPercentDiv.classList.add(corClasse);
 
-        return dailyPerformance;
+        return { dailyPerformance, precosDiaAnterior };
 
     } catch (error) {
         console.error("Erro ao calcular a valorização do dia para FIIs:", error);
         valorizationReaisDiv.textContent = "Erro";
-        return [];
+        return { dailyPerformance: [], precosDiaAnterior: {} };
     }
 }
 
@@ -279,7 +279,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
-        const dailyPerformance = await renderFiisDayValorization(tickers, carteira, precosAtuais);
+        const { dailyPerformance, precosDiaAnterior } = await renderFiisDayValorization(tickers, carteira, precosAtuais);
         const historicalPerformance = [];
 
         renderFiisSummary(carteira, precosAtuais);
@@ -294,6 +294,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker]?.price || 0;
+            const precoOntem = precosDiaAnterior[ticker] || precoAtual;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
@@ -301,6 +302,9 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
             const rentabilidadeReais = variacaoReais + ativo.proventos;
             const rentabilidadePercent = valorInvestido > 0 ? (rentabilidadeReais / valorInvestido) * 100 : 0;
+
+            const variacaoDiaReais = (precoAtual - precoOntem) * ativo.quantidade;
+            const variacaoDiaPercent = precoOntem > 0 ? ((precoAtual - precoOntem) / precoOntem) * 100 : 0;
 
             historicalPerformance.push({ ticker, changePercent: variacaoPercent });
             totalValorFiis += valorPosicaoAtual;
@@ -340,6 +344,12 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                         <div class="detail-item"><span>Preço Médio</span><span>${precoMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
                         <div class="detail-item"><span>Preço Atual</span><span>${precoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
                         <div class="detail-item"><span>Total Proventos</span><span>${ativo.proventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                        <div class="detail-item">
+                            <span>Variação (Dia)</span>
+                            <span class="${variacaoDiaReais >= 0 ? 'positive-change' : 'negative-change'}">
+                                ${variacaoDiaReais >= 0 ? '+' : ''}${variacaoDiaReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (${variacaoDiaPercent.toFixed(2)}%)
+                            </span>
+                        </div>
                     </div>
                 </div>
             `;
