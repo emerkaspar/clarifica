@@ -429,6 +429,7 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
     }
 }
 
+
 export function renderProventosPorAtivoBarChart(proventos) {
     const canvas = document.getElementById("proventos-por-ativo-bar-chart");
     if (!canvas) return;
@@ -626,15 +627,26 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
                     callbacks: {
                         title: (context) => context[0].label,
                         label: (context) => {
-                            const item = dyData[context.dataIndex];
-                            return `DY: ${item.dividendYield.toFixed(2)}%`;
+                            // CORREÇÃO APLICADA AQUI
+                            const dataIndex = context.dataIndex;
+                            if (dyData[dataIndex]) {
+                                const item = dyData[dataIndex];
+                                return `DY: ${item.dividendYield.toFixed(2)}%`;
+                            }
+                            return '';
                         },
                         afterBody: (context) => {
-                            const item = dyData[context.dataIndex];
-                            return [
-                                `Total Recebido: ${item.totalProventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
-                                `Tipo: ${item.tipoAtivo}`
-                            ];
+                            // E AQUI
+                            if (!context || context.length === 0) return '';
+                            const dataIndex = context[0].dataIndex;
+                            if (dyData[dataIndex]) {
+                                const item = dyData[dataIndex];
+                                return [
+                                    `Total Recebido: ${item.totalProventos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+                                    `Tipo: ${item.tipoAtivo}`
+                                ];
+                            }
+                            return '';
                         }
                     }
                 }
@@ -651,6 +663,6 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
                 }
             }
         },
-        plugins: [dataLabelsPlugin] // Registra o plugin customizado
+        plugins: [dataLabelsPlugin]
     });
 }
