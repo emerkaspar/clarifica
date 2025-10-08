@@ -381,7 +381,7 @@ async function renderVariacaoDiariaChart(lancamentos) {
 async function updatePerformanceChart() {
     const periodFilter = document.querySelector("#perf-period-filter .filter-btn.active");
     const period = periodFilter ? periodFilter.dataset.period : '6m';
-    const mainIndex = 'IBOV'; // Fixo como IBOV, já que o seletor foi removido.
+    const mainIndex = 'IBOV';
 
     const performanceData = await renderConsolidatedPerformanceChart(period, mainIndex);
 
@@ -446,5 +446,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // O event listener para 'perf-index-filter' foi removido.
 });

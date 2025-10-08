@@ -1,5 +1,4 @@
 import { fetchHistoricalData } from './api/brapi.js';
-import { fetchIndexers } from './api/bcb.js';
 import { db, auth } from './firebase-config.js';
 import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
@@ -256,11 +255,12 @@ async function fetchPerformanceData(userId, startDate) {
         return snapshot.docs.map(doc => doc.data());
     };
 
-    const [carteiraRaw, ibovRaw, ivvb11Raw, cdiRaw] = await Promise.all([
+    const [carteiraRaw, ibovRaw, ivvb11Raw, cdiRaw, ipcaRaw] = await Promise.all([
         fetchData("historicoPatrimonioDiario", "userID", userId),
         fetchData("indices", "ticker", "^BVSP"),
         fetchData("indices", "ticker", "IVVB11"),
-        fetchData("indices", "ticker", "CDI")
+        fetchData("indices", "ticker", "CDI"),
+        fetchData("indices", "ticker", "IPCA")
     ]);
 
     const carteiraGrouped = carteiraRaw.reduce((acc, curr) => {
@@ -275,7 +275,8 @@ async function fetchPerformanceData(userId, startDate) {
         carteira: carteiraSeries,
         ibov: indexToSeries(ibovRaw),
         ivvb11: indexToSeries(ivvb11Raw),
-        cdi: indexToSeries(cdiRaw)
+        cdi: indexToSeries(cdiRaw),
+        ipca: indexToSeries(ipcaRaw)
     };
 }
 
@@ -287,13 +288,11 @@ function processAndCalculatePerformance(seriesData, startDate, endDate) {
 
     const fillAndNormalize = (series) => {
         if (!series || series.length === 0) return new Array(labels.length).fill(null);
-
         const seriesMap = new Map(series.map(s => [s.date, s.value]));
         const filledValues = [];
         let lastValue = null;
         let baseValue = null;
         let foundStart = false;
-
         for (const date of labels) {
             if (!foundStart && seriesMap.has(date)) {
                 foundStart = true;
@@ -306,27 +305,22 @@ function processAndCalculatePerformance(seriesData, startDate, endDate) {
             lastValue = seriesMap.get(date) ?? lastValue;
             filledValues.push(lastValue);
         }
-
         if (baseValue === null || baseValue === 0) return new Array(labels.length).fill(0);
-
         return filledValues.map(v => v === null ? null : ((v / baseValue) - 1) * 100);
     };
 
     const processCDI = (series) => {
         if (!series || series.length === 0) return new Array(labels.length).fill(null);
-
         const seriesMap = new Map(series.map(s => [s.date, s.value]));
         const performanceData = [];
         let accumulatedIndex = 1;
         let foundStart = false;
-
         for (const date of labels) {
             if (!foundStart && series[0] && date < series[0].date) {
                 performanceData.push(null);
                 continue;
             }
             if (!foundStart) foundStart = true;
-
             const rate = seriesMap.get(date) ?? 0;
             accumulatedIndex *= (1 + rate / 100);
             performanceData.push((accumulatedIndex - 1) * 100);
@@ -334,12 +328,40 @@ function processAndCalculatePerformance(seriesData, startDate, endDate) {
         return performanceData;
     };
 
+    const processIPCA = (series, labels) => {
+        if (!series || series.length === 0) return new Array(labels.length).fill(null);
+        const seriesMap = new Map(series.map(s => [s.date.substring(0, 7), s.value]));
+        const performanceData = [];
+        const accumulatedValues = {};
+        const sortedMonths = [...seriesMap.keys()].sort();
+        let accumulatedIndex = 1;
+        for (const month of sortedMonths) {
+            const rate = seriesMap.get(month);
+            accumulatedIndex *= (1 + rate / 100);
+            accumulatedValues[month] = (accumulatedIndex - 1) * 100;
+        }
+        let lastPerf = null;
+        for (const date of labels) {
+            const month = date.substring(0, 7);
+            const perf = accumulatedValues[month];
+            if (perf !== undefined) {
+                performanceData.push(perf);
+                lastPerf = perf;
+            } else {
+                performanceData.push(lastPerf);
+            }
+        }
+        return performanceData;
+    };
+
+
     return {
         labels,
         carteira: fillAndNormalize(seriesData.carteira),
         ibov: fillAndNormalize(seriesData.ibov),
         ivvb11: fillAndNormalize(seriesData.ivvb11),
-        cdi: processCDI(seriesData.cdi)
+        cdi: processCDI(seriesData.cdi),
+        ipca: processIPCA(seriesData.ipca, labels)
     };
 }
 
@@ -377,14 +399,15 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
 
         const datasets = [
             { label: 'Carteira', data: chartData.carteira, borderColor: '#00d9c3', tension: 0.1, pointRadius: 0, borderWidth: 2.5 },
-            { label: 'CDI', data: chartData.cdi, borderColor: '#a0a7b3', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] }
+            { label: 'CDI', data: chartData.cdi, borderColor: '#a0a7b3', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] },
+            { label: 'IPCA', data: chartData.ipca, borderColor: '#ED64A6', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] }
         ];
 
         if (mainIndex === 'IBOV') {
-            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
-            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
+            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: 'rgba(255, 51, 0, 1)', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
         } else {
-            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: '#ECC94B', tension: 0.1, pointRadius: 0, borderWidth: 1.5, hidden: true });
+            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: 'rgba(255, 51, 0, 1)', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
             datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
         }
 
