@@ -29,9 +29,6 @@ function renderConsolidatedSummary(summaryData) {
 }
 
 /**
- * Busca o patrimônio total consolidado do dia anterior no Firestore.
- */
-/**
  * Busca o patrimônio total consolidado do dia anterior no Firestore de forma mais eficiente.
  */
 async function fetchConsolidatedPreviousDayPatrimonio(userID) {
@@ -53,7 +50,7 @@ async function fetchConsolidatedPreviousDayPatrimonio(userID) {
             console.warn("Nenhum registro de patrimônio de dias anteriores encontrado.");
             return 0;
         }
-        
+
         const ultimoDiaComDados = lastDateSnapshot.docs[0].data().data;
 
         // 2. Busca todos os registros daquela data e soma os valores
@@ -384,7 +381,7 @@ async function renderVariacaoDiariaChart(lancamentos) {
 async function updatePerformanceChart() {
     const periodFilter = document.querySelector("#perf-period-filter .filter-btn.active");
     const period = periodFilter ? periodFilter.dataset.period : '6m';
-    const mainIndex = document.getElementById("perf-index-filter").value;
+    const mainIndex = 'IBOV'; // Fixo como IBOV, já que o seletor foi removido.
 
     const performanceData = await renderConsolidatedPerformanceChart(period, mainIndex);
 
@@ -449,8 +446,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const indexFilter = document.getElementById('perf-index-filter');
-    if (indexFilter) {
-        indexFilter.addEventListener('change', updatePerformanceChart);
-    }
+    // O event listener para 'perf-index-filter' foi removido.
 });
