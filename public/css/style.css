@@ -1758,6 +1758,17 @@ tbody.is-expanded .group-toggle-icon {
   .group-summary-grid {
     justify-content: space-between; /* Distribui melhor os itens do resumo */
   }
+
+  .performance-filters {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #perf-period-filter.filter-btn-group {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
 }
 
 @media (max-width: 600px) {
@@ -1878,7 +1889,7 @@ tbody.is-expanded .group-toggle-icon {
     grid-template-columns: 1fr;
   }
 }
-/* --- ESTILOS PARA A TABELA COMPARATIVA DE ALOCAÇÃO --- */
+/* --- ESTILOS PARA TABELA COMPARATIVA DE ALOCAÇÃO --- */
 .comparison-row {
   display: grid;
   align-items: center;

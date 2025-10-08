@@ -592,8 +592,8 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
     const data = dyData.map(d => d.dividendYield);
 
     const colors = {
-        'Ações': 'rgba(0, 217, 195, 0.7)',
-        'FIIs': 'rgba(156, 103, 154, 0.92)',
+        'Ações': 'rgba(21, 238, 166, 1)',
+        'FIIs': 'rgba(0, 217, 195, 0.7)',
         'ETF': 'rgba(237, 100, 166, 0.7)'
     };
     const defaultColor = 'rgba(160, 167, 179, 0.7)';
