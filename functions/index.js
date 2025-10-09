@@ -335,7 +335,7 @@ const createDailySnapshot = async (dateStr, isBackfill = false) => {
     console.log(`[Snapshot] Rotina de snapshot para ${dateStr} concluída.`);
 };
 
-exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 23 * * *')
+exports.scheduledPortfolioSnapshot = functions.pubsub.schedule('00 20 * * *')
     .timeZone('America/Sao_Paulo')
     .onRun(async (context) => {
         const todayStr = new Date().toISOString().split('T')[0];
