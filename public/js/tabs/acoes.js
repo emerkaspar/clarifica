@@ -325,7 +325,7 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações">
-                    <div class="asset-card-header" style="width: 100%; justify-content: flex-start;">
+                    <div class="asset-card-header" style="width: 100%; justify-content: center;">
                         ${logoHtml}
                         <div class="asset-card-ticker-info">
                             <div class="ticker" style="font-size: 1.15rem;">${ativo.ativo}</div>

@@ -7,6 +7,7 @@ let carteiraAtualChart = null;
 let carteiraIdealChart = null;
 let acoesPorCapitalizacaoChart = null;
 let acoesPorSetorChart = null;
+let divisaoPorAtivoChart = null;
 
 
 // --- FUNÇÕES DE PERSISTÊNCIA (localStorage) ---
@@ -89,13 +90,12 @@ async function getCarteiraAtualizada(lancamentos, classificacoes) {
 
 
 /**
- * Calcula a alocação atual da carteira com base nos lançamentos e preços atuais.
+ * Calcula a alocação atual da carteira com base nos dados já processados.
  */
-async function calcularAlocacaoAtual(lancamentos, classificacoes) {
-    if (!lancamentos || lancamentos.length === 0) {
+function calcularAlocacaoAtual(carteiraAtualizada) {
+    if (!carteiraAtualizada || carteiraAtualizada.length === 0) {
         return { 'Ações': 0, 'FIIs': 0, 'Renda Fixa': 0, 'ETF': 0, 'Cripto': 0 };
     }
-    const carteiraAtualizada = await getCarteiraAtualizada(lancamentos, classificacoes);
     const alocacao = { 'Ações': 0, 'FIIs': 0, 'Renda Fixa': 0, 'ETF': 0, 'Cripto': 0 };
     let patrimonioTotal = 0;
 
@@ -123,9 +123,8 @@ async function calcularAlocacaoAtual(lancamentos, classificacoes) {
 /**
  * Calcula os dados agregados para os gráficos de pizza de Ações.
  */
-async function calcularDadosAcoes(lancamentos, classificacoes) {
-    const carteiraCompleta = await getCarteiraAtualizada(lancamentos, classificacoes);
-    const acoes = carteiraCompleta.filter(a => a.tipoAtivo === 'Ações');
+function calcularDadosAcoes(carteiraAtualizada) {
+    const acoes = carteiraAtualizada.filter(a => a.tipoAtivo === 'Ações');
     const totalAcoesValor = acoes.reduce((acc, acao) => acc + acao.valorAtual, 0);
     const THRESHOLD_PERCENT = 3; // Agrupa setores com menos de 3% em "Outros"
 
@@ -166,6 +165,90 @@ async function calcularDadosAcoes(lancamentos, classificacoes) {
 
 
 // --- FUNÇÕES DE RENDERIZAÇÃO DOS GRÁFICOS E TABELA ---
+
+/**
+ * Renderiza o gráfico de barras horizontais mostrando a divisão por cada ativo.
+ */
+function renderDivisaoPorAtivoChart(carteiraAtualizada) {
+    const canvas = document.getElementById('divisao-por-ativo-chart');
+    if (!canvas) return;
+
+    if (divisaoPorAtivoChart) {
+        divisaoPorAtivoChart.destroy();
+    }
+
+    const patrimonioTotal = carteiraAtualizada.reduce((acc, ativo) => acc + ativo.valorAtual, 0);
+    const sortedAssets = [...carteiraAtualizada].sort((a, b) => b.valorAtual - a.valorAtual);
+
+    const labels = sortedAssets.map(a => a.ticker);
+    const dataValues = sortedAssets.map(a => a.valorAtual);
+    const percentages = sortedAssets.map(a => (patrimonioTotal > 0 ? (a.valorAtual / patrimonioTotal) * 100 : 0));
+
+    divisaoPorAtivoChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Valor (R$)',
+                data: dataValues,
+                backgroundColor: 'rgba(0, 217, 195, 0.7)',
+                borderColor: '#00d9c3',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const index = context.dataIndex;
+                            const value = context.parsed.x;
+                            const percent = percentages[index];
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (value !== null) {
+                                label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                            }
+                            label += ` (${percent.toFixed(2)}%)`;
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: "#2a2c30" },
+                    ticks: {
+                        color: "#a0a7b3",
+                        callback: function (value) {
+                            if (value >= 1000) {
+                                return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
+                            }
+                            return "R$ " + value.toLocaleString('pt-BR');
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        color: "#a0a7b3"
+                    }
+                }
+            }
+        }
+    });
+}
+
 
 function renderAllocationPieChart(canvasId, chartInstance, title, data) {
     const canvas = document.getElementById(canvasId);
@@ -545,6 +628,7 @@ export async function renderAnalisesTab(lancamentos, proventos, classificacoes) 
 
     // Reseta gráficos se não houver dados
     if (!lancamentos || lancamentos.length === 0) {
+        if (divisaoPorAtivoChart) divisaoPorAtivoChart.destroy();
         if (carteiraAtualChart) carteiraAtualChart.destroy();
         if (carteiraIdealChart) carteiraIdealChart.destroy();
         if (acoesPorCapitalizacaoChart) acoesPorCapitalizacaoChart.destroy();
@@ -555,21 +639,27 @@ export async function renderAnalisesTab(lancamentos, proventos, classificacoes) 
 
 
     try {
-        // Renderiza seção de alocação de carteira
-        const alocacaoAtual = await calcularAlocacaoAtual(lancamentos, classificacoes);
+        // 1. Calcula os dados detalhados da carteira UMA VEZ
+        const carteiraAtualizada = await getCarteiraAtualizada(lancamentos, classificacoes);
+
+        // 2. Renderiza o novo gráfico de divisão por ativo no topo
+        renderDivisaoPorAtivoChart(carteiraAtualizada);
+
+        // 3. Renderiza a seção de alocação de carteira (por TIPO)
+        const alocacaoAtual = calcularAlocacaoAtual(carteiraAtualizada);
         const alocacaoIdeal = loadIdealAllocation();
 
         carteiraAtualChart = renderAllocationPieChart('carteira-atual-chart', carteiraAtualChart, 'Divisão Atual', alocacaoAtual);
         carteiraIdealChart = renderAllocationPieChart('carteira-ideal-chart', carteiraIdealChart, 'Divisão Ideal', alocacaoIdeal);
         renderComparisonTable(alocacaoAtual, alocacaoIdeal);
 
-        // Renderiza os novos gráficos de Ações
-        const { capitalizacaoData, setorData } = await calcularDadosAcoes(lancamentos, classificacoes);
+        // 4. Renderiza os gráficos de análise de Ações
+        const { capitalizacaoData, setorData } = calcularDadosAcoes(carteiraAtualizada);
         acoesPorCapitalizacaoChart = renderAnalisesPieChart('acoes-por-capitalizacao-chart', acoesPorCapitalizacaoChart, capitalizacaoData);
         acoesPorSetorChart = renderAnalisesPieChart('acoes-por-setor-chart', acoesPorSetorChart, setorData);
 
 
-        // Renderiza seção de rentabilidade comparativa
+        // 5. Renderiza a seção de rentabilidade comparativa
         const dadosRentabilidade = await calcularRentabilidadePorAtivo(lancamentos, proventos);
         renderGraficoComparativo(dadosRentabilidade);
 
