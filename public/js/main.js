@@ -97,7 +97,7 @@ function initializeDataListeners(userID) {
 
         renderHistorico(allLancamentos, precosEInfos);
         renderMovimentacaoChart(allLancamentos);
-        renderAcoesCarteira(allLancamentos, allProventos);
+        renderAcoesCarteira(allLancamentos, allProventos, precosEInfos);
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);
@@ -124,7 +124,7 @@ function initializeDataListeners(userID) {
         const summaryData = await updateMainSummaryHeader(allLancamentos, allProventos, precosEInfos, allTesouroDiretoPrices);
 
         updateProventosTab(allProventos, currentProventosMeta, precosEInfos, allLancamentos); // E aqui também
-        renderAcoesCarteira(allLancamentos, allProventos);
+        renderAcoesCarteira(allLancamentos, allProventos, precosEInfos);
         renderFiisCarteira(allLancamentos, allProventos, allClassificacoes, userConfig.divisaoIdealFIIs);
         renderEtfCarteira(allLancamentos, allProventos);
         renderCriptoCarteira(allLancamentos, allProventos);

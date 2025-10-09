@@ -269,7 +269,10 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         }
     });
 
-    const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
+    const tickers = Object.keys(carteira)
+        .filter(ticker => ticker && carteira[ticker].quantidade > 0)
+        .sort((a, b) => a.localeCompare(b));
+
     if (tickers.length === 0) {
         fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
         renderDivisaoFiisCharts(null, null);
@@ -325,7 +328,9 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="FIIs">
-                    <div class="fii-card-ticker">${ativo.ativo}</div>
+                    <div class="fii-card-ticker">
+                        <i class="fas fa-building"></i> ${ativo.ativo}
+                    </div>
                     <div class="fii-card-metric-main">
                         <div class="label">Valor Atual da Posição</div>
                         <div class="value">${valorPosicaoAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>

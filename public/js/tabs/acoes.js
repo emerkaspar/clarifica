@@ -229,7 +229,7 @@ function renderAcoesHighlights(dailyPerformance, historicalPerformance) {
 /**
  * Renderiza a aba de Ações.
  */
-export async function renderAcoesCarteira(lancamentos, proventos) {
+export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) {
     const acoesListaDiv = document.getElementById("acoes-lista");
     if (!acoesListaDiv) return;
 
@@ -276,7 +276,10 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         }
     });
 
-    const tickers = Object.keys(carteira).filter(ticker => ticker && carteira[ticker].quantidade > 0);
+    const tickers = Object.keys(carteira)
+        .filter(ticker => ticker && carteira[ticker].quantidade > 0)
+        .sort((a, b) => a.localeCompare(b));
+
     if (tickers.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
         renderAcoesHighlights([], []);
@@ -284,7 +287,7 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
     }
 
     try {
-        const precosAtuais = await fetchCurrentPrices(tickers);
+        const precosAtuais = precosEInfos || {};
 
         const { dailyPerformance, precosDiaAnterior } = await renderAcoesDayValorization(tickers, carteira, precosAtuais);
 
@@ -295,6 +298,15 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
             const precoAtual = precosAtuais[ticker]?.price || 0;
+            const logoUrl = precosAtuais[ticker]?.logoUrl;
+            let logoHtml;
+
+            if (logoUrl) {
+                logoHtml = `<img src="${logoUrl}" alt="${ativo.ativo}" class="ativo-logo" style="width: 40px; height: 40px;">`;
+            } else {
+                logoHtml = `<div class="ativo-logo-fallback" style="width: 40px; height: 40px; font-size: 18px;"><i class="fas fa-chart-line"></i></div>`;
+            }
+
             const precoOntem = precosDiaAnterior[ticker] || precoAtual;
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
@@ -313,7 +325,13 @@ export async function renderAcoesCarteira(lancamentos, proventos) {
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações">
-                    <div class="fii-card-ticker">${ativo.ativo}</div>
+                    <div class="asset-card-header" style="width: 100%; justify-content: flex-start;">
+                        ${logoHtml}
+                        <div class="asset-card-ticker-info">
+                            <div class="ticker" style="font-size: 1.15rem;">${ativo.ativo}</div>
+                            <div class="tipo">Ações</div>
+                        </div>
+                    </div>
                     
                     <div class="fii-card-metric-main">
                         <div class="label">Valor Atual da Posição</div>
