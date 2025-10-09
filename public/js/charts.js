@@ -10,8 +10,90 @@ let consolidatedPerformanceChart = null;
 let proventosPorAtivoBarChart = null;
 let dividendYieldChart = null;
 let isChartRendering = false;
+let proventosDetalheChart = null; // Variável para o novo gráfico de detalhes
 
-// ... (Outras funções de renderização de gráficos permanecem iguais)
+/**
+ * Renderiza o gráfico de detalhes de proventos de um mês/ano específico em um modal.
+ * @param {Array} proventosDoPeriodo - Lista de proventos filtrados para o período clicado.
+ * @param {string} title - O título para o modal (ex: "ago. de 25").
+ */
+export function renderProventosDetalheChart(proventosDoPeriodo, title) {
+    const canvas = document.getElementById("proventos-detalhe-chart");
+    if (!canvas) return;
+
+    const modalTitle = document.getElementById("proventos-detalhe-modal-title");
+    if (modalTitle) {
+        modalTitle.textContent = `Detalhes de Proventos - ${title}`;
+    }
+
+    if (proventosDetalheChart) {
+        proventosDetalheChart.destroy();
+    }
+
+    const porAtivo = proventosDoPeriodo.reduce((acc, p) => {
+        acc[p.ativo] = (acc[p.ativo] || 0) + p.valor;
+        return acc;
+    }, {});
+
+    const sortedData = Object.entries(porAtivo).sort(([, a], [, b]) => b - a);
+    const labels = sortedData.map(item => item[0]);
+    const data = sortedData.map(item => item[1]);
+
+    proventosDetalheChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Recebido (R$)',
+                data: data,
+                backgroundColor: 'rgba(0, 217, 195, 0.7)',
+                borderColor: '#00d9c3',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Gráfico de barras horizontal
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const value = context.parsed.x;
+                            return ' Recebido: ' + value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: "#2a2c30" },
+                    ticks: {
+                        color: "#a0a7b3",
+                        callback: function (value) {
+                            return value.toLocaleString("pt-BR", { style: 'currency', currency: 'BRL' });
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: "#a0a7b3" }
+                }
+            }
+        }
+    });
+
+    const modal = document.getElementById("proventos-detalhe-modal");
+    if (modal) {
+        modal.classList.add("show");
+    }
+}
+
+
+// ... (O restante das funções de renderMovimentacaoChart e renderPieCharts permanece igual)
 export function renderMovimentacaoChart(lancamentos) {
     const chartCanvas = document.getElementById("movimentacao-chart");
     if (!chartCanvas || typeof Chart === "undefined") return;
@@ -120,6 +202,7 @@ export function renderPieCharts(proventos) {
         tipoContainer.innerHTML = tipoHtml || '<p style="font-size: 0.8rem; color: #a0a7b3;">Sem dados.</p>';
     }
 }
+
 export function renderEvolutionChart(proventos) {
     const ctx = document.getElementById("proventos-evolucao-chart");
     if (!ctx) return;
@@ -147,11 +230,36 @@ export function renderEvolutionChart(proventos) {
         data: { labels: labels, datasets: [{ label: "Proventos Recebidos", data: data, backgroundColor: "#00d9c3", borderRadius: 4 }] },
         options: {
             responsive: true, maintainAspectRatio: false,
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const key = sortedKeys[index];
+                    const displayLabel = labels[index];
+
+                    let proventosDoPeriodo;
+
+                    if (intervalo === "Mensal") {
+                        const [year, month] = key.split('-').map(Number);
+                        proventosDoPeriodo = proventosFiltrados.filter(p => {
+                            const dataPag = new Date(p.dataPagamento + "T00:00:00");
+                            return dataPag.getFullYear() === year && (dataPag.getMonth() + 1) === month;
+                        });
+                    } else { // Anual
+                        const year = Number(key);
+                        proventosDoPeriodo = proventosFiltrados.filter(p => {
+                            const dataPag = new Date(p.dataPagamento + "T00:00:00");
+                            return dataPag.getFullYear() === year;
+                        });
+                    }
+                    renderProventosDetalheChart(proventosDoPeriodo, displayLabel);
+                }
+            },
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (context) { let label = context.dataset.label || ""; if (label) { label += ": " } const value = context.parsed.y; if (value !== null) { label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) } return label } } } },
             scales: { y: { beginAtZero: true, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: function (value) { return "R$ " + value.toLocaleString("pt-BR") } } }, x: { grid: { display: false }, ticks: { color: "#a0a7b3" } } },
         },
     });
 }
+// ... (O restante do arquivo, a partir de renderPerformanceChart, permanece igual)
 export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProventosData) {
     if (performanceChart) { performanceChart.destroy(); performanceChart = null }
     const container = document.getElementById('ativo-detalhes-performance');
