@@ -2,6 +2,7 @@ import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
 import { renderDivisaoFiisCharts } from './fiisCharts.js';
 import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { renderFiisValorAtualChart } from '../charts.js';
 
 
 /**
@@ -246,6 +247,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         document.getElementById("fiis-valorizacao-percent").textContent = "0,00%";
         document.getElementById("fiis-rentabilidade-percent").textContent = "0,00%";
         renderFiisHighlights([], []);
+        renderFiisValorAtualChart([]); // Limpa o gráfico
         return;
     }
 
@@ -277,6 +279,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
         fiisListaDiv.innerHTML = `<p>Nenhum FII com posição em carteira.</p>`;
         renderDivisaoFiisCharts(null, null);
         renderFiisHighlights([], []);
+        renderFiisValorAtualChart([]); // Limpa o gráfico
         return;
     }
 
@@ -293,6 +296,8 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             especieTijolo: { 'Lajes corporativas': 0, 'Shoppings e centros comerciais': 0, 'Logística e galpões industriais': 0, 'Outros': 0 },
             especiePapel: { 'Atrelado ao CDI': 0, 'Atrelado ao IPCA': 0 }
         };
+
+        const chartData = [];
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
@@ -311,6 +316,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
             historicalPerformance.push({ ticker, changePercent: variacaoPercent });
             totalValorFiis += valorPosicaoAtual;
+            chartData.push({ ticker, valorAtual: valorPosicaoAtual });
 
             const classif = classificacoes[ticker]?.classificacoes;
             if (classif) {
@@ -362,6 +368,14 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
         fiisListaDiv.innerHTML = html;
         renderFiisHighlights(dailyPerformance, historicalPerformance);
+
+        const chartDataFinal = chartData.map(item => ({
+            ...item,
+            percentual: totalValorFiis > 0 ? (item.valorAtual / totalValorFiis) * 100 : 0
+        })).sort((a, b) => b.valorAtual - a.valorAtual);
+        renderFiisValorAtualChart(chartDataFinal);
+
+
         const divisaoAtualPercentual = JSON.parse(JSON.stringify(valoresAtuais));
         if (totalValorFiis > 0) {
             for (const categoria in divisaoAtualPercentual) {

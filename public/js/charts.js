@@ -12,6 +12,7 @@ let dividendYieldChart = null;
 let isChartRendering = false;
 let proventosDetalheChart = null; // Variável para o novo gráfico de detalhes
 let acoesValorAtualChart = null; // Variável para o novo gráfico de Ações
+let fiisValorAtualChart = null; // Variável para o novo gráfico de FIIs
 
 
 /**
@@ -129,6 +130,91 @@ export function renderAcoesValorAtualChart(chartData) {
         },
         options: {
             indexAxis: 'y', // Gráfico de barras horizontal
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const index = context.dataIndex;
+                            const value = context.parsed.x;
+                            const percent = percentages[index];
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (value !== null) {
+                                label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                            }
+                            label += ` (${percent.toFixed(2)}%)`;
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: "#2a2c30" },
+                    ticks: {
+                        color: "#a0a7b3",
+                        callback: function (value) {
+                            if (value >= 1000) {
+                                return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
+                            }
+                            return "R$ " + value.toLocaleString('pt-BR');
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        color: "#a0a7b3"
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Renderiza o novo gráfico de barras com o valor atual por ativo na aba de FIIs.
+ * @param {Array<object>} chartData - Os dados dos FIIs a serem exibidos.
+ */
+export function renderFiisValorAtualChart(chartData) {
+    const canvas = document.getElementById('fiis-valor-atual-chart');
+    if (!canvas) return;
+
+    if (fiisValorAtualChart) {
+        fiisValorAtualChart.destroy();
+    }
+
+    if (!chartData || chartData.length === 0) {
+        return;
+    }
+
+    const labels = chartData.map(item => item.ticker);
+    const data = chartData.map(item => item.valorAtual);
+    const percentages = chartData.map(item => item.percentual);
+
+    fiisValorAtualChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Valor Atual (R$)',
+                data: data,
+                backgroundColor: 'rgba(90, 103, 216, 0.8)',
+                borderColor: '#5A67D8',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
