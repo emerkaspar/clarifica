@@ -773,15 +773,14 @@ function setupUploadCsvModal(userID) {
             return;
         }
 
-       
-const isCsvType = file.type === "text/csv";
-const isCsvExtension = file.name.toLowerCase().endsWith('.csv');
+        const isCsvType = file.type === "text/csv";
+        const isCsvExtension = file.name.toLowerCase().endsWith('.csv');
 
-if (!isCsvType && !isCsvExtension) {
-    validationMessageDiv.textContent = "Formato de arquivo inválido. Por favor, envie um arquivo CSV.";
-    validationMessageDiv.style.display = 'block';
-    return;
-}
+        if (!isCsvType && !isCsvExtension) {
+            validationMessageDiv.textContent = "Formato de arquivo inválido. Por favor, envie um arquivo CSV.";
+            validationMessageDiv.style.display = 'block';
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = async function (event) {
@@ -919,6 +918,46 @@ function setupAtivoDetalhesModal() {
         }
     });
 }
+
+// --- NOVO MODAL: LISTA DE ATIVOS ---
+export function openAssetListModal(title, assets, totalPortfolioValue) {
+    const modal = document.getElementById('asset-list-modal');
+    if (!modal) return;
+
+    const titleEl = modal.querySelector('#asset-list-modal-title');
+    const bodyEl = modal.querySelector('#asset-list-modal-body');
+
+    titleEl.textContent = title;
+
+    if (!assets || assets.length === 0) {
+        bodyEl.innerHTML = '<p>Nenhum ativo encontrado nesta categoria.</p>';
+    } else {
+        // Ordena os ativos pelo maior valor
+        assets.sort((a, b) => b.valorAtual - a.valorAtual);
+
+        const itemsHtml = assets.map(asset => {
+            const percentage = totalPortfolioValue > 0 ? (asset.valorAtual / totalPortfolioValue) * 100 : 0;
+            return `
+                <div class="detail-item" style="padding: 8px 0; border-bottom: 1px solid var(--border-primary);">
+                    <span>${asset.ticker}</span>
+                    <span style="display: flex; align-items: baseline; gap: 15px;">
+                        ${asset.valorAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        <span style="display: inline-block; width: 70px; text-align: right; color: var(--text-secondary); font-size: 0.8rem;">(${percentage.toFixed(2)}%)</span>
+                    </span>
+                </div>
+            `;
+        }).join('');
+        
+        // Remove a borda do último item
+        const lastItemIndex = itemsHtml.lastIndexOf('border-bottom: 1px solid var(--border-primary);');
+        const finalHtml = itemsHtml.substring(0, lastItemIndex) + itemsHtml.substring(lastItemIndex).replace('border-bottom: 1px solid var(--border-primary);', '');
+
+        bodyEl.innerHTML = `<div class="fii-card-details" style="padding-top: 0; border-top: none; gap: 0;">${finalHtml}</div>`;
+    }
+
+    modal.classList.add('show');
+}
+
 
 // --- FUNÇÃO DE SETUP PRINCIPAL ---
 export function setupAllModals(userID) {

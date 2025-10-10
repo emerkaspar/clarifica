@@ -384,7 +384,13 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                 }
             }
         }
-        renderDivisaoFiisCharts(divisaoAtualPercentual, divisaoIdeal);
+        renderDivisaoFiisCharts(
+            divisaoAtualPercentual, 
+            divisaoIdeal,
+            chartData, // Passa os dados detalhados dos ativos
+            classificacoes,
+            totalValorFiis
+        );
     } catch (error) {
         console.error("Erro ao renderizar carteira de FIIs:", error);
         fiisListaDiv.innerHTML = `<p>Erro ao carregar os dados da carteira. Tente novamente mais tarde.</p>`;

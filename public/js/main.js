@@ -3,7 +3,7 @@ import { collection, doc, onSnapshot, query, where, orderBy, getDocs } from "htt
 import { auth, db } from './firebase-config.js';
 import { initializeAuth } from './auth.js';
 import { initializeUI } from './ui.js';
-import { setupAllModals } from './api/modals.js';
+import { setupAllModals, openAssetListModal } from './api/modals.js';
 import { renderAcoesCarteira } from './tabs/acoes.js';
 import { renderFiisCarteira } from './tabs/fiis.js';
 import { renderEtfCarteira } from './tabs/etf.js';
@@ -171,6 +171,7 @@ function initializeDataListeners(userID) {
 document.addEventListener("DOMContentLoaded", () => {
     initializeAuth(onLogin, onLogout);
     initializeUI();
+    window.openAssetListModal = openAssetListModal; 
 
     // Listener para o evento de atualização da alocação ideal
     document.addEventListener('idealAllocationChanged', () => {

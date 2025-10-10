@@ -41,7 +41,7 @@ const CHART_DEFAULTS = {
 function getBarColors(atuais, ideais) {
     return atuais.map((atual, index) => {
         const ideal = ideais[index];
-        if (ideal === 0 && atual > 0) return '#f56565'; // Vermelho se tem algo que não deveria ter
+        if (ideal === 0 && atual > 0) return '#f56565'; 
 
         const bandaSuperior = ideal * 1.25;
         const bandaInferior = ideal * 0.75;
@@ -50,7 +50,45 @@ function getBarColors(atuais, ideais) {
     });
 }
 
-function renderSingleChart(canvasId, chartInstance, title, labels, dataAtual, dataIdeal) {
+function handleChartClick(chartTitle, clickedLabel, drilldownData) {
+    const { fullPortfolio, classificacoes, totalPortfolioValue } = drilldownData;
+    if (!fullPortfolio || !classificacoes) return;
+
+    let filterKey = '';
+    let filterValue = clickedLabel;
+    
+    // Mapeia o título do gráfico e o rótulo da barra para as chaves de classificação corretas
+    const titleToFilterKeyMap = {
+        'Divisão por Tipo': 'Tipo FII',
+        'Divisão por Risco': 'Risco FII',
+        'Divisão por Espécie': 'Espécie',
+    };
+    filterKey = titleToFilterKeyMap[chartTitle];
+
+    const labelToFilterValueMap = {
+        'Lajes Corp.': 'Lajes corporativas / Escritórios',
+        'Shoppings': 'Shoppings e centros comerciais',
+        'Logística': 'Logística e galpões industriais',
+        'CDI': 'Atrelado ao CDI',
+        'IPCA': 'Atrelado ao IPCA',
+    };
+    filterValue = labelToFilterValueMap[clickedLabel] || clickedLabel;
+
+    if (!filterKey) return;
+
+    const filteredAssets = fullPortfolio.filter(ativo => {
+        const classif = classificacoes[ativo.ticker]?.classificacoes;
+        return classif && classif[filterKey] === filterValue;
+    });
+
+    const modalTitle = `FIIs: ${clickedLabel}`;
+    if (typeof window.openAssetListModal === 'function') {
+        window.openAssetListModal(modalTitle, filteredAssets, totalPortfolioValue);
+    }
+}
+
+
+function renderSingleChart(canvasId, chartInstance, title, labels, dataAtual, dataIdeal, drilldownData) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
@@ -85,6 +123,12 @@ function renderSingleChart(canvasId, chartInstance, title, labels, dataAtual, da
         data: chartData,
         options: {
             ...CHART_DEFAULTS,
+            onClick: (evt, elements) => {
+                if (elements.length === 0) return;
+                const element = elements[0];
+                const clickedLabel = labels[element.index];
+                handleChartClick(title, clickedLabel, drilldownData);
+            },
             plugins: {
                 ...CHART_DEFAULTS.plugins,
                 title: {
@@ -98,20 +142,22 @@ function renderSingleChart(canvasId, chartInstance, title, labels, dataAtual, da
     });
 }
 
-export function renderDivisaoFiisCharts(divisaoAtual, divisaoIdeal) {
-    if (!divisaoAtual || !divisaoIdeal) return;
+export function renderDivisaoFiisCharts(divisaoAtual, divisaoIdeal, fullPortfolio, classificacoes, totalPortfolioValue) {
+    if (!divisaoAtual || !divisaoIdeal || !fullPortfolio) return;
+
+    const drilldownData = { fullPortfolio, classificacoes, totalPortfolioValue };
 
     // Gráfico por Tipo
     const labelsTipo = ['Tijolo', 'Papel'];
     const dataAtualTipo = [divisaoAtual.tipo.Tijolo, divisaoAtual.tipo.Papel];
     const dataIdealTipo = [divisaoIdeal['tipo-tijolo'], divisaoIdeal['tipo-papel']];
-    tipoChart = renderSingleChart('divisao-tipo-chart', tipoChart, 'Divisão por Tipo', labelsTipo, dataAtualTipo, dataIdealTipo);
+    tipoChart = renderSingleChart('divisao-tipo-chart', tipoChart, 'Divisão por Tipo', labelsTipo, dataAtualTipo, dataIdealTipo, drilldownData);
 
     // Gráfico por Risco
     const labelsRisco = ['Arrojado', 'Crescimento', 'Ancoragem'];
     const dataAtualRisco = [divisaoAtual.risco.Arrojado, divisaoAtual.risco.Crescimento, divisaoAtual.risco.Ancoragem];
     const dataIdealRisco = [divisaoIdeal['risco-arrojado'], divisaoIdeal['risco-crescimento'], divisaoIdeal['risco-ancoragem']];
-    riscoChart = renderSingleChart('divisao-risco-chart', riscoChart, 'Divisão por Risco', labelsRisco, dataAtualRisco, dataIdealRisco);
+    riscoChart = renderSingleChart('divisao-risco-chart', riscoChart, 'Divisão por Risco', labelsRisco, dataAtualRisco, dataIdealRisco, drilldownData);
 
     // Gráfico por Espécie (combina Tijolo e Papel)
     const labelsEspecie = ['Lajes Corp.', 'Shoppings', 'Logística', 'Outros', 'CDI', 'IPCA'];
@@ -131,5 +177,5 @@ export function renderDivisaoFiisCharts(divisaoAtual, divisaoIdeal) {
         divisaoIdeal['papel-cdi'],
         divisaoIdeal['papel-ipca']
     ];
-    especieChart = renderSingleChart('divisao-especie-chart', especieChart, 'Divisão por Espécie', labelsEspecie, dataAtualEspecie, dataIdealEspecie);
+    especieChart = renderSingleChart('divisao-especie-chart', especieChart, 'Divisão por Espécie', labelsEspecie, dataAtualEspecie, dataIdealEspecie, drilldownData);
 }
