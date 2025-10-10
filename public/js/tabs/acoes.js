@@ -78,9 +78,10 @@ async function fetchPreviousDayPrices(userID, tickers) {
  * @param {Array<string>} tickers - A lista de tickers de Ações na carteira.
  * @param {object} carteira - O objeto da carteira consolidada.
  * @param {object} precosAtuais - Objeto com os preços atuais para os tickers (intraday).
+ * @param {Array<object>} todosLancamentos - A lista completa de lançamentos para filtrar as operações do dia. // NOVO
  * @returns {Promise<object>} - Retorna a performance diária e os preços do dia anterior.
  */
-async function renderAcoesDayValorization(tickers, carteira, precosAtuais) {
+async function renderAcoesDayValorization(tickers, carteira, precosAtuais, todosLancamentos) { // MODIFICADO
     const valorizationReaisDiv = document.getElementById("acoes-valorization-reais");
     const valorizationPercentDiv = document.getElementById("acoes-valorization-percent");
 
@@ -92,6 +93,7 @@ async function renderAcoesDayValorization(tickers, carteira, precosAtuais) {
 
     try {
         const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
+        const hojeStr = new Date().toISOString().split('T')[0]; // NOVO
 
         let patrimonioTotalHoje = 0;
         let patrimonioTotalOntem = 0;
@@ -102,12 +104,26 @@ async function renderAcoesDayValorization(tickers, carteira, precosAtuais) {
             const precoHoje = precosAtuais[ticker]?.price;
             const precoOntem = precosDiaAnterior[ticker];
 
-            if (ativo && ativo.quantidade > 0) {
+            // --- INÍCIO DA LÓGICA CORRIGIDA ---
+            let quantidadeOntem = ativo.quantidade;
+            const lancamentosDeHoje = todosLancamentos.filter(l => l.ativo === ticker && l.data === hojeStr);
+
+            lancamentosDeHoje.forEach(l => {
+                if (l.tipoOperacao === 'compra') {
+                    quantidadeOntem -= l.quantidade;
+                } else if (l.tipoOperacao === 'venda') {
+                    quantidadeOntem += l.quantidade;
+                }
+            });
+            // --- FIM DA LÓGICA CORRIGIDA ---
+
+
+            if (ativo && quantidadeOntem > 0) { // MODIFICADO
                 if (precoHoje) {
-                    patrimonioTotalHoje += ativo.quantidade * precoHoje;
+                    patrimonioTotalHoje += quantidadeOntem * precoHoje; // MODIFICADO
                 }
                 // Usa o preço de hoje como fallback se o de ontem não estiver disponível ainda
-                patrimonioTotalOntem += ativo.quantidade * (precoOntem || precoHoje || 0);
+                patrimonioTotalOntem += quantidadeOntem * (precoOntem || precoHoje || 0); // MODIFICADO
 
                 if (precoHoje && precoOntem > 0) {
                     dailyPerformance.push({ ticker, changePercent: ((precoHoje / precoOntem) - 1) * 100 });
@@ -292,7 +308,7 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
     try {
         const precosAtuais = precosEInfos || {};
 
-        const { dailyPerformance, precosDiaAnterior } = await renderAcoesDayValorization(tickers, carteira, precosAtuais);
+        const { dailyPerformance, precosDiaAnterior } = await renderAcoesDayValorization(tickers, carteira, precosAtuais, acoesLancamentos);
 
         const historicalPerformance = [];
 

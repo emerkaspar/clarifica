@@ -76,9 +76,10 @@ async function fetchPreviousDayPrices(userID, tickers) {
  * @param {Array<string>} tickers - A lista de tickers de FIIs na carteira.
  * @param {object} carteira - O objeto da carteira consolidada.
  * @param {object} precosAtuais - Objeto com os preços atuais para os tickers (intraday).
+ * @param {Array<object>} todosLancamentos - A lista completa de lançamentos para filtrar as operações do dia. // NOVO
  * @returns {Promise<object>} - Retorna uma lista com a performance diária de cada FII e os preços do dia anterior.
  */
-async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
+async function renderFiisDayValorization(tickers, carteira, precosAtuais, todosLancamentos) { // MODIFICADO
     const valorizationReaisDiv = document.getElementById("fiis-valorization-reais");
     const valorizationPercentDiv = document.getElementById("fiis-valorization-percent");
 
@@ -90,6 +91,7 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
 
     try {
         const precosDiaAnterior = await fetchPreviousDayPrices(auth.currentUser.uid, tickers);
+        const hojeStr = new Date().toISOString().split('T')[0]; // NOVO
 
         let patrimonioTotalHoje = 0;
         let patrimonioTotalOntem = 0;
@@ -101,13 +103,30 @@ async function renderFiisDayValorization(tickers, carteira, precosAtuais) {
             const precoHoje = precosAtuais[ticker]?.price;
             const precoOntem = precosDiaAnterior[ticker];
 
-            if (ativo && ativo.quantidade > 0) {
+            // --- INÍCIO DA LÓGICA CORRIGIDA ---
+            let quantidadeOntem = ativo.quantidade;
+            const lancamentosDeHoje = todosLancamentos.filter(l => l.ativo === ticker && l.data === hojeStr);
+
+            lancamentosDeHoje.forEach(l => {
+                if (l.tipoOperacao === 'compra') {
+                    quantidadeOntem -= l.quantidade;
+                } else if (l.tipoOperacao === 'venda') {
+                    quantidadeOntem += l.quantidade;
+                }
+            });
+            // --- FIM DA LÓGICA CORRIGIDA ---
+
+
+            if (ativo && quantidadeOntem > 0) { // MODIFICADO: usa quantidadeOntem
                 if (precoHoje) {
-                    patrimonioTotalHoje += ativo.quantidade * precoHoje;
+                    patrimonioTotalHoje += quantidadeOntem * precoHoje; // MODIFICADO
                 }
                 if (precoOntem) {
-                    patrimonioTotalOntem += ativo.quantidade * precoOntem;
+                    patrimonioTotalOntem += quantidadeOntem * precoOntem; // MODIFICADO
                     hasPreviousDayData = true;
+                } else if (precoHoje) {
+                    // Fallback: se não achar preço de ontem, usa o de hoje para não quebrar o cálculo do patrimônio total.
+                    patrimonioTotalOntem += quantidadeOntem * precoHoje;
                 }
 
                 if (precoHoje && precoOntem > 0) {
@@ -285,7 +304,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
 
     try {
         const precosAtuais = await fetchCurrentPrices(tickers);
-        const { dailyPerformance, precosDiaAnterior } = await renderFiisDayValorization(tickers, carteira, precosAtuais);
+        const { dailyPerformance, precosDiaAnterior } = await renderFiisDayValorization(tickers, carteira, precosAtuais, fiisLancamentos);
         const historicalPerformance = [];
 
         renderFiisSummary(carteira, precosAtuais);
