@@ -34,13 +34,13 @@ const getThemeColors = () => {
         pieBorderColor: isLightTheme ? '#fff' : '#161a22',
 
         // Cores principais
-        primary: '#00d9c3',
+        primary: '#00d9c3', // Teal
         primaryTransparent: 'rgba(0, 217, 195, 0.7)',
         primaryArea: isLightTheme ? 'rgba(0, 217, 195, 0.1)' : 'rgba(0, 217, 195, 0.1)',
-        secondary: '#5A67D8',
+        secondary: '#5A67D8', // Indigo
         secondaryTransparent: 'rgba(90, 103, 216, 0.8)',
-        tertiary: '#ED64A6',
-        quaternary: '#ECC94B',
+        tertiary: '#ED64A6', // Magenta/Pink
+        quaternary: '#ECC94B', // Yellow
         neutral: isLightTheme ? '#6b7280' : '#a0a7b3',
         negative: '#ef4444',
         negativeTransparent: 'rgba(239, 68, 68, 0.7)',
@@ -90,6 +90,55 @@ const getBarChartOptions = (indexAxis = 'y') => {
         }
     };
 };
+
+/**
+ * Opções base para os gráficos de Donut (Pizza).
+ */
+const getDonutChartOptions = (title = '') => {
+    const colors = getThemeColors();
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%', // Aumenta a espessura do anel
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    color: colors.textColor,
+                    boxWidth: 12,
+                    padding: 15,
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            tooltip: {
+                backgroundColor: colors.tooltipBg,
+                titleColor: colors.tooltipColor,
+                bodyColor: colors.tooltipColor,
+                callbacks: {
+                    label: (context) => {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.chart.getDatasetMeta(0).total || 1;
+                        const percentage = total > 0 ? ((value / total) * 100) : 0;
+                        return `${label}: ${percentage.toFixed(2)}%`;
+                    }
+                }
+            },
+            title: {
+                display: !!title,
+                text: title,
+                color: colors.textColor,
+                font: {
+                    size: 16,
+                    weight: '600'
+                }
+            }
+        }
+    };
+};
+
 
 /**
  * Renderiza o gráfico de detalhes de proventos de um mês/ano específico em um modal.
@@ -346,6 +395,7 @@ export function renderMovimentacaoChart(lancamentos) {
     });
 };
 
+
 export function renderPieCharts(proventos) {
     const colors = getThemeColors();
 
@@ -359,12 +409,31 @@ export function renderPieCharts(proventos) {
         const sortedAtivos = Object.entries(porAtivo).sort((a, b) => b[1] - a[1]).slice(0, 7);
         const labelsAtivo = sortedAtivos.map((item) => item[0]);
         const dataAtivo = sortedAtivos.map((item) => item[1]);
-        const modernColors = [colors.primary, colors.secondary, colors.tertiary, colors.negative, colors.quaternary, "#4299E1", "#9F7AEA"];
+        
+        const modernColors = [
+            '#2dd4bf', '#60a5fa', '#f472b6', '#a78bfa', '#facc15', '#fb923c', '#9ca3af'
+        ];
+
         proventosPorAtivoChart = new Chart(ctxAtivo, {
             type: "doughnut",
-            data: { labels: labelsAtivo, datasets: [{ data: dataAtivo, backgroundColor: modernColors, borderWidth: 2, borderColor: colors.pieBorderColor, borderRadius: 5 }] },
+            data: { 
+                labels: labelsAtivo, 
+                datasets: [{ 
+                    data: dataAtivo, 
+                    backgroundColor: modernColors, 
+                    borderWidth: 0, 
+                    borderColor: 'transparent'
+                }] 
+            },
             options: {
-                responsive: true, maintainAspectRatio: false, cutout: "70%", hoverOffset: 12,
+                responsive: true, 
+                maintainAspectRatio: false, 
+                cutout: "70%", 
+                hoverOffset: 12,
+                // Adicionado para criar um espaço interno
+                layout: {
+                    padding: 15
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -375,7 +444,8 @@ export function renderPieCharts(proventos) {
                                 const value = context.raw || 0;
                                 const total = context.chart.getDatasetMeta(0).total || 1;
                                 const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: ${percentage}%`;
+                                const valorFormatado = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                return `${label}: ${valorFormatado} (${percentage}%)`;
                             }
                         }
                     },

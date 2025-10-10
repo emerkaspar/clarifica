@@ -250,6 +250,7 @@ function renderDivisaoPorAtivoChart(carteiraAtualizada) {
 }
 
 
+// Substitua esta função em /public/js/tabs/analises.js
 function renderAllocationPieChart(canvasId, chartInstance, title, data) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return null;
@@ -260,21 +261,23 @@ function renderAllocationPieChart(canvasId, chartInstance, title, data) {
 
     const labels = Object.keys(data);
     const values = Object.values(data);
+    
+    // Paleta de cores moderna e consistente
     const colors = {
-        'Ações': '#00d9c3',
-        'FIIs': '#5A67D8',
-        'Renda Fixa': '#a0a7b3',
-        'ETF': '#ED64A6',
-        'Cripto': '#ECC94B'
+        'Ações': '#2dd4bf',
+        'FIIs': '#60a5fa',
+        'Renda Fixa': '#9ca3af',
+        'ETF': '#f472b6',
+        'Cripto': '#facc15'
     };
     const idealColors = {
-        'Ações': '#00a896',
-        'FIIs': '#434190',
-        'Renda Fixa': '#6b7280',
-        'ETF': '#b83280',
-        'Cripto': '#b49000'
+        'Ações': '#2dd4bf',
+        'FIIs': '#60a5fa',
+        'Renda Fixa': '#9ca3af',
+        'ETF': '#f472b6',
+        'Cripto': '#facc15'
     };
-    const backgroundColors = labels.map(label => (canvasId.includes('ideal') ? idealColors[label] : colors[label]) || '#ccc');
+    const backgroundColors = labels.map(label => (canvasId.includes('ideal') ? idealColors[label] : colors[label]) || '#a78bfa');
 
 
     return new Chart(canvas, {
@@ -284,14 +287,20 @@ function renderAllocationPieChart(canvasId, chartInstance, title, data) {
             datasets: [{
                 data: values,
                 backgroundColor: backgroundColors,
-                borderColor: '#161a22',
-                borderWidth: 4,
+                // Ajustes para remover borda
+                borderColor: 'transparent',
+                borderWidth: 0,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             cutout: '70%',
+            // Adicionado para efeito de mouseover e para evitar corte
+            hoverOffset: 12,
+            layout: {
+                padding: 15
+            },
             plugins: {
                 legend: {
                     position: 'bottom',
@@ -314,6 +323,7 @@ function renderAllocationPieChart(canvasId, chartInstance, title, data) {
     });
 }
 
+
 function renderAnalisesPieChart(canvasId, chartInstance, data) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return null;
@@ -326,9 +336,9 @@ function renderAnalisesPieChart(canvasId, chartInstance, data) {
     const values = Object.values(data);
     const total = values.reduce((a, b) => a + b, 0);
 
-    const colors = ['#00d9c3', '#5A67D8', '#ED64A6', '#ECC94B', '#4299E1', '#9F7AEA', '#F56565', '#38B2AC', '#F6AD55', '#4C51BF'];
+    const colors = ['#2dd4bf', '#60a5fa', '#f472b6', '#a78bfa', '#facc15', '#fb923c', '#34d399', '#818cf8'];
     const backgroundColors = labels.map((label, i) => {
-        if (label === 'Outros' || label === 'Não Classificado') return '#4A5568';
+        if (label === 'Outros' || label === 'Não Classificado') return '#9ca3af'; // Cor cinza para 'Outros'
         return colors[i % colors.length];
     });
 
@@ -339,14 +349,20 @@ function renderAnalisesPieChart(canvasId, chartInstance, data) {
             datasets: [{
                 data: values,
                 backgroundColor: backgroundColors,
-                borderColor: '#1a1b1e',
-                borderWidth: 4,
+                // Ajustes para remover borda
+                borderColor: 'transparent',
+                borderWidth: 0,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             cutout: '70%',
+            // Adicionado para efeito de mouseover e para evitar corte
+            hoverOffset: 12,
+            layout: {
+                padding: 15
+            },
             plugins: {
                 legend: {
                     position: 'bottom',

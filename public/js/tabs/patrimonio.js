@@ -243,6 +243,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
 /**
  * Renderiza o gráfico de alocação de ativos.
  */
+// Substitua a função original em /public/js/tabs/patrimonio.js por esta
 function renderAssetAllocationChart(carteira, precosEInfos) {
     const canvas = document.getElementById('asset-allocation-chart');
     if (!canvas) return;
@@ -280,19 +281,30 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
             </div>`;
     }).join('');
 
+    const backgroundColors = [
+        '#2dd4bf', '#60a5fa', '#f472b6', '#a78bfa', '#facc15', '#fb923c', '#9ca3af'
+    ];
+
     assetAllocationChart = new Chart(canvas, {
         type: 'doughnut',
         data: {
             labels: labels,
             datasets: [{
                 data: data,
-                backgroundColor: ['#00d9c3', '#5A67D8', '#ED64A6', '#ECC94B', '#a0a7b3', '#4299E1'],
-                borderColor: '#161a22',
-                borderWidth: 4,
+                backgroundColor: backgroundColors,
+                borderColor: 'transparent',
+                borderWidth: 0,
             }]
         },
         options: {
-            responsive: true, maintainAspectRatio: false, cutout: '70%',
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            hoverOffset: 12,
+            // Adicionado para criar um espaço interno
+            layout: {
+                padding: 15 
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
