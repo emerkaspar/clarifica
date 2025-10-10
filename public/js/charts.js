@@ -1,6 +1,7 @@
 import { fetchHistoricalData } from './api/brapi.js';
 import { db, auth } from './firebase-config.js';
-import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { collection, query, where, orderBy, getDocs, limit } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { fetchIndexers } from './api/bcb.js';
 
 // --- VARIÁVEIS DE INSTÂNCIA DOS GRÁFICOS ---
 let movimentacaoChart = null;
@@ -533,6 +534,51 @@ export function renderEvolutionChart(proventos) {
     });
 }
 
+/**
+ * Função dedicada para buscar o histórico de Índices (IBOV, IVVB11) do Firestore.
+ * @param {string} ticker - O ticker do índice (ex: '^BVSP').
+ * @returns {Promise<object|null>} - Retorna os dados no mesmo formato da API Brapi.
+ */
+async function fetchIndexHistoricalData(ticker) {
+    console.log(`[Chart Performance] Buscando fallback para o índice ${ticker} no Firestore.`);
+    try {
+        const q = query(
+            collection(db, "indices"), // Busca na coleção correta: 'indices'
+            where("ticker", "==", ticker),
+            orderBy("data", "desc"),
+            limit(90) // Busca um histórico de 90 dias para ter dados suficientes
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.error(`Nenhum dado histórico encontrado no Firestore para o índice ${ticker}.`);
+            return null;
+        }
+
+        const historicalDataPrice = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                date: new Date(data.data).getTime() / 1000,
+                close: data.valor // Usa o campo 'valor' que é o correto para índices
+            };
+        });
+
+        historicalDataPrice.sort((a, b) => b.date - a.date);
+
+        return {
+            results: [{
+                symbol: ticker,
+                historicalDataPrice: historicalDataPrice
+            }]
+        };
+
+    } catch (error) {
+        console.error(`Erro ao buscar fallback de índice ${ticker} no Firestore:`, error);
+        return null;
+    }
+}
+
+
 export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProventosData) {
     if (performanceChart) { performanceChart.destroy(); performanceChart = null }
     const container = document.getElementById('ativo-detalhes-performance');
@@ -556,8 +602,8 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
         const [dadosAtivo, { historicoCDI }, dadosIBOV, dadosIVVB11] = await Promise.all([
             fetchHistoricalData(ticker, '3mo'),
             fetchIndexers(dataInicio, dataFinalParaAPI),
-            fetchHistoricalData('^BVSP', '3mo'),
-            fetchHistoricalData('IVVB11', '3mo')
+            fetchIndexHistoricalData('^BVSP'),
+            fetchIndexHistoricalData('IVVB11')
         ]);
 
         if (!dadosAtivo || dadosAtivo.error || !dadosAtivo.results || dadosAtivo.results.length === 0) throw new Error(`Dados indisponíveis para ${ticker}`);
