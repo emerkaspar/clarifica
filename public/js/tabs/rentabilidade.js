@@ -142,40 +142,118 @@ async function renderConsolidatedDayValorization(summaryData, lancamentos) {
 /**
  * Renderiza os destaques do dia (maiores altas e baixas) para a carteira consolidada.
  */
+/**
+ * Busca os preços de fechamento do dia anterior para uma lista de tickers.
+ * Esta função é uma cópia da que existe nas outras abas para garantir consistência.
+ */
+async function fetchPreviousDayPrices(userID, tickers) {
+    if (!userID || !tickers || tickers.length === 0) return {};
+
+    try {
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const precosAnteriores = {};
+
+        // 1. Encontra a data do último registro de preço anterior a hoje
+        const qLastDate = query(
+            collection(db, "historicoPrecosDiario"),
+            where("userID", "==", userID),
+            where("data", "<", hojeStr),
+            orderBy("data", "desc"),
+            limit(1)
+        );
+
+        const lastDateSnapshot = await getDocs(qLastDate);
+        if (lastDateSnapshot.empty) {
+            console.warn("[Rentabilidade] Nenhum registro de preço de dias anteriores encontrado.");
+            return {};
+        }
+
+        const ultimoDia = lastDateSnapshot.docs[0].data().data;
+
+        // 2. Quebra a lista de tickers em pacotes de 10 (limite do Firestore)
+        const tickerChunks = [];
+        for (let i = 0; i < tickers.length; i += 10) {
+            tickerChunks.push(tickers.slice(i, i + 10));
+        }
+
+        // 3. Executa as consultas em paralelo
+        const promises = tickerChunks.map(chunk => {
+            const qPrices = query(
+                collection(db, "historicoPrecosDiario"),
+                where("userID", "==", userID),
+                where("data", "==", ultimoDia),
+                where("ticker", "in", chunk)
+            );
+            return getDocs(qPrices);
+        });
+
+        // 4. Junta os resultados
+        const snapshots = await Promise.all(promises);
+        snapshots.forEach(priceSnapshot => {
+            priceSnapshot.forEach(doc => {
+                const data = doc.data();
+                precosAnteriores[data.ticker] = data.valor;
+            });
+        });
+
+        return precosAnteriores;
+
+    } catch (error) {
+        console.error("[Rentabilidade] Erro ao buscar preços do dia anterior:", error);
+        return {};
+    }
+}
+
+
+/**
+ * Renderiza os destaques do dia (maiores altas e baixas) para a carteira consolidada.
+ * VERSÃO CORRIGIDA
+ */
 async function renderConsolidatedHighlights(lancamentos) {
     const dayContainer = document.getElementById("rentabilidade-highlights-day");
     if (!dayContainer) return;
     dayContainer.innerHTML = 'Calculando destaques...';
 
     try {
-        const tickers = [...new Set(lancamentos.filter(l => !['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo)).map(l => l.ativo))];
+        // 1. Filtra APENAS os tickers de Renda Variável que estão na carteira.
+        const tickers = [...new Set(
+            lancamentos
+                .filter(l => ['Ações', 'FIIs', 'ETF', 'Cripto'].includes(l.tipoAtivo))
+                .map(l => l.ativo)
+        )];
 
         if (tickers.length === 0) {
-            dayContainer.innerHTML = '';
+            dayContainer.innerHTML = ''; // Limpa se não houver ativos de RV
             return;
         }
 
-        const [precosAtuais, historicalResults] = await Promise.all([
+        // 2. Busca os preços de hoje (API) e de ontem (banco de dados) para esses tickers.
+        const [precosAtuais, precosOntem] = await Promise.all([
             fetchCurrentPrices(tickers),
-            Promise.all(tickers.map(ticker => fetchHistoricalData(ticker, '5d')))
+            fetchPreviousDayPrices(auth.currentUser.uid, tickers)
         ]);
 
         const dailyPerformance = [];
-        historicalResults.forEach((data, index) => {
-            const ticker = tickers[index];
-            if (data?.results?.[0]?.historicalDataPrice?.length >= 1 && precosAtuais[ticker]) {
-                const hoje = precosAtuais[ticker]?.price;
-                const ontem = data.results[0].historicalDataPrice[0].close;
-                if (hoje && ontem > 0) {
-                    dailyPerformance.push({ ticker, changePercent: ((hoje / ontem) - 1) * 100 });
-                }
+        tickers.forEach(ticker => {
+            const precoHoje = precosAtuais[ticker]?.price;
+            const precoAnterior = precosOntem[ticker];
+
+            // 3. Calcula a variação percentual apenas se ambos os preços existirem.
+            if (precoHoje && precoAnterior > 0) {
+                dailyPerformance.push({
+                    ticker,
+                    changePercent: ((precoHoje / precoAnterior) - 1) * 100
+                });
             }
         });
 
+        // 4. Ordena para encontrar a maior alta e a maior baixa.
         dailyPerformance.sort((a, b) => b.changePercent - a.changePercent);
 
         const createHtml = (item) => {
-            if (!item) return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+            if (!item || typeof item.changePercent !== 'number') {
+                return '<div class="highlight-item"><span class="ticker">-</span><span class="value">0.00%</span></div>';
+            }
             const isPositive = item.changePercent >= 0;
             return `
                 <div class="highlight-item">
@@ -188,9 +266,10 @@ async function renderConsolidatedHighlights(lancamentos) {
         const highestDay = dailyPerformance.length > 0 ? dailyPerformance[0] : null;
         const lowestDay = dailyPerformance.length > 1 ? dailyPerformance[dailyPerformance.length - 1] : null;
 
+        // 5. Renderiza o resultado.
         dayContainer.innerHTML = createHtml(highestDay) + createHtml(lowestDay);
     } catch (error) {
-        console.error("Erro ao calcular destaques do dia:", error);
+        console.error("Erro ao calcular destaques do dia consolidados:", error);
         dayContainer.innerHTML = '<p style="font-size: 0.8rem; color: #a0a7b3;">Não foi possível carregar os destaques.</p>';
     }
 }
