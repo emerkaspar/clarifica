@@ -2,6 +2,7 @@ import { fetchHistoricalData } from './api/brapi.js';
 import { db, auth } from './firebase-config.js';
 import { collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
+// --- VARIÁVEIS DE INSTÂNCIA DOS GRÁFICOS ---
 let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
@@ -10,10 +11,85 @@ let consolidatedPerformanceChart = null;
 let proventosPorAtivoBarChart = null;
 let dividendYieldChart = null;
 let isChartRendering = false;
-let proventosDetalheChart = null; // Variável para o novo gráfico de detalhes
-let acoesValorAtualChart = null; // Variável para o novo gráfico de Ações
-let fiisValorAtualChart = null; // Variável para o novo gráfico de FIIs
+let proventosDetalheChart = null;
+let acoesValorAtualChart = null;
+let fiisValorAtualChart = null;
 
+
+// --- FUNÇÕES AUXILIARES DE CORES E OPÇÕES ---
+
+/**
+ * Retorna as cores apropriadas para os gráficos com base no tema atual.
+ */
+const getThemeColors = () => {
+    const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+    return {
+        textColor: isLightTheme ? '#374151' : '#a0a7b3',
+        gridColor: isLightTheme ? '#e5e7eb' : '#2a2c30',
+        gridColorTransparent: isLightTheme ? 'rgba(229, 231, 235, 0)' : 'rgba(42, 44, 48, 0)',
+        tooltipBg: isLightTheme ? '#fff' : '#1A202C',
+        tooltipColor: isLightTheme ? '#1f2937' : '#E2E8F0',
+        borderColor: isLightTheme ? '#d1d5db' : '#3a404d',
+        mainBgColor: isLightTheme ? '#f9fafb' : '#161a22',
+        pieBorderColor: isLightTheme ? '#fff' : '#161a22',
+
+        // Cores principais
+        primary: '#00d9c3',
+        primaryTransparent: 'rgba(0, 217, 195, 0.7)',
+        primaryArea: isLightTheme ? 'rgba(0, 217, 195, 0.1)' : 'rgba(0, 217, 195, 0.1)',
+        secondary: '#5A67D8',
+        secondaryTransparent: 'rgba(90, 103, 216, 0.8)',
+        tertiary: '#ED64A6',
+        quaternary: '#ECC94B',
+        neutral: isLightTheme ? '#6b7280' : '#a0a7b3',
+        negative: '#ef4444',
+        negativeTransparent: 'rgba(239, 68, 68, 0.7)',
+        ibov: 'rgba(255, 51, 0, 1)',
+    };
+};
+
+/**
+ * Opções base para os gráficos de barra.
+ */
+const getBarChartOptions = (indexAxis = 'y') => {
+    const colors = getThemeColors();
+    return {
+        indexAxis,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: colors.tooltipBg,
+                titleColor: colors.tooltipColor,
+                bodyColor: colors.tooltipColor,
+                callbacks: {
+                    label: function (context) {
+                        const value = indexAxis === 'y' ? context.parsed.x : context.parsed.y;
+                        return ` Valor: ${value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                grid: { color: indexAxis === 'y' ? colors.gridColor : colors.gridColorTransparent },
+                ticks: {
+                    color: colors.textColor,
+                    callback: function (value) {
+                        if (value >= 1000) return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
+                        return "R$ " + value.toLocaleString('pt-BR');
+                    }
+                }
+            },
+            y: {
+                grid: { color: indexAxis === 'x' ? colors.gridColor : colors.gridColorTransparent },
+                ticks: { color: colors.textColor }
+            }
+        }
+    };
+};
 
 /**
  * Renderiza o gráfico de detalhes de proventos de um mês/ano específico em um modal.
@@ -41,6 +117,7 @@ export function renderProventosDetalheChart(proventosDoPeriodo, title) {
     const sortedData = Object.entries(porAtivo).sort(([, a], [, b]) => b - a);
     const labels = sortedData.map(item => item[0]);
     const data = sortedData.map(item => item[1]);
+    const colors = getThemeColors();
 
     proventosDetalheChart = new Chart(canvas, {
         type: 'bar',
@@ -49,44 +126,13 @@ export function renderProventosDetalheChart(proventosDoPeriodo, title) {
             datasets: [{
                 label: 'Recebido (R$)',
                 data: data,
-                backgroundColor: 'rgba(0, 217, 195, 0.7)',
-                borderColor: '#00d9c3',
+                backgroundColor: colors.primaryTransparent,
+                borderColor: colors.primary,
                 borderWidth: 1,
                 borderRadius: 4
             }]
         },
-        options: {
-            indexAxis: 'y', // Gráfico de barras horizontal
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const value = context.parsed.x;
-                            return ' Recebido: ' + value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: { color: "#2a2c30" },
-                    ticks: {
-                        color: "#a0a7b3",
-                        callback: function (value) {
-                            return value.toLocaleString("pt-BR", { style: 'currency', currency: 'BRL' });
-                        }
-                    }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: { color: "#a0a7b3" }
-                }
-            }
-        }
+        options: getBarChartOptions('y')
     });
 
     const modal = document.getElementById("proventos-detalhe-modal");
@@ -94,6 +140,7 @@ export function renderProventosDetalheChart(proventosDoPeriodo, title) {
         modal.classList.add("show");
     }
 }
+
 
 /**
  * Renderiza o novo gráfico de barras com o valor atual por ativo na aba de Ações.
@@ -114,6 +161,19 @@ export function renderAcoesValorAtualChart(chartData) {
     const labels = chartData.map(item => item.ticker);
     const data = chartData.map(item => item.valorAtual);
     const percentages = chartData.map(item => item.percentual);
+    const colors = getThemeColors();
+
+    const options = getBarChartOptions('y');
+    options.plugins.tooltip.callbacks = {
+        label: function (context) {
+            const index = context.dataIndex;
+            const value = context.parsed.x;
+            const percent = percentages[index];
+            let label = ` ${context.dataset.label || ''}: ${value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} (${percent.toFixed(2)}%)`;
+            return label;
+        }
+    };
+
 
     acoesValorAtualChart = new Chart(canvas, {
         type: 'bar',
@@ -122,61 +182,13 @@ export function renderAcoesValorAtualChart(chartData) {
             datasets: [{
                 label: 'Valor Atual (R$)',
                 data: data,
-                backgroundColor: 'rgba(0, 217, 195, 0.7)',
-                borderColor: '#00d9c3',
+                backgroundColor: colors.primaryTransparent,
+                borderColor: colors.primary,
                 borderWidth: 1,
                 borderRadius: 4,
             }]
         },
-        options: {
-            indexAxis: 'y', // Gráfico de barras horizontal
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const index = context.dataIndex;
-                            const value = context.parsed.x;
-                            const percent = percentages[index];
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (value !== null) {
-                                label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                            }
-                            label += ` (${percent.toFixed(2)}%)`;
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: { color: "#2a2c30" },
-                    ticks: {
-                        color: "#a0a7b3",
-                        callback: function (value) {
-                            if (value >= 1000) {
-                                return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
-                            }
-                            return "R$ " + value.toLocaleString('pt-BR');
-                        }
-                    }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: {
-                        color: "#a0a7b3"
-                    }
-                }
-            }
-        }
+        options: options
     });
 }
 
@@ -199,6 +211,19 @@ export function renderFiisValorAtualChart(chartData) {
     const labels = chartData.map(item => item.ticker);
     const data = chartData.map(item => item.valorAtual);
     const percentages = chartData.map(item => item.percentual);
+    const colors = getThemeColors();
+
+    const options = getBarChartOptions('y');
+    options.plugins.tooltip.callbacks = {
+        label: function (context) {
+            const index = context.dataIndex;
+            const value = context.parsed.x;
+            const percent = percentages[index];
+            let label = ` ${context.dataset.label || ''}: ${value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} (${percent.toFixed(2)}%)`;
+            return label;
+        }
+    };
+
 
     fiisValorAtualChart = new Chart(canvas, {
         type: 'bar',
@@ -207,94 +232,38 @@ export function renderFiisValorAtualChart(chartData) {
             datasets: [{
                 label: 'Valor Atual (R$)',
                 data: data,
-                backgroundColor: 'rgba(90, 103, 216, 0.8)',
-                borderColor: '#5A67D8',
+                backgroundColor: colors.secondaryTransparent,
+                borderColor: colors.secondary,
                 borderWidth: 1,
                 borderRadius: 4,
             }]
         },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const index = context.dataIndex;
-                            const value = context.parsed.x;
-                            const percent = percentages[index];
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (value !== null) {
-                                label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                            }
-                            label += ` (${percent.toFixed(2)}%)`;
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: { color: "#2a2c30" },
-                    ticks: {
-                        color: "#a0a7b3",
-                        callback: function (value) {
-                            if (value >= 1000) {
-                                return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
-                            }
-                            return "R$ " + value.toLocaleString('pt-BR');
-                        }
-                    }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: {
-                        color: "#a0a7b3"
-                    }
-                }
-            }
-        }
+        options: options
     });
 }
 
-
-// ... (O restante das funções de renderMovimentacaoChart e renderPieCharts permanece igual)
 export function renderMovimentacaoChart(lancamentos) {
     const chartCanvas = document.getElementById("movimentacao-chart");
     if (!chartCanvas || typeof Chart === "undefined") return;
+
+    const colors = getThemeColors();
     const last6MonthsData = {};
     const labels = [];
     const dataAtual = new Date();
     dataAtual.setDate(1);
+
     for (let i = 5; i >= 0; i--) {
-        const date = new Date(
-            dataAtual.getFullYear(),
-            dataAtual.getMonth() - i,
-            1
-        );
-        const monthYearKey = `${date.getFullYear()}-${String(
-            date.getMonth() + 1
-        ).padStart(2, "0")}`;
-        labels.push(
-            date.toLocaleString("pt-BR", { month: "short", year: "2-digit" })
-        );
+        const date = new Date(dataAtual.getFullYear(), dataAtual.getMonth() - i, 1);
+        const monthYearKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        labels.push(date.toLocaleString("pt-BR", { month: "short", year: "2-digit" }));
         last6MonthsData[monthYearKey] = { compra: 0, venda: 0 };
     }
+
     const minDateKey = Object.keys(last6MonthsData)[0];
     lancamentos.forEach((l) => {
         const [year, month, day] = l.data.split("-").map(Number);
         const dataOp = new Date(year, month - 1, day);
-        const monthYearKey = `${dataOp.getFullYear()}-${String(
-            dataOp.getMonth() + 1
-        ).padStart(2, "0")}`;
+        const monthYearKey = `${dataOp.getFullYear()}-${String(dataOp.getMonth() + 1).padStart(2, "0")}`;
         if (monthYearKey >= minDateKey) {
             const valor = l.valorTotal || 0;
             if (l.tipoOperacao === "compra" && last6MonthsData[monthYearKey]) {
@@ -304,29 +273,32 @@ export function renderMovimentacaoChart(lancamentos) {
             }
         }
     });
+
     const compras = Object.values(last6MonthsData).map((data) => data.compra);
     const vendas = Object.values(last6MonthsData).map((data) => data.venda);
+
     const data = {
         labels: labels,
         datasets: [
             {
                 label: "Compras (R$)",
                 data: compras,
-                backgroundColor: "rgba(0, 217, 195, 0.7)",
-                borderColor: "#00d9c3",
+                backgroundColor: colors.primaryTransparent,
+                borderColor: colors.primary,
                 borderWidth: 1,
                 borderRadius: 6,
             },
             {
                 label: "Vendas (R$)",
                 data: vendas,
-                backgroundColor: "rgba(245, 101, 101, 0.7)",
-                borderColor: "#F56565",
+                backgroundColor: colors.negativeTransparent,
+                borderColor: colors.negative,
                 borderWidth: 1,
                 borderRadius: 6,
             },
         ],
     };
+
     if (movimentacaoChart) movimentacaoChart.destroy();
     movimentacaoChart = new Chart(chartCanvas, {
         type: "bar",
@@ -334,15 +306,49 @@ export function renderMovimentacaoChart(lancamentos) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: { x: { grid: { display: false }, ticks: { color: "#a0a7b3" } }, y: { grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: function (value) { if (value >= 1000) { return "R$ " + value / 1000 + "k" } return "R$ " + value } } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: colors.textColor } },
+                y: {
+                    grid: { color: colors.gridColor },
+                    ticks: {
+                        color: colors.textColor,
+                        callback: function (value) {
+                            if (value >= 1000) return "R$ " + value / 1000 + "k";
+                            return "R$ " + value;
+                        }
+                    }
+                }
+            },
             plugins: {
-                legend: { position: "top", align: "end", labels: { color: "#a0a7b3", usePointStyle: true, boxWidth: 8 } },
-                tooltip: { backgroundColor: "#1A202C", titleColor: "#E2E8F0", bodyColor: "#E2E8F0", padding: 12, cornerRadius: 6, borderColor: "rgba(255, 255, 255, 0.1)", borderWidth: 1, callbacks: { label: function (context) { let label = context.dataset.label || ""; if (label) { label += ": " } const value = context.parsed.y; if (value !== null) { label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) } return label } } },
+                legend: { position: "top", align: "end", labels: { color: colors.textColor, usePointStyle: true, boxWidth: 8 } },
+                tooltip: {
+                    backgroundColor: colors.tooltipBg,
+                    titleColor: colors.tooltipColor,
+                    bodyColor: colors.tooltipColor,
+                    padding: 12,
+                    cornerRadius: 6,
+                    borderColor: "rgba(255, 255, 255, 0.1)",
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function (context) {
+                            let label = context.dataset.label || "";
+                            if (label) { label += ": " }
+                            const value = context.parsed.y;
+                            if (value !== null) {
+                                label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                            }
+                            return label;
+                        }
+                    }
+                },
             },
         },
     });
 };
+
 export function renderPieCharts(proventos) {
+    const colors = getThemeColors();
+
     if (proventosPorAtivoChart) {
         proventosPorAtivoChart.destroy();
         proventosPorAtivoChart = null;
@@ -353,32 +359,45 @@ export function renderPieCharts(proventos) {
         const sortedAtivos = Object.entries(porAtivo).sort((a, b) => b[1] - a[1]).slice(0, 7);
         const labelsAtivo = sortedAtivos.map((item) => item[0]);
         const dataAtivo = sortedAtivos.map((item) => item[1]);
-        const modernColors = ["#00d9c3", "#5A67D8", "#ED64A6", "#F56565", "#ECC94B", "#4299E1", "#9F7AEA"];
+        const modernColors = [colors.primary, colors.secondary, colors.tertiary, colors.negative, colors.quaternary, "#4299E1", "#9F7AEA"];
         proventosPorAtivoChart = new Chart(ctxAtivo, {
             type: "doughnut",
-            data: { labels: labelsAtivo, datasets: [{ data: dataAtivo, backgroundColor: modernColors, borderWidth: 2, borderColor: "#1a1b1e", borderRadius: 5 }] },
+            data: { labels: labelsAtivo, datasets: [{ data: dataAtivo, backgroundColor: modernColors, borderWidth: 2, borderColor: colors.pieBorderColor, borderRadius: 5 }] },
             options: {
                 responsive: true, maintainAspectRatio: false, cutout: "70%", hoverOffset: 12,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { backgroundColor: "#1A202C", titleColor: "#E2E8F0", bodyColor: "#E2E8F0", padding: 12, cornerRadius: 6, borderColor: "rgba(255, 255, 255, 0.1)", borderWidth: 1, callbacks: { label: function (context) { const label = context.label || ""; const value = context.raw || 0; const total = context.chart.getDatasetMeta(0).total || 1; const percentage = ((value / total) * 100).toFixed(1); return `${label}: ${percentage}%` } } },
+                    tooltip: {
+                        backgroundColor: colors.tooltipBg, titleColor: colors.tooltipColor, bodyColor: colors.tooltipColor, padding: 12, cornerRadius: 6, borderColor: "rgba(255, 255, 255, 0.1)", borderWidth: 1,
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.label || "";
+                                const value = context.raw || 0;
+                                const total = context.chart.getDatasetMeta(0).total || 1;
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${percentage}%`;
+                            }
+                        }
+                    },
                 },
             },
         });
     }
+
     const tipoContainer = document.getElementById("dist-por-tipo-container");
     if (tipoContainer) {
         const totalProventos = proventos.reduce((acc, p) => acc + p.valor, 0);
         const porTipo = proventos.reduce((acc, p) => { const tipo = p.tipoAtivo === "Ações" || p.tipoAtivo === "FIIs" ? p.tipoAtivo : "Outros"; acc[tipo] = (acc[tipo] || 0) + p.valor; return acc }, {});
         let tipoHtml = "";
         Object.entries(porTipo).forEach(([label, value]) => { const percentage = totalProventos > 0 ? (value / totalProventos) * 100 : 0; tipoHtml += ` <div class="dist-item"> <div class="dist-label"> <span>${label}</span> <span>${percentage.toFixed(1)}%</span> </div> <div class="dist-bar-bg"> <div class="dist-bar-fill" style="width: ${percentage}%;"></div> </div> </div> ` });
-        tipoContainer.innerHTML = tipoHtml || '<p style="font-size: 0.8rem; color: #a0a7b3;">Sem dados.</p>';
+        tipoContainer.innerHTML = tipoHtml || `<p style="font-size: 0.8rem; color: #a0a7b3;">Sem dados.</p>`;
     }
 }
 
 export function renderEvolutionChart(proventos) {
     const ctx = document.getElementById("proventos-evolucao-chart");
     if (!ctx) return;
+    const colors = getThemeColors();
     const intervalo = document.querySelector("#intervalo-filter-group .active").dataset.intervalo;
     const periodo = document.getElementById("periodo-filter").value;
     const tipoAtivo = document.getElementById("tipo-ativo-filter").value;
@@ -397,10 +416,11 @@ export function renderEvolutionChart(proventos) {
     const sortedKeys = Object.keys(aggregatedData).sort();
     const labels = sortedKeys.map((key) => { if (intervalo === "Mensal") { const [year, month] = key.split("-"); return new Date(year, month - 1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }) } return key });
     const data = sortedKeys.map((key) => aggregatedData[key]);
+
     if (proventosEvolucaoChart) proventosEvolucaoChart.destroy();
     proventosEvolucaoChart = new Chart(ctx, {
         type: "bar",
-        data: { labels: labels, datasets: [{ label: "Proventos Recebidos", data: data, backgroundColor: "#00d9c3", borderRadius: 4 }] },
+        data: { labels: labels, datasets: [{ label: "Proventos Recebidos", data: data, backgroundColor: colors.primary, borderRadius: 4 }] },
         options: {
             responsive: true, maintainAspectRatio: false,
             onClick: (event, elements) => {
@@ -408,9 +428,7 @@ export function renderEvolutionChart(proventos) {
                     const index = elements[0].index;
                     const key = sortedKeys[index];
                     const displayLabel = labels[index];
-
                     let proventosDoPeriodo;
-
                     if (intervalo === "Mensal") {
                         const [year, month] = key.split('-').map(Number);
                         proventosDoPeriodo = proventosFiltrados.filter(p => {
@@ -427,12 +445,24 @@ export function renderEvolutionChart(proventos) {
                     renderProventosDetalheChart(proventosDoPeriodo, displayLabel);
                 }
             },
-            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (context) { let label = context.dataset.label || ""; if (label) { label += ": " } const value = context.parsed.y; if (value !== null) { label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) } return label } } } },
-            scales: { y: { beginAtZero: true, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: function (value) { return "R$ " + value.toLocaleString("pt-BR") } } }, x: { grid: { display: false }, ticks: { color: "#a0a7b3" } } },
+            plugins: {
+                legend: { display: false }, tooltip: {
+                    backgroundColor: colors.tooltipBg, titleColor: colors.tooltipColor, bodyColor: colors.tooltipColor,
+                    callbacks: {
+                        label: function (context) {
+                            let label = context.dataset.label || ""; if (label) { label += ": " } const value = context.parsed.y; if (value !== null) { label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) } return label
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: colors.gridColor }, ticks: { color: colors.textColor, callback: function (value) { return "R$ " + value.toLocaleString("pt-BR") } } },
+                x: { grid: { display: false }, ticks: { color: colors.textColor } }
+            },
         },
     });
 }
-// ... (O restante do arquivo, a partir de renderPerformanceChart, permanece igual)
+
 export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProventosData) {
     if (performanceChart) { performanceChart.destroy(); performanceChart = null }
     const container = document.getElementById('ativo-detalhes-performance');
@@ -445,7 +475,9 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
     if (!canvas) { container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Erro interno: Não foi possível criar o elemento do gráfico.</p>`; return }
     const ctx = canvas.getContext('2d');
     if (lancamentosDoAtivo.length === 0) { container.innerHTML = '<p style="color: #a0a7b3; text-align: center;">Sem lançamentos para gerar gráfico de performance.</p>'; return }
+
     try {
+        const colors = getThemeColors();
         const lancamentosOrdenados = [...lancamentosDoAtivo].sort((a, b) => new Date(a.data) - new Date(b.data));
         const dataInicio = lancamentosOrdenados[0].data;
         const hojeDate = new Date();
@@ -511,12 +543,27 @@ export async function renderPerformanceChart(ticker, lancamentosDoAtivo, allProv
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{ label: `Performance ${ticker}`, data: dataCarteiraNormalizada, borderColor: '#00d9c3', backgroundColor: 'rgba(0, 217, 195, 0.1)', fill: true, tension: 0.2, pointRadius: 0 }, { label: 'CDI', data: dataCDI, borderColor: '#a0a7b3', borderDash: [5, 5], backgroundColor: 'transparent', fill: false, tension: 0.2, pointRadius: 0 }, { label: 'IBOV', data: dataIBOV, borderColor: '#ECC94B', backgroundColor: 'transparent', fill: false, tension: 0.2, pointRadius: 0 }, { label: 'IVVB11', data: dataIVVB11, borderColor: '#5A67D8', backgroundColor: 'transparent', fill: false, tension: 0.2, pointRadius: 0 }]
+                datasets: [
+                    { label: `Performance ${ticker}`, data: dataCarteiraNormalizada, borderColor: colors.primary, backgroundColor: colors.primaryArea, fill: true, tension: 0.2, pointRadius: 0 },
+                    { label: 'CDI', data: dataCDI, borderColor: colors.neutral, borderDash: [5, 5], backgroundColor: 'transparent', fill: false, tension: 0.2, pointRadius: 0 },
+                    { label: 'IBOV', data: dataIBOV, borderColor: colors.quaternary, backgroundColor: 'transparent', fill: false, tension: 0.2, pointRadius: 0 },
+                    { label: 'IVVB11', data: dataIVVB11, borderColor: colors.secondary, backgroundColor: 'transparent', fill: false, tension: 0.2, pointRadius: 0 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                scales: { y: { ticks: { color: '#a0a7b3', callback: function (value) { return value.toFixed(1) + '%' } }, grid: { color: '#2a2c30' } }, x: { type: 'time', time: { unit: 'month' }, ticks: { color: '#a0a7b3' }, grid: { display: false } } },
-                plugins: { tooltip: { mode: 'index', intersect: false, callbacks: { label: function (context) { let label = context.dataset.label || ''; if (label) { label += ': ' } if (context.parsed.y !== null) { label += context.parsed.y.toFixed(2) + '%' } return label } } }, legend: { labels: { color: '#a0a7b3' } } }
+                scales: {
+                    y: { ticks: { color: colors.textColor, callback: function (value) { return value.toFixed(1) + '%' } }, grid: { color: colors.gridColor } },
+                    x: { type: 'time', time: { unit: 'month' }, ticks: { color: colors.textColor }, grid: { display: false } }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index', intersect: false, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipColor, bodyColor: colors.tooltipColor,
+                        callbacks: {
+                            label: function (context) { let label = context.dataset.label || ''; if (label) { label += ': ' } if (context.parsed.y !== null) { label += context.parsed.y.toFixed(2) + '%' } return label }
+                        }
+                    },
+                    legend: { labels: { color: colors.textColor } }
+                }
             }
         });
     } catch (error) { console.error("Erro ao buscar dados para o gráfico de performance:", error); container.innerHTML = `<p style="color: #a0a7b3; text-align: center;">Não foi possível carregar os dados de performance.<br><small>${error.message}</small></p>` }
@@ -661,6 +708,7 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
             consolidatedPerformanceChart.destroy();
             consolidatedPerformanceChart = null;
         }
+        const colors = getThemeColors();
 
         const endDate = new Date();
         const startDate = new Date();
@@ -679,17 +727,17 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
         const chartData = processAndCalculatePerformance(rawData, startDate, endDate);
 
         const datasets = [
-            { label: 'Carteira', data: chartData.carteira, borderColor: '#00d9c3', tension: 0.1, pointRadius: 0, borderWidth: 2.5 },
-            { label: 'CDI', data: chartData.cdi, borderColor: '#a0a7b3', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] },
-            { label: 'IPCA', data: chartData.ipca, borderColor: '#ED64A6', tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] }
+            { label: 'Carteira', data: chartData.carteira, borderColor: colors.primary, tension: 0.1, pointRadius: 0, borderWidth: 2.5 },
+            { label: 'CDI', data: chartData.cdi, borderColor: colors.neutral, tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] },
+            { label: 'IPCA', data: chartData.ipca, borderColor: colors.tertiary, tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 5] }
         ];
 
         if (mainIndex === 'IBOV') {
-            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: 'rgba(255, 51, 0, 1)', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
-            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: colors.ibov, tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: colors.secondary, tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
         } else {
-            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: 'rgba(255, 51, 0, 1)', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
-            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: '#5A67D8', tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+            datasets.push({ label: 'IBOV', data: chartData.ibov, borderColor: colors.ibov, tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
+            datasets.push({ label: 'IVVB11', data: chartData.ivvb11, borderColor: colors.secondary, tension: 0.1, pointRadius: 0, borderWidth: 1.5 });
         }
 
         consolidatedPerformanceChart = new Chart(canvas, {
@@ -706,8 +754,9 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
                     intersect: false,
                 },
                 plugins: {
-                    legend: { position: 'top', align: 'center', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8, padding: 20 } },
+                    legend: { position: 'top', align: 'center', labels: { color: colors.textColor, usePointStyle: true, boxWidth: 8, padding: 20 } },
                     tooltip: {
+                        backgroundColor: colors.tooltipBg, titleColor: colors.tooltipColor, bodyColor: colors.tooltipColor,
                         callbacks: {
                             label: (context) => {
                                 const value = context.parsed.y;
@@ -718,8 +767,8 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
                     }
                 },
                 scales: {
-                    y: { ticks: { color: '#a0a7b3', callback: value => value.toFixed(1) + '%' }, grid: { color: '#2a2c30' } },
-                    x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd/MM/yy', displayFormats: { day: 'dd/MM' } }, ticks: { color: '#a0a7b3', major: { enabled: true } }, grid: { display: false } }
+                    y: { ticks: { color: colors.textColor, callback: value => value.toFixed(1) + '%' }, grid: { color: colors.gridColor } },
+                    x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd/MM/yy', displayFormats: { day: 'dd/MM' } }, ticks: { color: colors.textColor, major: { enabled: true } }, grid: { display: false } }
                 }
             }
         });
@@ -737,6 +786,7 @@ export async function renderConsolidatedPerformanceChart(period = '6m', mainInde
 export function renderProventosPorAtivoBarChart(proventos) {
     const canvas = document.getElementById("proventos-por-ativo-bar-chart");
     if (!canvas) return;
+    const colors = getThemeColors();
 
     if (proventosPorAtivoBarChart) {
         proventosPorAtivoBarChart.destroy();
@@ -759,46 +809,13 @@ export function renderProventosPorAtivoBarChart(proventos) {
             datasets: [{
                 label: 'Total Recebido (R$)',
                 data: data,
-                backgroundColor: 'rgba(0, 217, 195, 0.7)',
-                borderColor: '#00d9c3',
+                backgroundColor: colors.primaryTransparent,
+                borderColor: colors.primary,
                 borderWidth: 1,
                 borderRadius: 4
             }]
         },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const value = context.parsed.x;
-                            return ' Total: ' + value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: { color: "#2a2c30" },
-                    ticks: {
-                        color: "#a0a7b3",
-                        callback: function (value) {
-                            return "R$ " + value.toLocaleString("pt-BR");
-                        }
-                    }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: { color: "#a0a7b3" }
-                }
-            }
-        }
+        options: getBarChartOptions('y')
     });
 }
 
@@ -812,6 +829,8 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
     if (dividendYieldChart) {
         dividendYieldChart.destroy();
     }
+    const themeColors = getThemeColors();
+
 
     // --- LÓGICA DE CÁLCULO ---
     const periodo = document.getElementById('dy-periodo-filter').value;
@@ -888,7 +907,7 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
             ctx.save();
 
             ctx.font = '500 11px "Open Sans"';
-            ctx.fillStyle = '#e0e0e0';
+            ctx.fillStyle = themeColors.textColor;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
 
@@ -928,10 +947,12 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: themeColors.tooltipBg,
+                    titleColor: themeColors.tooltipColor,
+                    bodyColor: themeColors.tooltipColor,
                     callbacks: {
                         title: (context) => context[0].label,
                         label: (context) => {
-                            // CORREÇÃO APLICADA AQUI
                             const dataIndex = context.dataIndex;
                             if (dyData[dataIndex]) {
                                 const item = dyData[dataIndex];
@@ -940,7 +961,6 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
                             return '';
                         },
                         afterBody: (context) => {
-                            // E AQUI
                             if (!context || context.length === 0) return '';
                             const dataIndex = context[0].dataIndex;
                             if (dyData[dataIndex]) {
@@ -958,12 +978,12 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
             scales: {
                 x: {
                     beginAtZero: true,
-                    grid: { color: "#2a2c30" },
-                    ticks: { color: "#a0a7b3", callback: (value) => value.toFixed(1) + '%' }
+                    grid: { color: themeColors.gridColor },
+                    ticks: { color: themeColors.textColor, callback: (value) => value.toFixed(1) + '%' }
                 },
                 y: {
                     grid: { display: false },
-                    ticks: { color: "#a0a7b3" }
+                    ticks: { color: themeColors.textColor }
                 }
             }
         },

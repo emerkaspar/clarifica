@@ -36,8 +36,25 @@ const setupUserDropdown = () => {
     });
 };
 
+// Lógica para Troca de Tema
+const setupThemeToggler = () => {
+    const themeToggleButton = document.getElementById('theme-toggle-btn');
+    if (!themeToggleButton) return;
+
+    themeToggleButton.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+
+        // Dispara um evento para que os gráficos possam se redesenhar
+        document.dispatchEvent(new Event('themeChanged'));
+    });
+};
+
 // Função principal que inicializa os componentes de UI
 export function initializeUI() {
     setupTabs();
     setupUserDropdown();
+    setupThemeToggler();
 }

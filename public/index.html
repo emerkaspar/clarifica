@@ -25,6 +25,13 @@
     <script src="js/chartjs-adapter-luxon.min.js"></script>
 
     <link rel="stylesheet" href="css/style.css" />
+    <script>
+      // Aplica o tema salvo antes de a página carregar para evitar "flash"
+      (function() {
+        const theme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
   </head>
   <body>
     <div class="container">
@@ -134,6 +141,10 @@
         </nav>
 
         <div class="top-menu-right">
+           <button id="theme-toggle-btn" class="theme-toggle-btn">
+              <i class="fas fa-sun"></i>
+              <i class="fas fa-moon"></i>
+            </button>
           <button id="btn-header-login-google">
             <i class="fab fa-google"></i> Fazer Login
           </button>
