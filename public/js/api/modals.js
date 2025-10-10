@@ -773,11 +773,15 @@ function setupUploadCsvModal(userID) {
             return;
         }
 
-        if (file.type !== "text/csv") {
-            validationMessageDiv.textContent = "Formato de arquivo inválido. Por favor, envie um arquivo CSV.";
-            validationMessageDiv.style.display = 'block';
-            return;
-        }
+       
+const isCsvType = file.type === "text/csv";
+const isCsvExtension = file.name.toLowerCase().endsWith('.csv');
+
+if (!isCsvType && !isCsvExtension) {
+    validationMessageDiv.textContent = "Formato de arquivo inválido. Por favor, envie um arquivo CSV.";
+    validationMessageDiv.style.display = 'block';
+    return;
+}
 
         const reader = new FileReader();
         reader.onload = async function (event) {
