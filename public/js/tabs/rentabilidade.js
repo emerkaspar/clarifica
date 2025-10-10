@@ -98,8 +98,31 @@ async function renderConsolidatedDayValorization(summaryData, lancamentos) {
         }
 
         const patrimonioHoje = summaryData.patrimonioTotal;
-        const variacaoReais = patrimonioHoje - patrimonioAnterior;
-        const variacaoPercent = (variacaoReais / patrimonioAnterior) * 100;
+
+        // --- INÍCIO DA LÓGICA CORRIGIDA ---
+        const hojeStr = new Date().toISOString().split('T')[0];
+        let aportesDoDia = 0;
+        let vendasDoDia = 0;
+
+        const lancamentosDeHoje = lancamentos.filter(l => l.data === hojeStr);
+        lancamentosDeHoje.forEach(l => {
+            const valorOp = l.valorTotal || l.valorAplicado || 0;
+            if (l.tipoOperacao === 'compra') {
+                aportesDoDia += valorOp;
+            } else if (l.tipoOperacao === 'venda') {
+                vendasDoDia += valorOp;
+            }
+        });
+
+        // Ajusta a variação para descontar as operações do dia
+        const variacaoBruta = patrimonioHoje - patrimonioAnterior;
+        const variacaoReais = variacaoBruta - aportesDoDia + vendasDoDia;
+        // --- FIM DA LÓGICA CORRIGIDA ---
+
+        // O patrimônio base para o cálculo percentual também precisa ser ajustado
+        const patrimonioBasePercentual = patrimonioAnterior;
+        const variacaoPercent = (patrimonioBasePercentual > 0) ? (variacaoReais / patrimonioBasePercentual) * 100 : 0;
+
 
         const isPositive = variacaoReais >= 0;
         valorizationReaisDiv.textContent = `${isPositive ? '+' : ''}${variacaoReais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
