@@ -592,7 +592,22 @@
                     </div>
                   </div>
                 </div>
-                <div class="content-header">
+                <div class="content-container" style="max-width: none">
+    <div class="valorization-header">
+      </div>
+
+    <div class="performance-box" style="margin-bottom: 20px;">
+      <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
+        Posição por Ativo
+      </h3>
+      <div class="performance-chart-container" style="height: 400px;">
+        <canvas id="acoes-valor-atual-chart"></canvas>
+      </div>
+    </div>
+
+
+                <div class="content-header">            
+                  
                   <h3>Carteira de Ações</h3>
                   <button id="btn-novo-lancamento-acao" class="btn-adicionar">
                     <i class="fas fa-plus"></i> Novo Lançamento
@@ -603,6 +618,7 @@
                 </div>
               </div>
             </div>
+            
             <div class="tab-pane" id="fiis">
               <div class="content-container" style="max-width: none">
                 <div class="valorization-header">

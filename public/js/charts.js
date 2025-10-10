@@ -11,6 +11,8 @@ let proventosPorAtivoBarChart = null;
 let dividendYieldChart = null;
 let isChartRendering = false;
 let proventosDetalheChart = null; // Variável para o novo gráfico de detalhes
+let acoesValorAtualChart = null; // Variável para o novo gráfico de Ações
+
 
 /**
  * Renderiza o gráfico de detalhes de proventos de um mês/ano específico em um modal.
@@ -90,6 +92,91 @@ export function renderProventosDetalheChart(proventosDoPeriodo, title) {
     if (modal) {
         modal.classList.add("show");
     }
+}
+
+/**
+ * Renderiza o novo gráfico de barras com o valor atual por ativo na aba de Ações.
+ * @param {Array<object>} chartData - Os dados dos ativos a serem exibidos.
+ */
+export function renderAcoesValorAtualChart(chartData) {
+    const canvas = document.getElementById('acoes-valor-atual-chart');
+    if (!canvas) return;
+
+    if (acoesValorAtualChart) {
+        acoesValorAtualChart.destroy();
+    }
+
+    if (!chartData || chartData.length === 0) {
+        return; // Não renderiza nada se não houver dados
+    }
+
+    const labels = chartData.map(item => item.ticker);
+    const data = chartData.map(item => item.valorAtual);
+    const percentages = chartData.map(item => item.percentual);
+
+    acoesValorAtualChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Valor Atual (R$)',
+                data: data,
+                backgroundColor: 'rgba(0, 217, 195, 0.7)',
+                borderColor: '#00d9c3',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Gráfico de barras horizontal
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const index = context.dataIndex;
+                            const value = context.parsed.x;
+                            const percent = percentages[index];
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (value !== null) {
+                                label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                            }
+                            label += ` (${percent.toFixed(2)}%)`;
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: { color: "#2a2c30" },
+                    ticks: {
+                        color: "#a0a7b3",
+                        callback: function (value) {
+                            if (value >= 1000) {
+                                return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
+                            }
+                            return "R$ " + value.toLocaleString('pt-BR');
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        color: "#a0a7b3"
+                    }
+                }
+            }
+        }
+    });
 }
 
 

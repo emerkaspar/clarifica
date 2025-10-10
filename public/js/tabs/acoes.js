@@ -1,6 +1,7 @@
 import { fetchCurrentPrices, fetchHistoricalData } from '../api/brapi.js';
 import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { renderAcoesValorAtualChart } from '../charts.js';
 
 /**
  * Busca os preços de fechamento do dia anterior para uma lista de tickers,
@@ -247,6 +248,7 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
         document.getElementById("acoes-valorizacao-percent").textContent = "0,00%";
         document.getElementById("acoes-rentabilidade-percent").textContent = "0,00%";
         renderAcoesHighlights([], []);
+        renderAcoesValorAtualChart([]); // Limpa o gráfico
         return;
     }
 
@@ -283,6 +285,7 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
     if (tickers.length === 0) {
         acoesListaDiv.innerHTML = `<p>Nenhuma Ação com posição em carteira.</p>`;
         renderAcoesHighlights([], []);
+        renderAcoesValorAtualChart([]); // Limpa o gráfico
         return;
     }
 
@@ -294,6 +297,9 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
         const historicalPerformance = [];
 
         renderAcoesSummary(carteira, precosAtuais);
+
+        let patrimonioTotalAcoes = 0;
+        const chartData = [];
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
@@ -311,6 +317,9 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
             const precoMedio = ativo.quantidadeComprada > 0 ? ativo.valorTotalInvestido / ativo.quantidadeComprada : 0;
             const valorPosicaoAtual = precoAtual * ativo.quantidade;
             const valorInvestido = precoMedio * ativo.quantidade;
+
+            patrimonioTotalAcoes += valorPosicaoAtual;
+            chartData.push({ ticker, valorAtual: valorPosicaoAtual });
 
             const variacaoReais = valorPosicaoAtual - valorInvestido;
             const variacaoPercent = valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0;
@@ -381,6 +390,14 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
 
         acoesListaDiv.innerHTML = html;
         renderAcoesHighlights(dailyPerformance, historicalPerformance);
+
+        // Prepara os dados para o novo gráfico e renderiza
+        const chartDataFinal = chartData.map(item => ({
+            ...item,
+            percentual: patrimonioTotalAcoes > 0 ? (item.valorAtual / patrimonioTotalAcoes) * 100 : 0
+        })).sort((a, b) => b.valorAtual - a.valorAtual);
+
+        renderAcoesValorAtualChart(chartDataFinal);
 
     } catch (error) {
         console.error("Erro ao renderizar carteira de Ações:", error);
