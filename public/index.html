@@ -1340,6 +1340,110 @@
                   </div>
                 </div>
 
+                <div class="content-header" style="margin-top: 40px;">
+                  <h3>Valuation por Fluxo de Caixa Descontado (Simplificado)</h3>
+                </div>
+                <div class="calculator-card dcf-calculator-simplified">
+                    <form id="dcf-form-simplified">
+                        <div class="dcf-simplified-grid">
+                            <div class="dcf-section">
+                                <h4 class="dcf-section-title">Dados da Empresa</h4>
+                                <div class="form-group-with-hint">
+                                    <label for="dcf-ticker" class="form-label">Ticker da Ação</label>
+                                    <input type="text" id="dcf-ticker" class="form-input" placeholder="Ex: KLBN4">
+                                    <i class="fas fa-info-circle hint-icon" title="1º passo: preencha o ticker da AÇÃO desejada."></i>
+                                </div>
+                                <div class="form-group-with-hint">
+                                    <label for="dcf-preco-atual-simplified" class="form-label">Preço Atual por Ação</label>
+                                    <input type="text" id="dcf-preco-atual-simplified" class="form-input" placeholder="R$ 20,50">
+                                    <i class="fas fa-info-circle hint-icon" title="Preço atual da ação na bolsa para cálculo do Upside/Downside."></i>
+                                </div>
+                                <div class="form-group-with-hint">
+                                    <label for="dcf-num-acoes-simplified" class="form-label">Quantidade de Papéis</label>
+                                    <input type="text" id="dcf-num-acoes-simplified" class="form-input" placeholder="1.500.000.000">
+                                    <i class="fas fa-info-circle hint-icon" title="2º passo: preencha o número total de ações (papéis) da empresa."></i>
+                                </div>
+                                 <div class="form-group-with-hint">
+                                    <label for="dcf-divida-liquida-simplified" class="form-label">Dívida Líquida</label>
+                                    <input type="text" id="dcf-divida-liquida-simplified" class="form-input" placeholder="1.000.000.000">
+                                    <i class="fas fa-info-circle hint-icon" title="Dívida total menos caixa. Essencial para ir do Valor da Firma para o Valor do Acionista."></i>
+                                </div>
+                            </div>
+
+                            <div class="dcf-section">
+                                <h4 class="dcf-section-title">Realidade Atual (FCL Histórico)</h4>
+                                <div class="form-group-with-hint">
+                                    <label class="form-label">Fluxo de Caixa Livre (Últimos 5 anos)</label>
+                                    <i class="fas fa-info-circle hint-icon" title="4º passo: insira o histórico de Fluxo de Caixa Livre (FCL) da Empresa."></i>
+                                    <div class="dcf-input-group-vertical">
+                                        <input type="text" id="dcf-fcl-ano-5" class="form-input" placeholder="Ano -5">
+                                        <input type="text" id="dcf-fcl-ano-4" class="form-input" placeholder="Ano -4">
+                                        <input type="text" id="dcf-fcl-ano-3" class="form-input" placeholder="Ano -3">
+                                        <input type="text" id="dcf-fcl-ano-2" class="form-input" placeholder="Ano -2">
+                                        <input type="text" id="dcf-fcl-ano-1" class="form-input" placeholder="Ano -1 (base para projeção)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dcf-section">
+                                <h4 class="dcf-section-title">Expectativa (Projeção)</h4>
+                                <div class="form-group-with-hint">
+                                    <label for="dcf-taxa-desconto" class="form-label">Taxa de Desconto</label>
+                                    <input type="text" id="dcf-taxa-desconto" class="form-input" placeholder="15%">
+                                    <i class="fas fa-info-circle hint-icon" title="3º passo: Insira a taxa de desconto desejada (normalmente a SELIC + prêmio de risco)."></i>
+                                </div>
+                                <div class="form-group-with-hint">
+                                    <label for="dcf-crescimento-projetado" class="form-label">Crescimento Projetado do FCL</label>
+                                    <input type="text" id="dcf-crescimento-projetado" class="form-input" placeholder="10%">
+                                    <i class="fas fa-info-circle hint-icon" title="5º passo: insira o crescimento projetado do FCL para os próximos 5 anos."></i>
+                                </div>
+                                <div class="form-group-with-hint">
+                                    <label for="dcf-crescimento-perpetuo-simplified" class="form-label">Cresc. na Perpetuidade</label>
+                                    <input type="text" id="dcf-crescimento-perpetuo-simplified" class="form-input" placeholder="2%">
+                                    <i class="fas fa-info-circle hint-icon" title="Taxa de crescimento sustentável da empresa no longo prazo (geralmente entre 2-3%)."></i>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="dcf-table-container">
+                        <h4 class="dcf-section-title" style="margin-bottom: 15px;">Projeção do Fluxo de Caixa Livre (FCL)</h4>
+                        <table class="dcf-table">
+                            <thead>
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th>Ano 1</th>
+                                    <th>Ano 2</th>
+                                    <th>Ano 3</th>
+                                    <th>Ano 4</th>
+                                    <th>Ano 5</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dcf-projection-table-simplified">
+                                </tbody>
+                        </table>
+                    </div>
+
+                    <div class="dcf-results-grid">
+                        <div class="result-item primary-result">
+                            <div class="result-label">Valor da Firma (Enterprise Value)</div>
+                            <div id="dcf-enterprise-value-simplified" class="result-value">R$ 0,00</div>
+                        </div>
+                        <div class="result-item primary-result">
+                            <div class="result-label">Valor de Mercado (Equity Value)</div>
+                            <div id="dcf-equity-value-simplified" class="result-value">R$ 0,00</div>
+                        </div>
+                        <div class="result-item primary-result" style="background-color: #004d46;">
+                            <div class="result-label" style="color: #f0f0f0;">Preço Justo por Ação</div>
+                            <div id="dcf-intrinsic-value-simplified" class="result-value" style="color: #ffffff;">R$ 0,00</div>
+                        </div>
+                        <div class="result-item primary-result">
+                            <div class="result-label">Potencial de Upside/Downside</div>
+                            <div id="dcf-upside-potential-simplified" class="result-value">0,00%</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="content-header" style="margin-top: 40px">
                   <h3>Meus Cálculos Salvos</h3>
                   <button
@@ -2542,7 +2646,5 @@
   </div>
 </div>
     <script src="js/main.js" type="module"></script>
-  </body>
-</html>
   </body>
 </html>

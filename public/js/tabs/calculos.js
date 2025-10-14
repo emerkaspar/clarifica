@@ -321,6 +321,159 @@ function initializePegRatioCalculator() {
 }
 
 
+// --- CALCULADORA: FLUXO DE CAIXA DESCONTADO (SIMPLIFICADO) ---
+function initializeDCFCalculatorSimplified() {
+    const dcfForm = document.getElementById('dcf-form-simplified');
+    if (!dcfForm) return;
+
+    // --- Helpers ---
+    const parseNumber = (value) => {
+        if (typeof value !== 'string' || value.trim() === '') return 0;
+        return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+    };
+
+    const parsePercent = (value) => {
+        if (typeof value !== 'string' || value.trim() === '') return 0;
+        return (parseFloat(value.replace('%', '').replace(',', '.')) || 0) / 100;
+    };
+
+    const formatCurrency = (value, fractionDigits = 2) => {
+        if (isNaN(value)) return 'R$ 0,00';
+        return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits });
+    };
+    
+    const formatPercent = (value) => {
+         if (isNaN(value)) return '0,00%';
+        return (value * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+    };
+
+    const formatBigNumber = (input) => {
+        let value = input.value.replace(/\D/g, '');
+        if (value) {
+            input.value = BigInt(value).toLocaleString('pt-BR');
+        } else {
+            input.value = '';
+        }
+    };
+
+    // --- Elementos do DOM ---
+    const inputs = {
+        ticker: document.getElementById('dcf-ticker'),
+        precoAtual: document.getElementById('dcf-preco-atual-simplified'),
+        numAcoes: document.getElementById('dcf-num-acoes-simplified'),
+        dividaLiquida: document.getElementById('dcf-divida-liquida-simplified'),
+        fcl: [
+            document.getElementById('dcf-fcl-ano-5'),
+            document.getElementById('dcf-fcl-ano-4'),
+            document.getElementById('dcf-fcl-ano-3'),
+            document.getElementById('dcf-fcl-ano-2'),
+            document.getElementById('dcf-fcl-ano-1'),
+        ],
+        taxaDesconto: document.getElementById('dcf-taxa-desconto'),
+        crescimentoProjetado: document.getElementById('dcf-crescimento-projetado'),
+        crescimentoPerpetuo: document.getElementById('dcf-crescimento-perpetuo-simplified'),
+    };
+
+    const projectionTableBody = document.getElementById('dcf-projection-table-simplified');
+
+    const results = {
+        enterpriseValue: document.getElementById('dcf-enterprise-value-simplified'),
+        equityValue: document.getElementById('dcf-equity-value-simplified'),
+        intrinsicValue: document.getElementById('dcf-intrinsic-value-simplified'),
+        upsidePotential: document.getElementById('dcf-upside-potential-simplified')
+    };
+
+    // --- Lógica de Cálculo ---
+    function calculateDCF() {
+        // Calcula a média do FCL histórico
+        const fclHistoricoValues = inputs.fcl
+            .map(input => parseNumber(input.value))
+            .filter(value => value > 0); // Considera apenas valores maiores que zero para a média
+
+        const fclBase = fclHistoricoValues.length > 0
+            ? fclHistoricoValues.reduce((sum, value) => sum + value, 0) / fclHistoricoValues.length
+            : 0;
+            
+        const p = { // premissas
+            precoAtual: parseNumber(inputs.precoAtual.value.replace('R$', '')),
+            numAcoes: parseNumber(inputs.numAcoes.value),
+            dividaLiquida: parseNumber(inputs.dividaLiquida.value),
+            fclBase: fclBase, // Usa a média do FCL histórico como base
+            taxaDesconto: parsePercent(inputs.taxaDesconto.value),
+            crescimentoProjetado: parsePercent(inputs.crescimentoProjetado.value),
+            crescimentoPerpetuo: parsePercent(inputs.crescimentoPerpetuo.value),
+        };
+
+        if (p.fclBase === 0 || p.taxaDesconto <= p.crescimentoPerpetuo) {
+            clearResults();
+            return;
+        }
+
+        const projecoes = [];
+        let fclAcumulado = p.fclBase;
+        for (let i = 1; i <= 5; i++) {
+            const fclProjetado = fclAcumulado * (1 + p.crescimentoProjetado);
+            fclAcumulado = fclProjetado;
+            const vpFcl = fclProjetado / Math.pow(1 + p.taxaDesconto, i);
+            projecoes.push({ fcl: fclProjetado, vpFcl: vpFcl });
+        }
+
+        const fclAno5 = projecoes[4].fcl;
+        const terminalValue = (fclAno5 * (1 + p.crescimentoPerpetuo)) / (p.taxaDesconto - p.crescimentoPerpetuo);
+        const vpTerminalValue = terminalValue / Math.pow(1 + p.taxaDesconto, 5);
+
+        const somaVpFcl = projecoes.reduce((sum, proj) => sum + proj.vpFcl, 0);
+        const enterpriseValue = somaVpFcl + vpTerminalValue;
+        const equityValue = enterpriseValue - p.dividaLiquida;
+        const intrinsicValuePerShare = p.numAcoes > 0 ? equityValue / p.numAcoes : 0;
+        const upsidePotential = p.precoAtual > 0 ? (intrinsicValuePerShare / p.precoAtual) - 1 : 0;
+        
+        updateUI(projecoes, { enterpriseValue, equityValue, intrinsicValuePerShare, upsidePotential });
+    }
+
+    function updateUI(projecoes, finalResults) {
+        projectionTableBody.innerHTML = `
+            <tr class="highlight-row">
+                <td>FCL Projetado</td>
+                ${projecoes.map(p => `<td>${formatCurrency(p.fcl, 0)}</td>`).join('')}
+            </tr>
+            <tr>
+                <td>FCL (Valor Presente)</td>
+                ${projecoes.map(p => `<td>${formatCurrency(p.vpFcl, 0)}</td>`).join('')}
+            </tr>
+        `;
+
+        results.enterpriseValue.textContent = formatCurrency(finalResults.enterpriseValue, 0);
+        results.equityValue.textContent = formatCurrency(finalResults.equityValue, 0);
+        results.intrinsicValue.textContent = formatCurrency(finalResults.intrinsicValuePerShare);
+        results.upsidePotential.textContent = formatPercent(finalResults.upsidePotential);
+        results.upsidePotential.style.color = finalResults.upsidePotential >= 0 ? '#00d9c3' : '#ef4444';
+    }
+
+    function clearResults() {
+        projectionTableBody.innerHTML = `
+            <tr class="highlight-row"><td>FCL Projetado</td>${Array(5).fill('<td>-</td>').join('')}</tr>
+            <tr><td>FCL (Valor Presente)</td>${Array(5).fill('<td>-</td>').join('')}</tr>
+        `;
+        Object.values(results).forEach(el => {
+            if (el.id.includes('upside')) {
+                el.textContent = '0,00%';
+                el.style.color = '';
+            } else {
+                el.textContent = 'R$ 0,00';
+            }
+        });
+    }
+
+    dcfForm.addEventListener('input', calculateDCF);
+
+    inputs.fcl.forEach(input => input.addEventListener('input', (e) => formatBigNumber(e.target)));
+    inputs.numAcoes.addEventListener('input', (e) => formatBigNumber(e.target));
+    inputs.dividaLiquida.addEventListener('input', (e) => formatBigNumber(e.target));
+    
+    clearResults();
+}
+
 // --- LÓGICA COMPARTILHADA DE SALVAMENTO E CONSULTA ---
 function loadCalculation(calc) {
     if (!calc || !calc.inputs) return;
@@ -411,6 +564,7 @@ function renderSavedCalculations(searchTerm = '') {
 export function initializePegCalculator(userID) {
     initializeTetoProjetivoCalculator();
     initializePegRatioCalculator();
+    initializeDCFCalculatorSimplified();
 
     btnVerSalvos.addEventListener('click', () => {
         renderSavedCalculations();
