@@ -222,6 +222,105 @@ function setupLancamentosModal(userID) {
     document.getElementById("btn-novo-lancamento-cripto").addEventListener("click", () => window.openLancamentoModal({ ativo: 'BTC' }, "", "Cripto"));
 }
 
+// --- MODAL DE OPÇÕES ---
+function setupOpcoesModal(userID) {
+    const modal = document.getElementById("opcoes-modal");
+    if (!modal) return;
+    const form = document.getElementById("form-nova-opcao");
+    const tickerInput = form.querySelector("#opcao-ticker");
+    const sugestoesDiv = form.querySelector("#opcao-ticker-sugestoes");
+    let timeoutBusca;
+
+    const parseCurrency = (value) => {
+        if (!value || typeof value !== 'string') return 0;
+        return parseFloat(value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+    };
+
+    const formatCurrencyOnInput = (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value) {
+            let numberValue = parseInt(value, 10) / 100;
+            e.target.value = numberValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else {
+            e.target.value = '';
+        }
+    };
+
+    form.querySelector("#opcao-premio").addEventListener('input', formatCurrencyOnInput);
+    form.querySelector("#opcao-strike").addEventListener('input', formatCurrencyOnInput);
+
+    tickerInput.addEventListener("input", () => {
+        clearTimeout(timeoutBusca);
+        timeoutBusca = setTimeout(async () => {
+            const suggestions = await searchAssets(tickerInput.value);
+            sugestoesDiv.innerHTML = "";
+            if (suggestions.length > 0) {
+                sugestoesDiv.style.display = "block";
+                suggestions.forEach((stock) => {
+                    const div = document.createElement("div");
+                    div.className = "sugestao-item";
+                    div.textContent = stock;
+                    div.onclick = () => {
+                        tickerInput.value = stock;
+                        sugestoesDiv.style.display = "none";
+                    };
+                    sugestoesDiv.appendChild(div);
+                });
+            } else {
+                sugestoesDiv.style.display = "none";
+            }
+        }, 400);
+    });
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const docId = form.querySelector("#opcao-doc-id").value;
+
+        const opcaoData = {
+            userID: userID,
+            ticker: form.querySelector("#opcao-ticker").value.toUpperCase(),
+            tipo: form.querySelector("#opcao-tipo").value,
+            operacao: form.querySelector("#opcao-operacao").value,
+            quantidade: parseInt(form.querySelector("#opcao-quantidade").value, 10),
+            premio: parseCurrency(form.querySelector("#opcao-premio").value),
+            strike: parseCurrency(form.querySelector("#opcao-strike").value),
+            vencimento: form.querySelector("#opcao-vencimento").value, 
+        };
+
+        try {
+            if (docId) {
+                await updateDoc(doc(db, "opcoes", docId), opcaoData);
+            } else {
+                opcaoData.timestamp = serverTimestamp();
+                await addDoc(collection(db, "opcoes"), opcaoData);
+            }
+            closeModal("opcoes-modal");
+        } catch (error) {
+            console.error("Erro ao salvar opção: ", error);
+            alert("Erro ao salvar: " + error.message);
+        }
+    });
+
+    window.openOpcaoModal = (data = {}, id = "") => {
+        form.reset();
+        form.querySelector("#opcao-doc-id").value = id;
+        document.getElementById("opcao-modal-title").textContent = id ? "Editar Opção" : "Lançar Opção";
+        form.querySelector(".btn-adicionar").innerHTML = id ? '<i class="fas fa-save"></i> Salvar' : '<i class="fas fa-plus"></i> Lançar';
+
+        form.querySelector("#opcao-ticker").value = data.ticker || "";
+        form.querySelector("#opcao-tipo").value = data.tipo || "Call";
+        form.querySelector("#opcao-operacao").value = data.operacao || "Venda";
+        form.querySelector("#opcao-quantidade").value = data.quantidade || "";
+        form.querySelector("#opcao-premio").value = (data.premio || "").toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        form.querySelector("#opcao-strike").value = (data.strike || "").toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        form.querySelector("#opcao-vencimento").value = data.vencimento || ""; 
+        
+        modal.classList.add("show");
+    };
+
+    document.getElementById("btn-lancamento-opcao").addEventListener("click", () => window.openOpcaoModal());
+}
+
 
 // --- MODAL DE DIVISÃO IDEAL DE FIIS ---
 function setupDivisaoIdealModal(userID) {
@@ -963,6 +1062,7 @@ export function openAssetListModal(title, assets, totalPortfolioValue) {
 export function setupAllModals(userID) {
     initializeCloseButtons();
     setupLancamentosModal(userID);
+    setupOpcoesModal(userID);
     setupDivisaoIdealModal(userID);
     setupRendaFixaModal(userID);
     setupProventoModal(userID);

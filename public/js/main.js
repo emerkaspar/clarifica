@@ -12,6 +12,7 @@ import { renderRendaFixaCarteira } from './tabs/rendaFixa.js';
 import { renderHistorico } from './tabs/lancamentos.js';
 import { renderClassificacao } from './tabs/classificacao.js';
 import { updateProventosTab } from './tabs/proventos.js';
+import { renderOpcoesTab } from './tabs/opcoes.js';
 import { renderMovimentacaoChart } from './charts.js';
 import { updateMainSummaryHeader } from './summary.js';
 import { renderPatrimonioTab } from './tabs/patrimonio.js';
@@ -24,6 +25,7 @@ import { renderAnalisesTab } from './tabs/analises.js';
 let currentUserID = null;
 let allLancamentos = [];
 let allProventos = [];
+let allOpcoes = [];
 let allClassificacoes = {};
 let currentProventosMeta = null;
 let allTesouroDiretoPrices = {};
@@ -72,6 +74,7 @@ const onLogout = () => {
     currentUserID = null;
     allLancamentos = [];
     allProventos = [];
+    allOpcoes = [];
     allClassificacoes = {};
     currentProventosMeta = null;
     allTesouroDiretoPrices = {};
@@ -131,6 +134,12 @@ function initializeDataListeners(userID) {
         renderPatrimonioTab(allLancamentos, allProventos);
         renderRentabilidadeTab(allLancamentos, allProventos, summaryData);
         renderAnalisesTab(allLancamentos, allProventos, allClassificacoes, precosEInfos);
+    });
+
+    const qOpcoes = query(collection(db, "opcoes"), where("userID", "==", userID), orderBy("timestamp", "desc"));
+    onSnapshot(qOpcoes, (snapshot) => {
+        allOpcoes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        renderOpcoesTab(allOpcoes);
     });
 
     const qClassificacoes = query(collection(db, "ativosClassificados"), where("userID", "==", userID));

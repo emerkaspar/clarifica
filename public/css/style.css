@@ -2506,3 +2506,226 @@ tbody.is-expanded .group-toggle-icon {
   transform: translateY(-150%);
   opacity: 0;
 }
+
+/* --- ESTILOS PARA ABA DE OPÇÕES (CARDS) --- */
+.opcoes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaço entre os cards */
+}
+
+.opcao-card {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.opcao-card:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-row-1, .card-row-2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px 15px;
+}
+
+.card-row-1 {
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.ticker-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-grow: 1;
+}
+
+.ticker-badge {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.type-info {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    min-width: 80px;
+}
+
+.type-info .tipo-operacao {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.type-info .compra-venda {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.strike-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.strike-info span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.strike-info strong {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.data-group {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.data-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.data-item span {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+.data-item strong {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* --- ESTILOS PARA ABA DE OPÇÕES (CARDS) --- */
+.opcoes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaço entre os cards */
+}
+
+.opcao-card {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+.opcao-card:hover {
+    border-color: var(--border-secondary);
+}
+
+.card-row-1, .card-row-2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px 15px;
+}
+
+.card-row-1 {
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.ticker-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-grow: 1; /* Permite que o grupo cresça */
+    min-width: 150px; /* Largura mínima para evitar quebra de linha */
+}
+
+.ticker-badge {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background-color: var(--bg-quaternary);
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+.type-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.type-info .tipo-operacao {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.type-info .compra-venda {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.strike-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.strike-info span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.strike-info strong {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.data-group {
+    display: flex;
+    gap: 25px; /* Aumenta o espaçamento entre os itens */
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+}
+
+.data-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 80px; /* Largura mínima para cada item */
+}
+
+.data-item span {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    text-transform: uppercase;
+}
+
+.data-item strong {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
