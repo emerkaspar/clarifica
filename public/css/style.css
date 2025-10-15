@@ -2729,3 +2729,84 @@ tbody.is-expanded .group-toggle-icon {
     font-weight: 600;
     color: var(--text-primary);
 }
+
+/* --- AJUSTES NO MENU DE ABAS (DESKTOP) --- */
+.nav-tabs-wrapper {
+  padding: 0 25px;
+  border-bottom: 1px solid var(--border-primary);
+  /* MODIFICADO: Remove a rolagem e adiciona espaço para quebra de linha */
+  overflow-x: visible; 
+  padding-bottom: 15px; /* Espaço para a segunda linha, se quebrar */
+}
+.nav-tabs {
+  display: flex;
+  /* MODIFICADO: Permite que os itens quebrem a linha */
+  flex-wrap: wrap; 
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 15px 25px; /* Espaço vertical e horizontal entre os itens */
+}
+.nav-tabs .nav-link {
+    margin-bottom: -16px; /* Ajuste para manter a borda inferior alinhada */
+}
+
+/* --- ESTILOS PARA O MENU HAMBURGER (MÓVEL) --- */
+.mobile-menu-btn {
+  display: none; /* Escondido por padrão no desktop */
+  background: transparent;
+  border: 1px solid var(--border-secondary);
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 0 25px 15px; /* Posicionamento no mobile */
+}
+
+#mobile-nav-menu {
+  display: none; /* Escondido por padrão */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: var(--bg-secondary);
+  z-index: 2000;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+  box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+  overflow-y: auto;
+}
+
+#mobile-nav-menu.open {
+  transform: translateX(0);
+}
+
+#mobile-nav-menu .nav-tabs {
+  flex-direction: column;
+  gap: 0;
+  padding-top: 20px;
+}
+
+#mobile-nav-menu .nav-link {
+  display: block;
+  padding: 15px 25px;
+  border-bottom: 1px solid var(--border-primary);
+  margin-bottom: 0;
+}
+#mobile-nav-menu .nav-link.active {
+    border-bottom: 1px solid var(--border-primary);
+    background-color: var(--bg-quaternary);
+}
+
+/* --- REGRAS DE RESPONSIVIDADE --- */
+@media (max-width: 992px) {
+  .nav-tabs-wrapper {
+    display: none; /* Esconde o menu de abas original */
+  }
+  .mobile-menu-btn,
+  #mobile-nav-menu {
+    display: block; /* Mostra o botão hamburger e prepara o menu móvel */
+  }
+}
