@@ -56,7 +56,7 @@ export async function renderOpcoesTab(opcoes) {
                                 ${diferencaPercent.toFixed(2)}%
                             </strong>
                         </div>
-                        <div class="data-item"><span>Status</span><strong>${isITM ? '<span class="status-classificado">ITM</span>' : '<span class="status-nao-classificado">OTM</span>'}</strong></div>
+                        <div class="data-item"><span>Status</span><strong>${isITM ? '<span class="status-classificado">Sendo exercido</span>' : '<span class="status-nao-classificado">Virando Pó</span>'}</strong></div>
                     </div>
                 </div>
             </div>
