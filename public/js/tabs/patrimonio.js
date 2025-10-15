@@ -133,21 +133,54 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
         patrimonioEvolutionChart = null;
     }
 
-    const lancamentosOrdenados = [...lancamentos].sort((a, b) => new Date(a.data) - new Date(b.data));
+    const periodo = document.getElementById('patrimonio-periodo-filter').value;
+    const tipoAtivo = document.getElementById('patrimonio-tipo-ativo-filter').value;
+
+    let lancamentosFiltrados = lancamentos;
+    if (tipoAtivo !== 'Todos') {
+        const isRendaFixa = tipoAtivo === 'Renda Fixa';
+        lancamentosFiltrados = lancamentos.filter(l => {
+            if (isRendaFixa) {
+                return ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo);
+            }
+            return l.tipoAtivo === tipoAtivo;
+        });
+    }
+
+    const lancamentosOrdenados = [...lancamentosFiltrados].sort((a, b) => new Date(a.data) - new Date(b.data));
     if (lancamentosOrdenados.length === 0) {
         return;
     }
 
-    const monthlyData = {};
     const hoje = new Date();
-    const dataInicio = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
+    let dataInicio;
 
-    for (let d = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1); d <= hoje; d.setMonth(d.getMonth() + 1)) {
+    switch (periodo) {
+        case '12m':
+            dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
+            break;
+        case '5y':
+            dataInicio = new Date(hoje.getFullYear() - 4, 0, 1);
+            break;
+        case '10y':
+            dataInicio = new Date(hoje.getFullYear() - 9, 0, 1);
+            break;
+        case 'all':
+            dataInicio = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
+            break;
+        case 'current_year':
+        default:
+            dataInicio = new Date(hoje.getFullYear(), 0, 1);
+            break;
+    }
+
+    const monthlyData = {};
+    for (let d = new Date(dataInicio); d <= hoje; d.setMonth(d.getMonth() + 1)) {
         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         monthlyData[monthKey] = {
             label: d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }),
             valorAplicado: 0,
-            patrimonioFinal: 0,
+            ganhoCapital: 0,
         };
     }
 
@@ -192,48 +225,47 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
             }
         });
 
-        monthlyData[monthKey].patrimonioFinal = patrimonioAtualDoMes;
-        monthlyData[monthKey].valorAplicado = valorInvestidoAcumulado < 0 ? 0 : valorInvestidoAcumulado;
+        const valorAplicadoFinal = valorInvestidoAcumulado < 0 ? 0 : valorInvestidoAcumulado;
+        monthlyData[monthKey].valorAplicado = valorAplicadoFinal;
+        monthlyData[monthKey].ganhoCapital = patrimonioAtualDoMes - valorAplicadoFinal;
     }
 
     const labels = Object.values(monthlyData).map(d => d.label);
     const valoresAplicados = Object.values(monthlyData).map(d => d.valorAplicado);
-    const patrimoniosFinais = Object.values(monthlyData).map(d => d.patrimonioFinal);
+    const ganhosDeCapital = Object.values(monthlyData).map(d => d.ganhoCapital);
 
     patrimonioEvolutionChart = new Chart(canvas, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [
                 {
                     label: 'Valor Aplicado',
                     data: valoresAplicados,
-                    borderColor: '#5a6170',
-                    borderDash: [5, 5],
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0.1
+                    backgroundColor: '#c4c4c4ff',
                 },
                 {
-                    label: 'Patrimônio',
-                    data: patrimoniosFinais,
-                    borderColor: '#00d9c3',
-                    backgroundColor: 'rgba(0, 217, 195, 0.1)',
-                    fill: true,
-                    pointRadius: 0,
-                    tension: 0.1,
+                    label: 'Ganho de Capital',
+                    data: ganhosDeCapital,
+                    backgroundColor: '#00ffddff',
                 }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             scales: {
-                x: { grid: { display: false }, ticks: { color: "#a0a7b3" } },
-                y: { grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}` } }
+                x: { stacked: true, grid: { display: false }, ticks: { color: "#a0a7b3" } },
+                y: { stacked: true, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}` } }
             },
             plugins: {
                 legend: { position: 'top', align: 'end', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8 } },
-                tooltip: { mode: 'index', intersect: false, callbacks: { label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}` } }
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
+                    }
+                }
             }
         }
     });
@@ -243,7 +275,6 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
 /**
  * Renderiza o gráfico de alocação de ativos.
  */
-// Substitua a função original em /public/js/tabs/patrimonio.js por esta
 function renderAssetAllocationChart(carteira, precosEInfos) {
     const canvas = document.getElementById('asset-allocation-chart');
     if (!canvas) return;
@@ -301,9 +332,8 @@ function renderAssetAllocationChart(carteira, precosEInfos) {
             maintainAspectRatio: false,
             cutout: '70%',
             hoverOffset: 12,
-            // Adicionado para criar um espaço interno
             layout: {
-                padding: 15 
+                padding: 15
             },
             plugins: {
                 legend: { display: false },
@@ -532,5 +562,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+
+        const periodoFilter = document.getElementById('patrimonio-periodo-filter');
+        const tipoAtivoFilter = document.getElementById('patrimonio-tipo-ativo-filter');
+
+        const handleFilterChange = () => {
+            if (window.allLancamentos && window.precosEInfos) {
+                renderPatrimonioEvolutionChart(window.allLancamentos, window.precosEInfos);
+            }
+        };
+
+        periodoFilter.addEventListener('change', handleFilterChange);
+        tipoAtivoFilter.addEventListener('change', handleFilterChange);
     }
 });

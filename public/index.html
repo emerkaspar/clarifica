@@ -27,9 +27,9 @@
     <link rel="stylesheet" href="css/style.css" />
     <script>
       // Aplica o tema salvo antes de a página carregar para evitar "flash"
-      (function() {
-        const theme = localStorage.getItem('theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', theme);
+      (function () {
+        const theme = localStorage.getItem("theme") || "dark";
+        document.documentElement.setAttribute("data-theme", theme);
       })();
     </script>
   </head>
@@ -141,10 +141,10 @@
         </nav>
 
         <div class="top-menu-right">
-           <button id="theme-toggle-btn" class="theme-toggle-btn">
-              <i class="fas fa-sun"></i>
-              <i class="fas fa-moon"></i>
-            </button>
+          <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-sun"></i>
+            <i class="fas fa-moon"></i>
+          </button>
           <button id="btn-header-login-google">
             <i class="fab fa-google"></i> Fazer Login
           </button>
@@ -221,10 +221,11 @@
 
       <div id="app-content">
         <div class="main-content-wrapper">
-          
-          <button id="mobile-menu-toggle" class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
+          <button id="mobile-menu-toggle" class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+          </button>
           <div id="mobile-nav-menu"></div>
-          
+
           <div class="nav-tabs-wrapper">
             <ul class="nav-tabs" id="myTab">
               <li>
@@ -254,7 +255,32 @@
               <div id="patrimonio-content">
                 <div class="patrimonio-grid">
                   <div class="patrimonio-card chart-card">
-                    <h3>Evolução do Patrimônio</h3>
+                    <div class="performance-header" style="margin-bottom: 15px">
+                      <h3 style="margin: 0">Evolução do Patrimônio</h3>
+                      <div class="performance-filters">
+                        <select
+                          id="patrimonio-periodo-filter"
+                          class="filter-select"
+                        >
+                          <option value="current_year">Ano Atual</option>
+                          <option value="12m" selected>12 meses</option>
+                          <option value="5y">5 anos</option>
+                          <option value="10y">10 anos</option>
+                          <option value="all">Todo o período</option>
+                        </select>
+                        <select
+                          id="patrimonio-tipo-ativo-filter"
+                          class="filter-select"
+                        >
+                          <option value="Todos">Todos os tipos</option>
+                          <option value="Ações">Ações</option>
+                          <option value="FIIs">FIIs</option>
+                          <option value="ETF">ETF</option>
+                          <option value="Cripto">Criptomoedas</option>
+                          <option value="Renda Fixa">Renda Fixa</option>
+                        </select>
+                      </div>
+                    </div>
                     <div class="chart-container-large">
                       <canvas id="patrimonio-evolution-chart"></canvas>
                     </div>
@@ -287,14 +313,24 @@
             </div>
             <div class="tab-pane" id="rentabilidade">
               <div class="valorization-header">
-                <div id="rentabilidade-valorization-card" class="valorization-card">
+                <div
+                  id="rentabilidade-valorization-card"
+                  class="valorization-card"
+                >
                   <div class="valorization-title">
                     <i class="fas fa-arrow-trend-up"></i>
                     <span>Valorização do dia (Carteira)</span>
                   </div>
                   <div class="valorization-main">
-                    <span id="rentabilidade-consolidada-valorization-reais" class="valorization-value">Calculando...</span>
-                    <span id="rentabilidade-consolidada-valorization-percent" class="valorization-pill"></span>
+                    <span
+                      id="rentabilidade-consolidada-valorization-reais"
+                      class="valorization-value"
+                      >Calculando...</span
+                    >
+                    <span
+                      id="rentabilidade-consolidada-valorization-percent"
+                      class="valorization-pill"
+                    ></span>
                   </div>
                   <div class="highlights-container">
                     <div class="highlight-block">
@@ -302,11 +338,17 @@
                         <i class="fas fa-calendar-day"></i>
                         <span>Destaques do Dia</span>
                       </div>
-                      <div id="rentabilidade-highlights-day" class="highlight-content"></div>
+                      <div
+                        id="rentabilidade-highlights-day"
+                        class="highlight-content"
+                      ></div>
                     </div>
                   </div>
                 </div>
-                <div id="rentabilidade-summary-card" class="valorization-card summary-card-details">
+                <div
+                  id="rentabilidade-summary-card"
+                  class="valorization-card summary-card-details"
+                >
                   <div class="valorization-title">
                     <i class="fas fa-wallet"></i>
                     <span>Resumo da Carteira</span>
@@ -314,19 +356,35 @@
                   <div class="summary-details-grid">
                     <div class="summary-item">
                       <span class="summary-label">Total Investido</span>
-                      <span id="rentabilidade-consolidada-total-investido" class="summary-value">R$ 0,00</span>
+                      <span
+                        id="rentabilidade-consolidada-total-investido"
+                        class="summary-value"
+                        >R$ 0,00</span
+                      >
                     </div>
                     <div class="summary-item">
                       <span class="summary-label">Patrimônio Atual</span>
-                      <span id="rentabilidade-consolidada-patrimonio-atual" class="summary-value">R$ 0,00</span>
+                      <span
+                        id="rentabilidade-consolidada-patrimonio-atual"
+                        class="summary-value"
+                        >R$ 0,00</span
+                      >
                     </div>
                     <div class="summary-item">
                       <span class="summary-label">Rentabilidade Total</span>
-                      <span id="rentabilidade-consolidada-rentabilidade-reais" class="summary-value">R$ 0,00</span>
+                      <span
+                        id="rentabilidade-consolidada-rentabilidade-reais"
+                        class="summary-value"
+                        >R$ 0,00</span
+                      >
                     </div>
                     <div class="summary-item">
                       <span class="summary-label">Rentabilidade</span>
-                      <span id="rentabilidade-consolidada-rentabilidade-percent" class="summary-value">0,00%</span>
+                      <span
+                        id="rentabilidade-consolidada-rentabilidade-percent"
+                        class="summary-value"
+                        >0,00%</span
+                      >
                     </div>
                   </div>
                 </div>
@@ -337,21 +395,35 @@
                   <div class="performance-summary">
                     <div>
                       <span class="summary-label">RENTABILIDADE ATUAL</span>
-                      <span id="perf-rent-atual" class="summary-value">0,00%</span>
+                      <span id="perf-rent-atual" class="summary-value"
+                        >0,00%</span
+                      >
                     </div>
                     <div>
                       <span class="summary-label">RENTABILIDADE PERÍODO</span>
-                      <span id="perf-rent-periodo" class="summary-value">0,00%</span>
+                      <span id="perf-rent-periodo" class="summary-value"
+                        >0,00%</span
+                      >
                     </div>
                   </div>
                   <div class="performance-filters">
                     <div id="perf-period-filter" class="filter-btn-group">
-                      <button class="filter-btn" data-period="30d">30 dias</button>
-                      <button class="filter-btn active" data-period="6m">6 meses</button>
-                      <button class="filter-btn" data-period="ytd">Ano atual</button>
+                      <button class="filter-btn" data-period="30d">
+                        30 dias
+                      </button>
+                      <button class="filter-btn active" data-period="6m">
+                        6 meses
+                      </button>
+                      <button class="filter-btn" data-period="ytd">
+                        Ano atual
+                      </button>
                       <button class="filter-btn" data-period="1y">1 ano</button>
-                      <button class="filter-btn" data-period="2y">2 anos</button>
-                      <button class="filter-btn" data-period="5y">5 anos</button>
+                      <button class="filter-btn" data-period="2y">
+                        2 anos
+                      </button>
+                      <button class="filter-btn" data-period="5y">
+                        5 anos
+                      </button>
                       <button class="filter-btn" data-period="all">Tudo</button>
                     </div>
                   </div>
@@ -361,16 +433,35 @@
                 </div>
               </div>
 
-              <div class="performance-box" style="margin-top: 40px;">
-                <div class="evolution-header" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                  <h3 style="margin: 0;">Variação Diária do Patrimônio</h3>
+              <div class="performance-box" style="margin-top: 40px">
+                <div
+                  class="evolution-header"
+                  style="
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                  "
+                >
+                  <h3 style="margin: 0">Variação Diária do Patrimônio</h3>
                   <div class="evolution-filters">
-                    <div id="daily-variation-interval-filter" class="filter-btn-group">
-                      <button class="filter-btn active" data-intervalo="Diário">Diário</button>
-                      <button class="filter-btn" data-intervalo="Mensal">Mensal</button>
-                      <button class="filter-btn" data-intervalo="Anual">Anual</button>
+                    <div
+                      id="daily-variation-interval-filter"
+                      class="filter-btn-group"
+                    >
+                      <button class="filter-btn active" data-intervalo="Diário">
+                        Diário
+                      </button>
+                      <button class="filter-btn" data-intervalo="Mensal">
+                        Mensal
+                      </button>
+                      <button class="filter-btn" data-intervalo="Anual">
+                        Anual
+                      </button>
                     </div>
-                    <select id="daily-variation-asset-filter" class="filter-select">
+                    <select
+                      id="daily-variation-asset-filter"
+                      class="filter-select"
+                    >
                       <option value="Todos">Carteira Consolidada</option>
                       <option value="Ações">Ações</option>
                       <option value="FIIs">FIIs</option>
@@ -381,152 +472,185 @@
                   </div>
                 </div>
                 <div class="performance-chart-container">
-                    <canvas id="daily-variation-chart"></canvas>
+                  <canvas id="daily-variation-chart"></canvas>
                 </div>
               </div>
             </div>
 
             <div class="tab-pane" id="proventos">
-                <div class="content-container" style="max-width: 1200px">
-                    <div class="content-header">
-                        <h3>Acompanhamento de Proventos</h3>
-                        <div style="display: flex; gap: 15px">
-                            <button id="btn-meta-proventos" class="btn-adicionar" style="background-color: #3a404d">
-                                <i class="fas fa-bullseye"></i> Definir Meta
-                            </button>
-                            <button id="btn-lancamento-provento" class="btn-adicionar">
-                                <i class="fas fa-plus"></i> Lançar Provento
-                            </button>
-                        </div>
-                    </div>
-                    <div class="proventos-dashboard">
-                        <div class="summary-card">
-                            <h4 class="card-title">Resumo</h4>
-                            <div class="summary-metric">
-                                <div class="metric-header">
-                                    <span>Média Mensal (últ. 6 meses)</span>
-                                    <span id="meta-proventos-atingida">0%</span>
-                                </div>
-                                <div class="progress-bar-container">
-                                    <div id="progress-bar-proventos" class="progress-bar"></div>
-                                </div>
-                                <div class="metric-footer">
-                                    <span id="media-mensal-valor">R$ 0,00</span>
-                                    <span id="meta-mensal-valor">Meta: R$ 0,00</span>
-                                </div>
-                            </div>
-                            <div class="summary-divider"></div>
-                            <div class="summary-metric-row">
-                                <div class="summary-metric-simple">
-                                    <label>Total de 12 meses</label>
-                                    <span id="total-12-meses">R$ 0,00</span>
-                                </div>
-                                <div class="summary-metric-simple">
-                                    <label>Total da carteira</label>
-                                    <span id="total-carteira-proventos">R$ 0,00</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="summary-card">
-                            <h4 class="card-title">Distribuição de proventos</h4>
-                            <div class="pie-charts-container">
-                                <div class="distribution-wrapper">
-                                    <p class="chart-label">Por Ativo</p>
-                                    <div class="chart-canvas-container">
-                                        <canvas id="proventos-por-ativo-chart"></canvas>
-                                    </div>
-                                </div>
-                                <div class="distribution-wrapper">
-                                    <p class="chart-label">Por Tipo (Ações/FIIs)</p>
-                                    <div id="dist-por-tipo-container"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="summary-card" style="grid-column: 1 / -1;">
-                            <div class="evolution-header">
-                                <h4 class="card-title" style="margin: 0">
-                                    Evolução de Proventos
-                                </h4>
-                                <div class="evolution-filters">
-                                    <div id="intervalo-filter-group" class="filter-btn-group">
-                                        <button class="filter-btn active" data-intervalo="Mensal">
-                                            Mensal
-                                        </button>
-                                        <button class="filter-btn" data-intervalo="Anual">
-                                            Anual
-                                        </button>
-                                    </div>
-                                    <select id="periodo-filter" class="filter-select">
-                                        <option value="12m">Últimos 12 meses</option>
-                                        <option value="current_year">Ano atual</option>
-                                        <option value="5y">Últimos 5 anos</option>
-                                    </select>
-                                    <select id="tipo-ativo-filter" class="filter-select">
-                                        <option value="Todos">Todos os Tipos</option>
-                                        <option value="Ações">Ações</option>
-                                        <option value="FIIs">FIIs</option>
-                                    </select>
-                                    <select id="ativo-filter" class="filter-select">
-                                        <option value="Todos">Todos os Ativos</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="evolution-chart-container">
-                                <canvas id="proventos-evolucao-chart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="charts-grid" style="margin-top: 20px;">
-                        <div class="summary-card">
-                            <h4 class="card-title">Proventos Recebidos por Ativo (R$)</h4>
-                            <div class="evolution-chart-container" style="height: 400px;">
-                                <canvas id="proventos-por-ativo-bar-chart"></canvas>
-                            </div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="evolution-header" style="justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h4 class="card-title" style="margin: 0;">Dividend Yield por Ativo (%)</h4>
-                                <div id="dy-chart-filters" class="evolution-filters" style="gap: 15px;">
-                                    <select id="dy-periodo-filter" class="filter-select">
-                                        <option value="12m" selected>Últimos 12 meses</option>
-                                        <option value="6m">Últimos 6 meses</option>
-                                        <option value="ytd">Ano Atual</option>
-                                        <option value="5y">Últimos 5 anos</option>
-                                    </select>
-                                    <select id="dy-tipo-ativo-filter" class="filter-select">
-                                        <option value="Todos" selected>Todos os Tipos</option>
-                                        <option value="Ações">Ações</option>
-                                        <option value="FIIs">FIIs</option>
-                                        <option value="ETF">ETF</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="evolution-chart-container" style="height: 400px;">
-                                <canvas id="dividend-yield-chart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <h3>Proventos Lançados</h3>
-                    <div class="lista-wrapper" style="margin-top: 30px">
-                        <div id="proventos-lista"></div>
-                    </div>
+              <div class="content-container" style="max-width: 1200px">
+                <div class="content-header">
+                  <h3>Acompanhamento de Proventos</h3>
+                  <div style="display: flex; gap: 15px">
+                    <button
+                      id="btn-meta-proventos"
+                      class="btn-adicionar"
+                      style="background-color: #3a404d"
+                    >
+                      <i class="fas fa-bullseye"></i> Definir Meta
+                    </button>
+                    <button id="btn-lancamento-provento" class="btn-adicionar">
+                      <i class="fas fa-plus"></i> Lançar Provento
+                    </button>
+                  </div>
                 </div>
+                <div class="proventos-dashboard">
+                  <div class="summary-card">
+                    <h4 class="card-title">Resumo</h4>
+                    <div class="summary-metric">
+                      <div class="metric-header">
+                        <span>Média Mensal (últ. 6 meses)</span>
+                        <span id="meta-proventos-atingida">0%</span>
+                      </div>
+                      <div class="progress-bar-container">
+                        <div
+                          id="progress-bar-proventos"
+                          class="progress-bar"
+                        ></div>
+                      </div>
+                      <div class="metric-footer">
+                        <span id="media-mensal-valor">R$ 0,00</span>
+                        <span id="meta-mensal-valor">Meta: R$ 0,00</span>
+                      </div>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-metric-row">
+                      <div class="summary-metric-simple">
+                        <label>Total de 12 meses</label>
+                        <span id="total-12-meses">R$ 0,00</span>
+                      </div>
+                      <div class="summary-metric-simple">
+                        <label>Total da carteira</label>
+                        <span id="total-carteira-proventos">R$ 0,00</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="summary-card">
+                    <h4 class="card-title">Distribuição de proventos</h4>
+                    <div class="pie-charts-container">
+                      <div class="distribution-wrapper">
+                        <p class="chart-label">Por Ativo</p>
+                        <div class="chart-canvas-container">
+                          <canvas id="proventos-por-ativo-chart"></canvas>
+                        </div>
+                      </div>
+                      <div class="distribution-wrapper">
+                        <p class="chart-label">Por Tipo (Ações/FIIs)</p>
+                        <div id="dist-por-tipo-container"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="summary-card" style="grid-column: 1 / -1">
+                    <div class="evolution-header">
+                      <h4 class="card-title" style="margin: 0">
+                        Evolução de Proventos
+                      </h4>
+                      <div class="evolution-filters">
+                        <div
+                          id="intervalo-filter-group"
+                          class="filter-btn-group"
+                        >
+                          <button
+                            class="filter-btn active"
+                            data-intervalo="Mensal"
+                          >
+                            Mensal
+                          </button>
+                          <button class="filter-btn" data-intervalo="Anual">
+                            Anual
+                          </button>
+                        </div>
+                        <select id="periodo-filter" class="filter-select">
+                          <option value="12m">Últimos 12 meses</option>
+                          <option value="current_year">Ano atual</option>
+                          <option value="5y">Últimos 5 anos</option>
+                        </select>
+                        <select id="tipo-ativo-filter" class="filter-select">
+                          <option value="Todos">Todos os Tipos</option>
+                          <option value="Ações">Ações</option>
+                          <option value="FIIs">FIIs</option>
+                        </select>
+                        <select id="ativo-filter" class="filter-select">
+                          <option value="Todos">Todos os Ativos</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="evolution-chart-container">
+                      <canvas id="proventos-evolucao-chart"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="charts-grid" style="margin-top: 20px">
+                  <div class="summary-card">
+                    <h4 class="card-title">
+                      Proventos Recebidos por Ativo (R$)
+                    </h4>
+                    <div
+                      class="evolution-chart-container"
+                      style="height: 400px"
+                    >
+                      <canvas id="proventos-por-ativo-bar-chart"></canvas>
+                    </div>
+                  </div>
+                  <div class="summary-card">
+                    <div
+                      class="evolution-header"
+                      style="
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 15px;
+                      "
+                    >
+                      <h4 class="card-title" style="margin: 0">
+                        Dividend Yield por Ativo (%)
+                      </h4>
+                      <div
+                        id="dy-chart-filters"
+                        class="evolution-filters"
+                        style="gap: 15px"
+                      >
+                        <select id="dy-periodo-filter" class="filter-select">
+                          <option value="12m" selected>Últimos 12 meses</option>
+                          <option value="6m">Últimos 6 meses</option>
+                          <option value="ytd">Ano Atual</option>
+                          <option value="5y">Últimos 5 anos</option>
+                        </select>
+                        <select id="dy-tipo-ativo-filter" class="filter-select">
+                          <option value="Todos" selected>Todos os Tipos</option>
+                          <option value="Ações">Ações</option>
+                          <option value="FIIs">FIIs</option>
+                          <option value="ETF">ETF</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div
+                      class="evolution-chart-container"
+                      style="height: 400px"
+                    >
+                      <canvas id="dividend-yield-chart"></canvas>
+                    </div>
+                  </div>
+                </div>
+                <h3>Proventos Lançados</h3>
+                <div class="lista-wrapper" style="margin-top: 30px">
+                  <div id="proventos-lista"></div>
+                </div>
+              </div>
             </div>
 
-             <div class="tab-pane" id="opcoes">
-                <div class="content-container">
-                    <div class="content-header">
-                        <h3>Minhas Opções</h3>
-                        <button id="btn-lancamento-opcao" class="btn-adicionar">
-                            <i class="fas fa-plus"></i> Lançar Opção
-                        </button>
-                    </div>
-                    <div id="opcoes-lista" class="opcoes-container">
-                        </div>
+            <div class="tab-pane" id="opcoes">
+              <div class="content-container">
+                <div class="content-header">
+                  <h3>Minhas Opções</h3>
+                  <button id="btn-lancamento-opcao" class="btn-adicionar">
+                    <i class="fas fa-plus"></i> Lançar Opção
+                  </button>
                 </div>
+                <div id="opcoes-lista" class="opcoes-container"></div>
+              </div>
             </div>
 
             <div class="tab-pane" id="acoes">
@@ -621,11 +745,21 @@
                     </div>
                   </div>
                 </div>
-                <div class="performance-box" style="margin-bottom: 20px;">
-                  <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
+                <div class="performance-box" style="margin-bottom: 20px">
+                  <h3
+                    style="
+                      margin-top: 0;
+                      margin-bottom: 20px;
+                      font-weight: 600;
+                      color: #e0e0e0;
+                    "
+                  >
                     Posição por Ativo
                   </h3>
-                  <div class="performance-chart-container" style="height: 400px;">
+                  <div
+                    class="performance-chart-container"
+                    style="height: 400px"
+                  >
                     <canvas id="acoes-valor-atual-chart"></canvas>
                   </div>
                 </div>
@@ -732,13 +866,23 @@
                   </div>
                 </div>
 
-                <div class="performance-box" style="margin-bottom: 20px;">
-                    <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
-                        Posição por Ativo
-                    </h3>
-                    <div class="performance-chart-container" style="height: 400px;">
-                        <canvas id="fiis-valor-atual-chart"></canvas>
-                    </div>
+                <div class="performance-box" style="margin-bottom: 20px">
+                  <h3
+                    style="
+                      margin-top: 0;
+                      margin-bottom: 20px;
+                      font-weight: 600;
+                      color: #e0e0e0;
+                    "
+                  >
+                    Posição por Ativo
+                  </h3>
+                  <div
+                    class="performance-chart-container"
+                    style="height: 400px"
+                  >
+                    <canvas id="fiis-valor-atual-chart"></canvas>
+                  </div>
                 </div>
 
                 <div class="content-header">
@@ -1358,108 +1502,257 @@
                   </div>
                 </div>
 
-                <div class="content-header" style="margin-top: 40px;">
-                  <h3>Valuation por Fluxo de Caixa Descontado (Simplificado)</h3>
+                <div class="content-header" style="margin-top: 40px">
+                  <h3>
+                    Valuation por Fluxo de Caixa Descontado (Simplificado)
+                  </h3>
                 </div>
                 <div class="calculator-card dcf-calculator-simplified">
-                    <form id="dcf-form-simplified">
-                        <div class="dcf-simplified-grid">
-                            <div class="dcf-section">
-                                <h4 class="dcf-section-title">Dados da Empresa</h4>
-                                <div class="form-group-with-hint">
-                                    <label for="dcf-ticker" class="form-label">Ticker da Ação</label>
-                                    <input type="text" id="dcf-ticker" class="form-input" placeholder="Ex: KLBN4">
-                                    <i class="fas fa-info-circle hint-icon" title="1º passo: preencha o ticker da AÇÃO desejada."></i>
-                                </div>
-                                <div class="form-group-with-hint">
-                                    <label for="dcf-preco-atual-simplified" class="form-label">Preço Atual por Ação</label>
-                                    <input type="text" id="dcf-preco-atual-simplified" class="form-input" placeholder="R$ 20,50">
-                                    <i class="fas fa-info-circle hint-icon" title="Preço atual da ação na bolsa para cálculo do Upside/Downside."></i>
-                                </div>
-                                <div class="form-group-with-hint">
-                                    <label for="dcf-num-acoes-simplified" class="form-label">Quantidade de Papéis</label>
-                                    <input type="text" id="dcf-num-acoes-simplified" class="form-input" placeholder="1.500.000.000">
-                                    <i class="fas fa-info-circle hint-icon" title="2º passo: preencha o número total de ações (papéis) da empresa."></i>
-                                </div>
-                                 <div class="form-group-with-hint">
-                                    <label for="dcf-divida-liquida-simplified" class="form-label">Dívida Líquida</label>
-                                    <input type="text" id="dcf-divida-liquida-simplified" class="form-input" placeholder="1.000.000.000">
-                                    <i class="fas fa-info-circle hint-icon" title="Dívida total menos caixa. Essencial para ir do Valor da Firma para o Valor do Acionista."></i>
-                                </div>
-                            </div>
-
-                            <div class="dcf-section">
-                                <h4 class="dcf-section-title">Realidade Atual (FCL Histórico)</h4>
-                                <div class="form-group-with-hint">
-                                    <label class="form-label">Fluxo de Caixa Livre (Últimos 5 anos)</label>
-                                    <i class="fas fa-info-circle hint-icon" title="4º passo: insira o histórico de Fluxo de Caixa Livre (FCL) da Empresa."></i>
-                                    <div class="dcf-input-group-vertical">
-                                        <input type="text" id="dcf-fcl-ano-5" class="form-input" placeholder="Ano -5">
-                                        <input type="text" id="dcf-fcl-ano-4" class="form-input" placeholder="Ano -4">
-                                        <input type="text" id="dcf-fcl-ano-3" class="form-input" placeholder="Ano -3">
-                                        <input type="text" id="dcf-fcl-ano-2" class="form-input" placeholder="Ano -2">
-                                        <input type="text" id="dcf-fcl-ano-1" class="form-input" placeholder="Ano -1 (base para projeção)">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dcf-section">
-                                <h4 class="dcf-section-title">Expectativa (Projeção)</h4>
-                                <div class="form-group-with-hint">
-                                    <label for="dcf-taxa-desconto" class="form-label">Taxa de Desconto</label>
-                                    <input type="text" id="dcf-taxa-desconto" class="form-input" placeholder="15%">
-                                    <i class="fas fa-info-circle hint-icon" title="3º passo: Insira a taxa de desconto desejada (normalmente a SELIC + prêmio de risco)."></i>
-                                </div>
-                                <div class="form-group-with-hint">
-                                    <label for="dcf-crescimento-projetado" class="form-label">Crescimento Projetado do FCL</label>
-                                    <input type="text" id="dcf-crescimento-projetado" class="form-input" placeholder="10%">
-                                    <i class="fas fa-info-circle hint-icon" title="5º passo: insira o crescimento projetado do FCL para os próximos 5 anos."></i>
-                                </div>
-                                <div class="form-group-with-hint">
-                                    <label for="dcf-crescimento-perpetuo-simplified" class="form-label">Cresc. na Perpetuidade</label>
-                                    <input type="text" id="dcf-crescimento-perpetuo-simplified" class="form-input" placeholder="2%">
-                                    <i class="fas fa-info-circle hint-icon" title="Taxa de crescimento sustentável da empresa no longo prazo (geralmente entre 2-3%)."></i>
-                                </div>
-                            </div>
+                  <form id="dcf-form-simplified">
+                    <div class="dcf-simplified-grid">
+                      <div class="dcf-section">
+                        <h4 class="dcf-section-title">Dados da Empresa</h4>
+                        <div class="form-group-with-hint">
+                          <label for="dcf-ticker" class="form-label"
+                            >Ticker da Ação</label
+                          >
+                          <input
+                            type="text"
+                            id="dcf-ticker"
+                            class="form-input"
+                            placeholder="Ex: KLBN4"
+                          />
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="1º passo: preencha o ticker da AÇÃO desejada."
+                          ></i>
                         </div>
-                    </form>
+                        <div class="form-group-with-hint">
+                          <label
+                            for="dcf-preco-atual-simplified"
+                            class="form-label"
+                            >Preço Atual por Ação</label
+                          >
+                          <input
+                            type="text"
+                            id="dcf-preco-atual-simplified"
+                            class="form-input"
+                            placeholder="R$ 20,50"
+                          />
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="Preço atual da ação na bolsa para cálculo do Upside/Downside."
+                          ></i>
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label
+                            for="dcf-num-acoes-simplified"
+                            class="form-label"
+                            >Quantidade de Papéis</label
+                          >
+                          <input
+                            type="text"
+                            id="dcf-num-acoes-simplified"
+                            class="form-input"
+                            placeholder="1.500.000.000"
+                          />
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="2º passo: preencha o número total de ações (papéis) da empresa."
+                          ></i>
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label
+                            for="dcf-divida-liquida-simplified"
+                            class="form-label"
+                            >Dívida Líquida</label
+                          >
+                          <input
+                            type="text"
+                            id="dcf-divida-liquida-simplified"
+                            class="form-input"
+                            placeholder="1.000.000.000"
+                          />
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="Dívida total menos caixa. Essencial para ir do Valor da Firma para o Valor do Acionista."
+                          ></i>
+                        </div>
+                      </div>
 
-                    <div class="dcf-table-container">
-                        <h4 class="dcf-section-title" style="margin-bottom: 15px;">Projeção do Fluxo de Caixa Livre (FCL)</h4>
-                        <table class="dcf-table">
-                            <thead>
-                                <tr>
-                                    <th>Descrição</th>
-                                    <th>Ano 1</th>
-                                    <th>Ano 2</th>
-                                    <th>Ano 3</th>
-                                    <th>Ano 4</th>
-                                    <th>Ano 5</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dcf-projection-table-simplified">
-                                </tbody>
-                        </table>
+                      <div class="dcf-section">
+                        <h4 class="dcf-section-title">
+                          Realidade Atual (FCL Histórico)
+                        </h4>
+                        <div class="form-group-with-hint">
+                          <label class="form-label"
+                            >Fluxo de Caixa Livre (Últimos 5 anos)</label
+                          >
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="4º passo: insira o histórico de Fluxo de Caixa Livre (FCL) da Empresa."
+                          ></i>
+                          <div class="dcf-input-group-vertical">
+                            <input
+                              type="text"
+                              id="dcf-fcl-ano-5"
+                              class="form-input"
+                              placeholder="Ano -5"
+                            />
+                            <input
+                              type="text"
+                              id="dcf-fcl-ano-4"
+                              class="form-input"
+                              placeholder="Ano -4"
+                            />
+                            <input
+                              type="text"
+                              id="dcf-fcl-ano-3"
+                              class="form-input"
+                              placeholder="Ano -3"
+                            />
+                            <input
+                              type="text"
+                              id="dcf-fcl-ano-2"
+                              class="form-input"
+                              placeholder="Ano -2"
+                            />
+                            <input
+                              type="text"
+                              id="dcf-fcl-ano-1"
+                              class="form-input"
+                              placeholder="Ano -1 (base para projeção)"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="dcf-section">
+                        <h4 class="dcf-section-title">
+                          Expectativa (Projeção)
+                        </h4>
+                        <div class="form-group-with-hint">
+                          <label for="dcf-taxa-desconto" class="form-label"
+                            >Taxa de Desconto</label
+                          >
+                          <input
+                            type="text"
+                            id="dcf-taxa-desconto"
+                            class="form-input"
+                            placeholder="15%"
+                          />
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="3º passo: Insira a taxa de desconto desejada (normalmente a SELIC + prêmio de risco)."
+                          ></i>
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label
+                            for="dcf-crescimento-projetado"
+                            class="form-label"
+                            >Crescimento Projetado do FCL</label
+                          >
+                          <input
+                            type="text"
+                            id="dcf-crescimento-projetado"
+                            class="form-input"
+                            placeholder="10%"
+                          />
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="5º passo: insira o crescimento projetado do FCL para os próximos 5 anos."
+                          ></i>
+                        </div>
+                        <div class="form-group-with-hint">
+                          <label
+                            for="dcf-crescimento-perpetuo-simplified"
+                            class="form-label"
+                            >Cresc. na Perpetuidade</label
+                          >
+                          <input
+                            type="text"
+                            id="dcf-crescimento-perpetuo-simplified"
+                            class="form-input"
+                            placeholder="2%"
+                          />
+                          <i
+                            class="fas fa-info-circle hint-icon"
+                            title="Taxa de crescimento sustentável da empresa no longo prazo (geralmente entre 2-3%)."
+                          ></i>
+                        </div>
+                      </div>
                     </div>
+                  </form>
 
-                    <div class="dcf-results-grid">
-                        <div class="result-item primary-result">
-                            <div class="result-label">Valor da Firma (Enterprise Value)</div>
-                            <div id="dcf-enterprise-value-simplified" class="result-value">R$ 0,00</div>
-                        </div>
-                        <div class="result-item primary-result">
-                            <div class="result-label">Valor de Mercado (Equity Value)</div>
-                            <div id="dcf-equity-value-simplified" class="result-value">R$ 0,00</div>
-                        </div>
-                        <div class="result-item primary-result" style="background-color: #004d46;">
-                            <div class="result-label" style="color: #f0f0f0;">Preço Justo por Ação</div>
-                            <div id="dcf-intrinsic-value-simplified" class="result-value" style="color: #ffffff;">R$ 0,00</div>
-                        </div>
-                        <div class="result-item primary-result">
-                            <div class="result-label">Potencial de Upside/Downside</div>
-                            <div id="dcf-upside-potential-simplified" class="result-value">0,00%</div>
-                        </div>
+                  <div class="dcf-table-container">
+                    <h4 class="dcf-section-title" style="margin-bottom: 15px">
+                      Projeção do Fluxo de Caixa Livre (FCL)
+                    </h4>
+                    <table class="dcf-table">
+                      <thead>
+                        <tr>
+                          <th>Descrição</th>
+                          <th>Ano 1</th>
+                          <th>Ano 2</th>
+                          <th>Ano 3</th>
+                          <th>Ano 4</th>
+                          <th>Ano 5</th>
+                        </tr>
+                      </thead>
+                      <tbody id="dcf-projection-table-simplified"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="dcf-results-grid">
+                    <div class="result-item primary-result">
+                      <div class="result-label">
+                        Valor da Firma (Enterprise Value)
+                      </div>
+                      <div
+                        id="dcf-enterprise-value-simplified"
+                        class="result-value"
+                      >
+                        R$ 0,00
+                      </div>
                     </div>
+                    <div class="result-item primary-result">
+                      <div class="result-label">
+                        Valor de Mercado (Equity Value)
+                      </div>
+                      <div
+                        id="dcf-equity-value-simplified"
+                        class="result-value"
+                      >
+                        R$ 0,00
+                      </div>
+                    </div>
+                    <div
+                      class="result-item primary-result"
+                      style="background-color: #004d46"
+                    >
+                      <div class="result-label" style="color: #f0f0f0">
+                        Preço Justo por Ação
+                      </div>
+                      <div
+                        id="dcf-intrinsic-value-simplified"
+                        class="result-value"
+                        style="color: #ffffff"
+                      >
+                        R$ 0,00
+                      </div>
+                    </div>
+                    <div class="result-item primary-result">
+                      <div class="result-label">
+                        Potencial de Upside/Downside
+                      </div>
+                      <div
+                        id="dcf-upside-potential-simplified"
+                        class="result-value"
+                      >
+                        0,00%
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="content-header" style="margin-top: 40px">
@@ -1476,10 +1769,13 @@
 
             <div class="tab-pane" id="analises">
               <div class="content-container" style="max-width: none">
-                <div class="patrimonio-card chart-card" style="margin-bottom: 40px;">
+                <div
+                  class="patrimonio-card chart-card"
+                  style="margin-bottom: 40px"
+                >
                   <h3>Divisão da Carteira por Ativo</h3>
-                  <div class="chart-container-large" style="height: 550px;">
-                      <canvas id="divisao-por-ativo-chart"></canvas>
+                  <div class="chart-container-large" style="height: 550px">
+                    <canvas id="divisao-por-ativo-chart"></canvas>
                   </div>
                 </div>
                 <div class="content-header">
@@ -2166,63 +2462,116 @@
     </div>
 
     <div id="opcoes-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="opcao-modal-title">Lançar Operação com Opção</h2>
-                <button class="modal-close-btn" data-modal="opcoes-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="form-nova-opcao">
-                    <input type="hidden" id="opcao-doc-id" />
-                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                        <div class="input-wrapper">
-                            <label for="opcao-ticker" class="form-label">Ativo-Objeto</label>
-                            <input type="text" id="opcao-ticker" placeholder="Ex: PETR4" class="form-input" required autocomplete="off" />
-                            <div id="opcao-ticker-sugestoes" class="sugestoes-lista"></div>
-                        </div>
-                        <div>
-                            <label for="opcao-tipo" class="form-label">Tipo de Opção</label>
-                            <select id="opcao-tipo" class="form-select" required>
-                                <option value="Call">Call (Opção de Compra)</option>
-                                <option value="Put">Put (Opção de Venda)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="opcao-operacao" class="form-label">Operação</label>
-                            <select id="opcao-operacao" class="form-select" required>
-                                <option value="Venda">Venda (Lançamento)</option>
-                                <option value="Compra">Compra (Tomada)</option>
-                            </select>
-                        </div>
-                         <div>
-                            <label for="opcao-quantidade" class="form-label">Quantidade</label>
-                            <input type="number" id="opcao-quantidade" placeholder="100" class="form-input" required />
-                        </div>
-                        <div>
-                            <label for="opcao-premio" class="form-label">Prêmio por Opção (R$)</label>
-                            <input type="text" id="opcao-premio" placeholder="R$ 0,50" class="form-input" required />
-                        </div>
-                         <div>
-                            <label for="opcao-strike" class="form-label">Strike (Valor da Opção) R$</label>
-                            <input type="text" id="opcao-strike" placeholder="R$ 28,00" class="form-input" required />
-                        </div>
-                        <div class="input-icon-wrapper">
-                           <label for="opcao-vencimento" class="form-label">Data de Vencimento</label>
-                           <i class="fas fa-calendar-alt"></i>
-                           <input type="date" id="opcao-vencimento" name="opcao-vencimento" class="form-input" required />
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-cancelar" data-modal="opcoes-modal">Cancelar</button>
-                        <button type="submit" class="btn-adicionar">
-                            <i class="fas fa-plus"></i> Lançar
-                        </button>
-                    </div>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="opcao-modal-title">Lançar Operação com Opção</h2>
+          <button class="modal-close-btn" data-modal="opcoes-modal">
+            &times;
+          </button>
         </div>
+        <div class="modal-body">
+          <form id="form-nova-opcao">
+            <input type="hidden" id="opcao-doc-id" />
+            <div
+              class="form-grid"
+              style="
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              "
+            >
+              <div class="input-wrapper">
+                <label for="opcao-ticker" class="form-label"
+                  >Ativo-Objeto</label
+                >
+                <input
+                  type="text"
+                  id="opcao-ticker"
+                  placeholder="Ex: PETR4"
+                  class="form-input"
+                  required
+                  autocomplete="off"
+                />
+                <div id="opcao-ticker-sugestoes" class="sugestoes-lista"></div>
+              </div>
+              <div>
+                <label for="opcao-tipo" class="form-label">Tipo de Opção</label>
+                <select id="opcao-tipo" class="form-select" required>
+                  <option value="Call">Call (Opção de Compra)</option>
+                  <option value="Put">Put (Opção de Venda)</option>
+                </select>
+              </div>
+              <div>
+                <label for="opcao-operacao" class="form-label">Operação</label>
+                <select id="opcao-operacao" class="form-select" required>
+                  <option value="Venda">Venda (Lançamento)</option>
+                  <option value="Compra">Compra (Tomada)</option>
+                </select>
+              </div>
+              <div>
+                <label for="opcao-quantidade" class="form-label"
+                  >Quantidade</label
+                >
+                <input
+                  type="number"
+                  id="opcao-quantidade"
+                  placeholder="100"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div>
+                <label for="opcao-premio" class="form-label"
+                  >Prêmio por Opção (R$)</label
+                >
+                <input
+                  type="text"
+                  id="opcao-premio"
+                  placeholder="R$ 0,50"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div>
+                <label for="opcao-strike" class="form-label"
+                  >Strike (Valor da Opção) R$</label
+                >
+                <input
+                  type="text"
+                  id="opcao-strike"
+                  placeholder="R$ 28,00"
+                  class="form-input"
+                  required
+                />
+              </div>
+              <div class="input-icon-wrapper">
+                <label for="opcao-vencimento" class="form-label"
+                  >Data de Vencimento</label
+                >
+                <i class="fas fa-calendar-alt"></i>
+                <input
+                  type="date"
+                  id="opcao-vencimento"
+                  name="opcao-vencimento"
+                  class="form-input"
+                  required
+                />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn-cancelar"
+                data-modal="opcoes-modal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn-adicionar">
+                <i class="fas fa-plus"></i> Lançar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
-
 
     <div id="meta-proventos-modal" class="modal-overlay">
       <div class="modal-content">
@@ -2674,54 +3023,83 @@
 
     <script src="js/main.js" type="module"></script>
     <div id="salvar-calculo-modal" class="modal-overlay">
-      <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-content" style="max-width: 500px">
         <div class="modal-header">
           <h2>Salvar Cálculo</h2>
-          <button class="modal-close-btn" data-modal="salvar-calculo-modal">&times;</button>
+          <button class="modal-close-btn" data-modal="salvar-calculo-modal">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <form id="form-salvar-calculo">
-            <div class="form-grid" style="grid-template-columns: 1fr;">
+            <div class="form-grid" style="grid-template-columns: 1fr">
               <div>
                 <label for="salvar-titulo" class="form-label">Título</label>
-                <input type="text" id="salvar-titulo" class="form-input" required>
+                <input
+                  type="text"
+                  id="salvar-titulo"
+                  class="form-input"
+                  required
+                />
               </div>
               <div>
-                <label for="salvar-notas" class="form-label">Notas (Opcional)</label>
-                <textarea id="salvar-notas" class="form-input" rows="3" style="resize: vertical;"></textarea>
+                <label for="salvar-notas" class="form-label"
+                  >Notas (Opcional)</label
+                >
+                <textarea
+                  id="salvar-notas"
+                  class="form-input"
+                  rows="3"
+                  style="resize: vertical"
+                ></textarea>
               </div>
             </div>
-            <div class="modal-footer" style="padding: 25px 0 0 0;">
-              <button type="button" class="btn-cancelar" data-modal="salvar-calculo-modal">Cancelar</button>
-              <button type="submit" class="btn-salvar"><i class="fas fa-save"></i> Salvar</button>
+            <div class="modal-footer" style="padding: 25px 0 0 0">
+              <button
+                type="button"
+                class="btn-cancelar"
+                data-modal="salvar-calculo-modal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn-salvar">
+                <i class="fas fa-save"></i> Salvar
+              </button>
             </div>
           </form>
         </div>
       </div>
     </div>
     <div id="proventos-detalhe-modal" class="modal-overlay">
-      <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-content" style="max-width: 700px">
         <div class="modal-header">
           <h2 id="proventos-detalhe-modal-title">Detalhes dos Proventos</h2>
-          <button class="modal-close-btn" data-modal="proventos-detalhe-modal">&times;</button>
+          <button class="modal-close-btn" data-modal="proventos-detalhe-modal">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
-          <div class="evolution-chart-container" style="height: 400px;">
+          <div class="evolution-chart-container" style="height: 400px">
             <canvas id="proventos-detalhe-chart"></canvas>
           </div>
         </div>
       </div>
     </div>
     <div id="asset-list-modal" class="modal-overlay">
-  <div class="modal-content" style="max-width: 600px;">
-    <div class="modal-header">
-      <h2 id="asset-list-modal-title">Ativos na Categoria</h2>
-      <button class="modal-close-btn" data-modal="asset-list-modal">&times;</button>
-    </div>
-    <div class="modal-body" id="asset-list-modal-body" style="padding-top: 10px; padding-bottom: 25px;">
+      <div class="modal-content" style="max-width: 600px">
+        <div class="modal-header">
+          <h2 id="asset-list-modal-title">Ativos na Categoria</h2>
+          <button class="modal-close-btn" data-modal="asset-list-modal">
+            &times;
+          </button>
+        </div>
+        <div
+          class="modal-body"
+          id="asset-list-modal-body"
+          style="padding-top: 10px; padding-bottom: 25px"
+        ></div>
       </div>
-  </div>
-</div>
+    </div>
     <script src="js/main.js" type="module"></script>
   </body>
 </html>
