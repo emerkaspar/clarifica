@@ -22,8 +22,31 @@ export async function renderOpcoesTab(opcoes) {
         const isITM = op.tipo === 'Call' ? precoAtualAtivo > op.strike : precoAtualAtivo < op.strike;
         const isVenda = op.operacao === 'Venda';
 
-        // Formata a data de vencimento
         const dataVencimento = op.vencimento ? new Date(op.vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
+
+        // --- INÍCIO DA NOVA LÓGICA DE STATUS ---
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0); // Normaliza a data de hoje para comparar apenas o dia
+        const dataVenc = new Date(op.vencimento + 'T00:00:00');
+        const isExpired = dataVenc < hoje;
+
+        let statusHtml;
+        if (isExpired) {
+            // Se expirou, mostra o resultado final com ícone
+            if (isITM) {
+                // Exercido (resultado não preferido)
+                statusHtml = `<span style="color: var(--negative-change); display: flex; align-items: center; gap: 6px;"><i class="fas fa-thumbs-down"></i> Exercido</span>`;
+            } else {
+                // Virou pó (resultado preferido)
+                statusHtml = `<span style="color: var(--positive-change); display: flex; align-items: center; gap: 6px;"><i class="fas fa-thumbs-up"></i> Virou Pó</span>`;
+            }
+        } else {
+            // Se ainda não venceu, mostra o status atual sem ícone
+            statusHtml = isITM 
+                ? '<span style="color: var(--negative-change);">Sendo exercido</span>' 
+                : '<span style="color: var(--positive-change);">Virando Pó</span>';
+        }
+        // --- FIM DA NOVA LÓGICA DE STATUS ---
 
         return `
             <div class="opcao-card">
@@ -56,7 +79,12 @@ export async function renderOpcoesTab(opcoes) {
                                 ${diferencaPercent.toFixed(2)}%
                             </strong>
                         </div>
-                        <div class="data-item"><span>Status</span><strong>${isITM ? '<span class="status-classificado">Sendo exercido</span>' : '<span class="status-nao-classificado">Virando Pó</span>'}</strong></div>
+                        <div class="data-item">
+                            <span>Status</span>
+                            <strong>
+                                ${statusHtml}
+                            </strong>
+                        </div>
                     </div>
                 </div>
             </div>
