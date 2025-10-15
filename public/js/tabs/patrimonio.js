@@ -95,6 +95,7 @@ async function getPrecosAtuaisRendaFixa(lancamentos) {
     return precosEInfos;
 }
 
+
 /**
  * Busca dados de variação diária para um conjunto de tickers.
  */
@@ -134,16 +135,16 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
     }
 
     const periodo = document.getElementById('patrimonio-periodo-filter').value;
-    const tipoAtivo = document.getElementById('patrimonio-tipo-ativo-filter').value;
+    const tipoAtivoFiltro = document.getElementById('patrimonio-tipo-ativo-filter').value;
 
     let lancamentosFiltrados = lancamentos;
-    if (tipoAtivo !== 'Todos') {
-        const isRendaFixa = tipoAtivo === 'Renda Fixa';
+    if (tipoAtivoFiltro !== 'Todos') {
+        const isRendaFixa = tipoAtivoFiltro === 'Renda Fixa';
         lancamentosFiltrados = lancamentos.filter(l => {
             if (isRendaFixa) {
                 return ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo);
             }
-            return l.tipoAtivo === tipoAtivo;
+            return l.tipoAtivo === tipoAtivoFiltro;
         });
     }
 
@@ -156,23 +157,17 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
     let dataInicio;
 
     switch (periodo) {
-        case '12m':
-            dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
-            break;
-        case '5y':
-            dataInicio = new Date(hoje.getFullYear() - 4, 0, 1);
-            break;
-        case '10y':
-            dataInicio = new Date(hoje.getFullYear() - 9, 0, 1);
-            break;
-        case 'all':
-            dataInicio = new Date(lancamentosOrdenados[0].data + 'T00:00:00');
-            break;
-        case 'current_year':
-        default:
-            dataInicio = new Date(hoje.getFullYear(), 0, 1);
-            break;
+        case '12m': dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1); break;
+        case '5y': dataInicio = new Date(hoje.getFullYear() - 5, hoje.getMonth(), 1); break;
+        case '10y': dataInicio = new Date(hoje.getFullYear() - 10, hoje.getMonth(), 1); break;
+        case 'all': dataInicio = new Date(lancamentosOrdenados[0].data + 'T00:00:00'); break;
+        case 'current_year': default: dataInicio = new Date(hoje.getFullYear(), 0, 1); break;
     }
+
+    const { historicoCDI, historicoIPCA } = await fetchIndexers(
+        dataInicio.toISOString().split('T')[0],
+        hoje.toISOString().split('T')[0]
+    );
 
     const monthlyData = {};
     for (let d = new Date(dataInicio); d <= hoje; d.setMonth(d.getMonth() + 1)) {
@@ -194,11 +189,18 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
 
         while (lancamentoIndex < lancamentosOrdenados.length && new Date(lancamentosOrdenados[lancamentoIndex].data + 'T00:00:00') <= fimDoMes) {
             const l = lancamentosOrdenados[lancamentoIndex];
+            const ativoKey = l.ativo;
 
-            if (!carteira[l.ativo]) {
-                carteira[l.ativo] = { quantidade: 0, valorTotalInvestido: 0, _quantidadeComprada: 0, _valorTotalComprado: 0 };
+            if (!carteira[ativoKey]) {
+                carteira[ativoKey] = {
+                    ...l,
+                    quantidade: 0,
+                    valorTotalInvestido: 0,
+                    _quantidadeComprada: 0,
+                    _valorTotalComprado: 0,
+                };
             }
-            const ativo = carteira[l.ativo];
+            const ativo = carteira[ativoKey];
 
             if (l.tipoOperacao === 'compra') {
                 valorInvestidoAcumulado += l.valorTotal;
@@ -217,13 +219,63 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
         }
 
         let patrimonioAtualDoMes = 0;
-        Object.keys(carteira).forEach(ticker => {
-            const ativo = carteira[ticker];
-            if (ativo.quantidade > 1e-8) {
-                const preco = precosEInfos[ticker]?.price || (ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0);
+        for (const ativoKey in carteira) {
+            const ativo = carteira[ativoKey];
+            if (ativo.quantidade < 1e-8) continue;
+
+            const isRendaFixa = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(ativo.tipoAtivo);
+
+            if (isRendaFixa) {
+                const dataAplicacao = new Date(ativo.data + 'T00:00:00');
+                const diasCorridos = Math.floor((fimDoMes - dataAplicacao) / (1000 * 60 * 60 * 24));
+                if (diasCorridos < 0) continue;
+
+                let valorBruto = ativo.valorTotalInvestido;
+
+                if (ativo.tipoRentabilidade === 'Pós-Fixado') {
+                    let acumuladorCDI = 1;
+                    const percentualCDI = parseFloat(ativo.taxaContratada.replace(/% do CDI/i, '')) / 100;
+                    historicoCDI
+                        .filter(item => {
+                            const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
+                            return itemDate >= dataAplicacao && itemDate <= fimDoMes;
+                        })
+                        .forEach(item => { acumuladorCDI *= (1 + (parseFloat(item.valor) / 100) * percentualCDI); });
+                    valorBruto = ativo.valorTotalInvestido * acumuladorCDI;
+                } else if (ativo.tipoRentabilidade === 'Prefixado') {
+                    const taxaAnual = parseFloat(ativo.taxaContratada.replace('%', '')) / 100;
+                    const diasUteis = diasCorridos * (252 / 365.25);
+                    valorBruto = ativo.valorTotalInvestido * Math.pow(1 + taxaAnual, diasUteis / 252);
+                } else if (ativo.tipoRentabilidade === 'Híbrido') {
+                    let acumuladorIPCA = 1;
+                    const matchTaxa = ativo.taxaContratada.match(/(\d+(\.\d+)?)%/);
+                    const taxaPrefixadaAnual = matchTaxa ? parseFloat(matchTaxa[1]) / 100 : 0;
+                    historicoIPCA
+                        .filter(item => {
+                            const itemDate = new Date(item.data.split('/').reverse().join('-') + 'T00:00:00');
+                            return itemDate >= dataAplicacao && itemDate <= fimDoMes;
+                        })
+                        .forEach(item => { acumuladorIPCA *= (1 + parseFloat(item.valor) / 100); });
+                    const valorCorrigido = ativo.valorTotalInvestido * acumuladorIPCA;
+                    const diasUteis = diasCorridos * (252 / 365.25);
+                    valorBruto = valorCorrigido * Math.pow(1 + taxaPrefixadaAnual, diasUteis / 252);
+                }
+
+                const lucro = valorBruto - ativo.valorTotalInvestido;
+                let aliquotaIR = 0;
+                if (lucro > 0 && !['LCI', 'LCA'].includes(ativo.tipoAtivo)) {
+                    if (diasCorridos <= 180) aliquotaIR = 0.225;
+                    else if (diasCorridos <= 360) aliquotaIR = 0.20;
+                    else if (diasCorridos <= 720) aliquotaIR = 0.175;
+                    else aliquotaIR = 0.15;
+                }
+                patrimonioAtualDoMes += valorBruto - (lucro * aliquotaIR);
+
+            } else {
+                const preco = precosEInfos[ativoKey]?.price || (ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0);
                 patrimonioAtualDoMes += ativo.quantidade * preco;
             }
-        });
+        }
 
         const valorAplicadoFinal = valorInvestidoAcumulado < 0 ? 0 : valorInvestidoAcumulado;
         monthlyData[monthKey].valorAplicado = valorAplicadoFinal;
@@ -242,12 +294,12 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
                 {
                     label: 'Valor Aplicado',
                     data: valoresAplicados,
-                    backgroundColor: '#c4c4c4ff',
+                    backgroundColor: '#cccacaff',
                 },
                 {
                     label: 'Ganho de Capital',
                     data: ganhosDeCapital,
-                    backgroundColor: '#00ffddff',
+                    backgroundColor: '#00d9c3',
                 }
             ]
         },
