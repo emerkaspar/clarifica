@@ -3,9 +3,57 @@ import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.
 
 const historicoListaDiv = document.getElementById("historico-lista");
 const searchInput = document.getElementById("search-ativo");
+const paginationContainer = document.getElementById("lancamentos-pagination");
+
+let currentPage = 1;
+const ITEMS_PER_PAGE = 10;
 
 /**
- * Renderiza a tabela com o histórico de todos os lançamentos.
+ * Renderiza os controles de paginação.
+ * @param {number} totalItems - O número total de lançamentos a serem paginados.
+ */
+const renderPagination = (totalItems) => {
+    if (!paginationContainer) return;
+
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    paginationContainer.innerHTML = '';
+
+    if (totalPages <= 1) {
+        return;
+    }
+
+    // Botão "Anterior"
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Anterior';
+    prevButton.disabled = currentPage === 1;
+    prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderHistorico(window.allLancamentos, window.precosEInfos);
+        }
+    });
+    paginationContainer.appendChild(prevButton);
+
+    // Indicador de página
+    const pageIndicator = document.createElement('span');
+    pageIndicator.textContent = `Página ${currentPage} de ${totalPages}`;
+    paginationContainer.appendChild(pageIndicator);
+
+    // Botão "Próxima"
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Próxima';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderHistorico(window.allLancamentos, window.precosEInfos);
+        }
+    });
+    paginationContainer.appendChild(nextButton);
+};
+
+/**
+ * Renderiza a tabela com o histórico de todos os lançamentos com paginação.
  * @param {Array<object>} lancamentos - A lista completa de todos os lançamentos do usuário.
  * @param {object} precosEInfos - Objeto com preços e URLs de logos dos ativos.
  */
@@ -21,10 +69,16 @@ export function renderHistorico(lancamentos, precosEInfos = {}) {
 
     if (lancamentosFiltrados.length === 0) {
         historicoListaDiv.innerHTML = `<p>Nenhum lançamento encontrado.</p>`;
+        if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
 
-    historicoListaDiv.innerHTML = lancamentosFiltrados.map((l) => {
+    // Lógica de Paginação
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const lancamentosDaPagina = lancamentosFiltrados.slice(startIndex, endIndex);
+
+    historicoListaDiv.innerHTML = lancamentosDaPagina.map((l) => {
         const isRendaFixa = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo);
         const valorTotal = l.valorTotal || l.valorAplicado || 0;
         const quantidade = l.quantidade || '-';
@@ -67,6 +121,8 @@ export function renderHistorico(lancamentos, precosEInfos = {}) {
             </div>
         `;
     }).join("");
+
+    renderPagination(lancamentosFiltrados.length);
 }
 
 // Event listener para os botões de editar e excluir
@@ -99,6 +155,7 @@ historicoListaDiv.addEventListener("click", async (e) => {
 });
 
 searchInput.addEventListener("input", () => {
+    currentPage = 1; // Reseta para a primeira página ao pesquisar
     if (window.allLancamentos && window.precosEInfos) {
         renderHistorico(window.allLancamentos, window.precosEInfos);
     }
