@@ -5,6 +5,9 @@ import { renderOpcoesRendaMensalChart, renderOpcoesEstrategiasChart, renderOpcoe
 
 const opcoesListaDiv = document.getElementById("opcoes-lista");
 const exerciciosListaDiv = document.getElementById("opcoes-exercicios-lista");
+const statusFilterContainer = document.getElementById("opcoes-status-filter");
+
+let currentStatusFilter = 'ativas'; // Estado inicial do filtro
 
 /**
  * Renderiza os cards de resumo da aba Opções.
@@ -57,13 +60,13 @@ function renderComprasExercidas(opcoes, precosAtuais) {
 
     const comprasExercidas = opcoes.filter(op => {
         const dataVenc = new Date(op.vencimento + 'T00:00:00');
-        const precoNoVencimento = precosAtuais[op.ticker]?.price || 0; // Aproximação, o ideal seria o preço no dia do venc.
+        const precoNoVencimento = precosAtuais[op.ticker]?.price || 0;
         const foiExercida = op.tipo === 'Put' && precoNoVencimento < op.strike;
-
+        
         return op.operacao === 'Venda' &&
                op.tipo === 'Put' &&
                dataVenc < hoje &&
-               foiExercida;
+               foiExercida; 
     });
 
     if (comprasExercidas.length === 0) {
@@ -98,26 +101,39 @@ function renderComprasExercidas(opcoes, precosAtuais) {
 export async function renderOpcoesTab(opcoes) {
     if (!opcoesListaDiv) return;
 
-    if (opcoes.length === 0) {
-        opcoesListaDiv.innerHTML = `<p>Nenhuma opção lançada ainda.</p>`;
-        renderOpcoesSummary([], {});
-        renderOpcoesRendaMensalChart([]);
-        renderOpcoesEstrategiasChart([]);
-        renderOpcoesPremioPorAtivoChart([]);
-        renderComprasExercidas([]);
-        return;
-    }
+    // A lista completa de opções é mantida para os gráficos
+    const allOpcoes = [...opcoes]; 
 
-    const tickers = [...new Set(opcoes.map(op => op.ticker))];
+    const tickers = [...new Set(allOpcoes.map(op => op.ticker))];
     const precosAtuais = await fetchCurrentPrices(tickers);
 
-    renderOpcoesSummary(opcoes, precosAtuais);
-    renderOpcoesRendaMensalChart(opcoes);
-    renderOpcoesEstrategiasChart(opcoes);
-    renderOpcoesPremioPorAtivoChart(opcoes); // <-- Nova chamada
-    renderComprasExercidas(opcoes, precosAtuais);
+    // Renderiza os componentes do cabeçalho com todos os dados
+    renderOpcoesSummary(allOpcoes, precosAtuais);
+    renderOpcoesRendaMensalChart(allOpcoes);
+    renderOpcoesEstrategiasChart(allOpcoes);
+    renderOpcoesPremioPorAtivoChart(allOpcoes);
+    renderComprasExercidas(allOpcoes, precosAtuais);
 
-    opcoesListaDiv.innerHTML = opcoes.map(op => {
+    // *** INÍCIO DA LÓGICA DE FILTRAGEM ***
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const opcoesFiltradas = allOpcoes.filter(op => {
+        const dataVenc = new Date(op.vencimento + 'T00:00:00');
+        const isExpired = dataVenc < hoje;
+        return currentStatusFilter === 'ativas' ? !isExpired : isExpired;
+    });
+    
+    if (opcoesFiltradas.length === 0) {
+        opcoesListaDiv.innerHTML = `<p>Nenhuma opção ${currentStatusFilter === 'ativas' ? 'ativa' : 'vencida'} encontrada.</p>`;
+        return;
+    }
+    // *** FIM DA LÓGICA DE FILTRAGEM ***
+
+    // Ordena as opções filtradas pela data de vencimento
+    opcoesFiltradas.sort((a, b) => new Date(b.vencimento) - new Date(a.vencimento));
+    
+    opcoesListaDiv.innerHTML = opcoesFiltradas.map(op => {
         const precoAtualAtivo = precosAtuais[op.ticker]?.price || 0;
         const diferencaReais = precoAtualAtivo - op.strike;
         const diferencaPercent = op.strike > 0 ? (diferencaReais / op.strike) * 100 : 0;
@@ -125,11 +141,7 @@ export async function renderOpcoesTab(opcoes) {
         const isVenda = op.operacao === 'Venda';
 
         const dataVencimento = op.vencimento ? new Date(op.vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
-
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const dataVenc = new Date(op.vencimento + 'T00:00:00');
-        const isExpired = dataVenc < hoje;
+        const isExpired = new Date(op.vencimento + 'T00:00:00') < hoje;
 
         let statusHtml;
         let acoesHtml = `
@@ -193,6 +205,25 @@ export async function renderOpcoesTab(opcoes) {
             </div>
         `;
     }).join("");
+}
+
+// Event Listener para o filtro de status (Ativas/Vencidas)
+if (statusFilterContainer) {
+    statusFilterContainer.addEventListener('click', (e) => {
+        if (e.target.matches('.filter-btn')) {
+            const status = e.target.dataset.status;
+            if (status !== currentStatusFilter) {
+                currentStatusFilter = status;
+                statusFilterContainer.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Re-renderiza a lista com o novo filtro
+                if (window.allOpcoes) {
+                    renderOpcoesTab(window.allOpcoes);
+                }
+            }
+        }
+    });
 }
 
 
