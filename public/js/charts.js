@@ -4,9 +4,6 @@ import { collection, query, where, orderBy, getDocs, limit } from "https://www.g
 import { fetchIndexers } from './api/bcb.js';
 
 // --- VARIÁVEIS DE INSTÂNCIA DOS GRÁFICOS ---
-let opcoesRendaMensalChart = null;
-let opcoesEstrategiasChart = null;
-let opcoesPremioPorAtivoChart = null;
 let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
@@ -18,6 +15,9 @@ let isChartRendering = false;
 let proventosDetalheChart = null;
 let acoesValorAtualChart = null;
 let fiisValorAtualChart = null;
+let opcoesRendaMensalChart = null;
+let opcoesEstrategiasChart = null;
+let opcoesPremioPorAtivoChart = null;
 
 
 // --- FUNÇÕES AUXILIARES DE CORES E OPÇÕES ---
@@ -53,10 +53,38 @@ const getThemeColors = () => {
 };
 
 /**
- * Opções base para os gráficos de barra.
+ * Opções base para os gráficos de barra. (CORRIGIDO)
  */
 const getBarChartOptions = (indexAxis = 'y') => {
     const colors = getThemeColors();
+    const currencyCallback = function (value) {
+        if (value >= 1000) return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
+        return "R$ " + value.toLocaleString('pt-BR');
+    };
+
+    const scales = {
+        x: {
+            grid: { color: colors.gridColorTransparent },
+            ticks: { color: colors.textColor }
+        },
+        y: {
+            grid: { color: colors.gridColorTransparent },
+            ticks: { color: colors.textColor }
+        }
+    };
+
+    if (indexAxis === 'y') {
+        // Gráfico de Barras Horizontais (valor no eixo X)
+        scales.x.beginAtZero = true;
+        scales.x.grid.color = colors.gridColor;
+        scales.x.ticks.callback = currencyCallback;
+    } else {
+        // Gráfico de Barras Verticais (valor no eixo Y)
+        scales.y.beginAtZero = true;
+        scales.y.grid.color = colors.gridColor;
+        scales.y.ticks.callback = currencyCallback;
+    }
+
     return {
         indexAxis,
         responsive: true,
@@ -75,25 +103,10 @@ const getBarChartOptions = (indexAxis = 'y') => {
                 }
             }
         },
-        scales: {
-            x: {
-                beginAtZero: true,
-                grid: { color: indexAxis === 'y' ? colors.gridColor : colors.gridColorTransparent },
-                ticks: {
-                    color: colors.textColor,
-                    callback: function (value) {
-                        if (value >= 1000) return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
-                        return "R$ " + value.toLocaleString('pt-BR');
-                    }
-                }
-            },
-            y: {
-                grid: { color: indexAxis === 'x' ? colors.gridColor : colors.gridColorTransparent },
-                ticks: { color: colors.textColor }
-            }
-        }
+        scales: scales
     };
 };
+
 
 /**
  * Opções base para os gráficos de Donut (Pizza).
@@ -1109,8 +1122,6 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
         plugins: [dataLabelsPlugin]
     });
 }
-
- // --- ADICIONE ESTA NOVA FUNÇÃO NO FINAL DO ARQUIVO ---
 /**
  * Renderiza o gráfico de barras de renda mensal com prêmios de opções.
  * @param {Array<object>} opcoes - A lista de todas as operações com opções.
@@ -1159,7 +1170,7 @@ export function renderOpcoesRendaMensalChart(opcoes) {
         options: getBarChartOptions('x') // Usando 'x' para barras verticais
     });
 }
-// --- ADICIONE ESTA NOVA FUNÇÃO NO FINAL DO ARQUIVO ---
+
 /**
  * Renderiza o gráfico de pizza com a distribuição de estratégias de opções.
  * @param {Array<object>} opcoes - A lista de todas as operações com opções.
@@ -1204,7 +1215,7 @@ export function renderOpcoesEstrategiasChart(opcoes) {
         options: getDonutChartOptions()
     });
 }
-// --- ADICIONE ESTA NOVA FUNÇÃO NO FINAL DO ARQUIVO ---
+
 /**
  * Renderiza o gráfico de pizza com a distribuição de prêmios de opções por ativo.
  * @param {Array<object>} opcoes - A lista de todas as operações com opções.
