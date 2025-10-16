@@ -272,6 +272,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
                 patrimonioAtualDoMes += valorBruto - (lucro * aliquotaIR);
 
             } else {
+                // CORREÇÃO: Usa o preço médio de compra como fallback caso o preço atual não seja encontrado.
                 const preco = precosEInfos[ativoKey]?.price || (ativo._quantidadeComprada > 0 ? ativo._valorTotalComprado / ativo._quantidadeComprada : 0);
                 patrimonioAtualDoMes += ativo.quantidade * preco;
             }
@@ -294,7 +295,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
                 {
                     label: 'Valor Aplicado',
                     data: valoresAplicados,
-                    backgroundColor: '#cccacaff',
+                    backgroundColor: '#c4c4c4ec',
                 },
                 {
                     label: 'Ganho de Capital',
@@ -307,7 +308,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
             responsive: true, maintainAspectRatio: false,
             scales: {
                 x: { stacked: true, grid: { display: false }, ticks: { color: "#a0a7b3" } },
-                y: { stacked: true, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}` } }
+                y: { stacked: true, grid: { color: "#ff9fdada" }, ticks: { color: "#a0a7b3", callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}` } }
             },
             plugins: {
                 legend: { position: 'top', align: 'end', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8 } },
