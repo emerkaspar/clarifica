@@ -139,6 +139,7 @@ function initializeDataListeners(userID) {
     const qOpcoes = query(collection(db, "opcoes"), where("userID", "==", userID), orderBy("timestamp", "desc"));
     onSnapshot(qOpcoes, (snapshot) => {
         allOpcoes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        window.allOpcoes = allOpcoes;
         renderOpcoesTab(allOpcoes);
     });
 
