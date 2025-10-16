@@ -4,6 +4,7 @@ import { collection, query, where, orderBy, getDocs, limit } from "https://www.g
 import { fetchIndexers } from './api/bcb.js';
 
 // --- VARIÁVEIS DE INSTÂNCIA DOS GRÁFICOS ---
+let opcoesRendaMensalChart = null;
 let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
@@ -1104,5 +1105,55 @@ export function renderDividendYieldChart(proventos, lancamentos, precosEInfos) {
             }
         },
         plugins: [dataLabelsPlugin]
+    });
+}
+
+ // --- ADICIONE ESTA NOVA FUNÇÃO NO FINAL DO ARQUIVO ---
+/**
+ * Renderiza o gráfico de barras de renda mensal com prêmios de opções.
+ * @param {Array<object>} opcoes - A lista de todas as operações com opções.
+ */
+export function renderOpcoesRendaMensalChart(opcoes) {
+    const canvas = document.getElementById('opcoes-renda-mensal-chart');
+    if (!canvas) return;
+
+    if (opcoesRendaMensalChart) {
+        opcoesRendaMensalChart.destroy();
+    }
+
+    // Filtra apenas as vendas e agrupa os prêmios por mês de vencimento
+    const rendaPorMes = opcoes
+        .filter(op => op.operacao === 'Venda')
+        .reduce((acc, op) => {
+            const mesVencimento = op.vencimento.substring(0, 7); // Formato YYYY-MM
+            const premioTotal = op.premio * op.quantidade;
+            acc[mesVencimento] = (acc[mesVencimento] || 0) + premioTotal;
+            return acc;
+        }, {});
+
+    const sortedMonths = Object.keys(rendaPorMes).sort();
+
+    const labels = sortedMonths.map(mes => {
+        const [year, month] = mes.split('-');
+        return new Date(year, month - 1, 1).toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+    });
+    const data = sortedMonths.map(mes => rendaPorMes[mes]);
+
+    const colors = getThemeColors();
+
+    opcoesRendaMensalChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Prêmio Recebido (R$)',
+                data: data,
+                backgroundColor: colors.primaryTransparent,
+                borderColor: colors.primary,
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: getBarChartOptions('x') // Usando 'x' para barras verticais
     });
 }

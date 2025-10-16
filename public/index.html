@@ -642,6 +642,37 @@
             </div>
 
             <div class="tab-pane" id="opcoes">
+              <div class="valorization-header">
+                <div id="opcoes-summary-card" class="valorization-card summary-card-details">
+                  <div class="valorization-title">
+                    <i class="fas fa-wallet"></i>
+                    <span>Resumo da Carteira de Opções</span>
+                  </div>
+                  <div class="summary-details-grid">
+                    <div class="summary-item">
+                      <span class="summary-label">Prêmio Total Recebido (Vendas)</span>
+                      <span id="opcoes-premio-total" class="summary-value">R$ 0,00</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Posições em Aberto</span>
+                      <span id="opcoes-posicoes-abertas" class="summary-value">0</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Risco de Exercício (ITM)</span>
+                      <span id="opcoes-risco-exercicio" class="summary-value">0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="performance-box" style="margin-bottom: 20px">
+                <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
+                  Renda Mensal com Prêmios (Vendas)
+                </h3>
+                <div class="performance-chart-container" style="height: 350px;">
+                  <canvas id="opcoes-renda-mensal-chart"></canvas>
+                </div>
+              </div>
               <div class="content-container">
                 <div class="content-header">
                   <h3>Minhas Opções</h3>
