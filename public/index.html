@@ -665,12 +665,23 @@
                 </div>
               </div>
 
-              <div class="performance-box" style="margin-bottom: 20px">
-                <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
-                  Renda Mensal com Prêmios (Vendas)
-                </h3>
-                <div class="performance-chart-container" style="height: 350px;">
-                  <canvas id="opcoes-renda-mensal-chart"></canvas>
+              <div class="charts-grid-container" style="display: grid; grid-template-columns: 1.5fr 1fr; align-items: start; gap: 20px; margin-bottom: 20px;">
+                <div class="performance-box" style="padding: 20px;">
+                  <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
+                    Renda Mensal com Prêmios (Vendas)
+                  </h3>
+                  <div class="performance-chart-container" style="height: 350px;">
+                    <canvas id="opcoes-renda-mensal-chart"></canvas>
+                  </div>
+                </div>
+
+                <div class="performance-box" style="padding: 20px;">
+                  <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
+                    Prêmios por Ativo
+                  </h3>
+                  <div class="chart-container-donut" style="height: 350px; margin: 0 auto;">
+                    <canvas id="opcoes-premio-por-ativo-chart"></canvas>
+                  </div>
                 </div>
               </div>
               <div class="content-container">
@@ -681,6 +692,7 @@
                   </button>
                 </div>
                 <div id="opcoes-lista" class="opcoes-container"></div>
+
                 <div class="charts-grid-container" style="margin-top: 40px; grid-template-columns: 1fr 2fr; align-items: start;">
                   <div class="performance-box" style="padding: 20px;">
                     <h3 style="margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #e0e0e0;">
@@ -700,7 +712,7 @@
                     </div>
                   </div>
                 </div>
-                </div>
+                
               </div>
             </div>
 

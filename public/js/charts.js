@@ -4,8 +4,9 @@ import { collection, query, where, orderBy, getDocs, limit } from "https://www.g
 import { fetchIndexers } from './api/bcb.js';
 
 // --- VARIÁVEIS DE INSTÂNCIA DOS GRÁFICOS ---
-let opcoesEstrategiasChart = null;
 let opcoesRendaMensalChart = null;
+let opcoesEstrategiasChart = null;
+let opcoesPremioPorAtivoChart = null;
 let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
 let proventosEvolucaoChart = null;
@@ -1201,5 +1202,64 @@ export function renderOpcoesEstrategiasChart(opcoes) {
             }]
         },
         options: getDonutChartOptions()
+    });
+}
+// --- ADICIONE ESTA NOVA FUNÇÃO NO FINAL DO ARQUIVO ---
+/**
+ * Renderiza o gráfico de pizza com a distribuição de prêmios de opções por ativo.
+ * @param {Array<object>} opcoes - A lista de todas as operações com opções.
+ */
+export function renderOpcoesPremioPorAtivoChart(opcoes) {
+    const canvas = document.getElementById('opcoes-premio-por-ativo-chart');
+    if (!canvas) return;
+
+    if (opcoesPremioPorAtivoChart) {
+        opcoesPremioPorAtivoChart.destroy();
+    }
+
+    // Filtra vendas e agrupa os prêmios por ativo
+    const premioPorAtivo = opcoes
+        .filter(op => op.operacao === 'Venda')
+        .reduce((acc, op) => {
+            const premioTotal = op.premio * op.quantidade;
+            acc[op.ticker] = (acc[op.ticker] || 0) + premioTotal;
+            return acc;
+        }, {});
+
+    const sortedData = Object.entries(premioPorAtivo).sort(([, a], [, b]) => b - a);
+    
+    const labels = sortedData.map(item => item[0]);
+    const data = sortedData.map(item => item[1]);
+
+    const colors = getThemeColors();
+    const backgroundColors = [
+        '#2dd4bf', '#60a5fa', '#f472b6', '#a78bfa', '#facc15', '#fb923c', '#9ca3af'
+    ];
+
+    const options = getDonutChartOptions();
+    // Customiza o tooltip para mostrar valor e percentual
+    options.plugins.tooltip.callbacks.label = (context) => {
+        const label = context.label || '';
+        const value = context.raw || 0;
+        const total = context.chart.getDatasetMeta(0).total || 1;
+        const percentage = total > 0 ? ((value / total) * 100) : 0;
+        const formattedValue = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return `${label}: ${formattedValue} (${percentage.toFixed(2)}%)`;
+    };
+
+
+    opcoesPremioPorAtivoChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: backgroundColors,
+                borderColor: colors.pieBorderColor,
+                borderWidth: 2,
+                hoverOffset: 8
+            }]
+        },
+        options: options
     });
 }

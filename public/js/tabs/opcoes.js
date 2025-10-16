@@ -1,7 +1,7 @@
 import { db } from '../firebase-config.js';
 import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { fetchCurrentPrices } from '../api/brapi.js';
-import { renderOpcoesRendaMensalChart, renderOpcoesEstrategiasChart } from '../charts.js';
+import { renderOpcoesRendaMensalChart, renderOpcoesEstrategiasChart, renderOpcoesPremioPorAtivoChart } from '../charts.js';
 
 const opcoesListaDiv = document.getElementById("opcoes-lista");
 const exerciciosListaDiv = document.getElementById("opcoes-exercicios-lista");
@@ -47,8 +47,9 @@ function renderOpcoesSummary(opcoes, precosAtuais) {
 /**
  * Renderiza a tabela de compras por exercício de Venda de PUT.
  * @param {Array<object>} opcoes - A lista de todas as operações com opções.
+ * @param {object} precosAtuais - Objeto com os preços atuais para verificar o exercício.
  */
-function renderComprasExercidas(opcoes) {
+function renderComprasExercidas(opcoes, precosAtuais) {
     if (!exerciciosListaDiv) return;
 
     const hoje = new Date();
@@ -56,9 +57,13 @@ function renderComprasExercidas(opcoes) {
 
     const comprasExercidas = opcoes.filter(op => {
         const dataVenc = new Date(op.vencimento + 'T00:00:00');
+        const precoNoVencimento = precosAtuais[op.ticker]?.price || 0; // Aproximação, o ideal seria o preço no dia do venc.
+        const foiExercida = op.tipo === 'Put' && precoNoVencimento < op.strike;
+
         return op.operacao === 'Venda' &&
                op.tipo === 'Put' &&
-               dataVenc < hoje; // Expiradas
+               dataVenc < hoje &&
+               foiExercida;
     });
 
     if (comprasExercidas.length === 0) {
@@ -98,6 +103,7 @@ export async function renderOpcoesTab(opcoes) {
         renderOpcoesSummary([], {});
         renderOpcoesRendaMensalChart([]);
         renderOpcoesEstrategiasChart([]);
+        renderOpcoesPremioPorAtivoChart([]);
         renderComprasExercidas([]);
         return;
     }
@@ -108,8 +114,8 @@ export async function renderOpcoesTab(opcoes) {
     renderOpcoesSummary(opcoes, precosAtuais);
     renderOpcoesRendaMensalChart(opcoes);
     renderOpcoesEstrategiasChart(opcoes);
-    renderComprasExercidas(opcoes);
-
+    renderOpcoesPremioPorAtivoChart(opcoes); // <-- Nova chamada
+    renderComprasExercidas(opcoes, precosAtuais);
 
     opcoesListaDiv.innerHTML = opcoes.map(op => {
         const precoAtualAtivo = precosAtuais[op.ticker]?.price || 0;
