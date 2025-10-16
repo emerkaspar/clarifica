@@ -1,9 +1,10 @@
 import { db } from '../firebase-config.js';
 import { doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { fetchCurrentPrices } from '../api/brapi.js';
-import { renderOpcoesRendaMensalChart } from '../charts.js'; // Importa a nova função
+import { renderOpcoesRendaMensalChart, renderOpcoesEstrategiasChart } from '../charts.js';
 
 const opcoesListaDiv = document.getElementById("opcoes-lista");
+const exerciciosListaDiv = document.getElementById("opcoes-exercicios-lista");
 
 /**
  * Renderiza os cards de resumo da aba Opções.
@@ -22,16 +23,12 @@ function renderOpcoesSummary(opcoes, precosAtuais) {
         const dataVenc = new Date(op.vencimento + 'T00:00:00');
         const isExpired = dataVenc < hoje;
 
-        // Calcula o prêmio total apenas para operações de Venda.
         if (op.operacao === 'Venda') {
             premioTotalRecebido += op.premio * op.quantidade;
         }
 
-        // Conta posições que ainda não venceram.
         if (!isExpired) {
             posicoesAbertas++;
-
-            // Verifica o risco de exercício para vendas em aberto.
             const precoAtualAtivo = precosAtuais[op.ticker]?.price || 0;
             const isITM = op.tipo === 'Call' ? precoAtualAtivo > op.strike : precoAtualAtivo < op.strike;
             if (op.operacao === 'Venda' && isITM) {
@@ -47,24 +44,71 @@ function renderOpcoesSummary(opcoes, precosAtuais) {
     riscoEl.style.color = riscoExercicio > 0 ? 'var(--negative-change)' : 'var(--positive-change)';
 }
 
+/**
+ * Renderiza a tabela de compras por exercício de Venda de PUT.
+ * @param {Array<object>} opcoes - A lista de todas as operações com opções.
+ */
+function renderComprasExercidas(opcoes) {
+    if (!exerciciosListaDiv) return;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const comprasExercidas = opcoes.filter(op => {
+        const dataVenc = new Date(op.vencimento + 'T00:00:00');
+        return op.operacao === 'Venda' &&
+               op.tipo === 'Put' &&
+               dataVenc < hoje; // Expiradas
+    });
+
+    if (comprasExercidas.length === 0) {
+        exerciciosListaDiv.innerHTML = '<p style="font-size: 0.9rem; color: var(--text-secondary);">Nenhuma compra por exercício de PUT registrada.</p>';
+        return;
+    }
+    
+    const tableHeader = `
+        <div class="exercicio-header">
+            <div>Ativo</div>
+            <div>Data Exerc.</div>
+            <div>Quantidade</div>
+            <div>Preço (Strike)</div>
+            <div>Custo Total</div>
+        </div>
+    `;
+
+    const tableRows = comprasExercidas.map(op => `
+        <div class="exercicio-row">
+            <div>${op.ticker}</div>
+            <div>${new Date(op.vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+            <div>${op.quantidade}</div>
+            <div>${op.strike.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+            <div>${(op.strike * op.quantidade).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
+        </div>
+    `).join('');
+
+    exerciciosListaDiv.innerHTML = tableHeader + tableRows;
+}
+
 
 export async function renderOpcoesTab(opcoes) {
     if (!opcoesListaDiv) return;
 
     if (opcoes.length === 0) {
         opcoesListaDiv.innerHTML = `<p>Nenhuma opção lançada ainda.</p>`;
-        // Limpa os cards e o gráfico se não houver dados
         renderOpcoesSummary([], {});
         renderOpcoesRendaMensalChart([]);
+        renderOpcoesEstrategiasChart([]);
+        renderComprasExercidas([]);
         return;
     }
 
     const tickers = [...new Set(opcoes.map(op => op.ticker))];
     const precosAtuais = await fetchCurrentPrices(tickers);
 
-    // Renderiza os novos componentes
     renderOpcoesSummary(opcoes, precosAtuais);
     renderOpcoesRendaMensalChart(opcoes);
+    renderOpcoesEstrategiasChart(opcoes);
+    renderComprasExercidas(opcoes);
 
 
     opcoesListaDiv.innerHTML = opcoes.map(op => {
@@ -90,7 +134,6 @@ export async function renderOpcoesTab(opcoes) {
         if (isExpired) {
             if (isITM) {
                 statusHtml = `<span style="color: var(--negative-change); display: flex; align-items: center; gap: 6px;"><i class="fas fa-thumbs-down"></i> Exercido</span>`;
-                // Adiciona o botão para lançar a compra se for uma Venda de PUT exercida
                 if (op.operacao === 'Venda' && op.tipo === 'Put') {
                     acoesHtml = `<button class="btn-adicionar btn-lancar-compra" data-id="${op.id}" style="font-size: 0.8rem; padding: 6px 10px;"><i class="fas fa-plus"></i> Lançar Compra</button>` + acoesHtml;
                 }
@@ -179,7 +222,6 @@ if (opcoesListaDiv) {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && typeof window.openLancamentoModal === 'function') {
                 const opcao = docSnap.data();
-                // Prepara os dados para o modal de lançamento de Ações/FIIs
                 const lancamentoData = {
                     ativo: opcao.ticker,
                     data: opcao.vencimento,
@@ -187,7 +229,6 @@ if (opcoesListaDiv) {
                     preco: opcao.strike,
                     tipoOperacao: 'compra'
                 };
-                // Abre o modal de lançamento de compra com os dados pré-preenchidos
                 window.openLancamentoModal(lancamentoData, "", "Ações");
             }
             return;

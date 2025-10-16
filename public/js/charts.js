@@ -4,6 +4,7 @@ import { collection, query, where, orderBy, getDocs, limit } from "https://www.g
 import { fetchIndexers } from './api/bcb.js';
 
 // --- VARIÁVEIS DE INSTÂNCIA DOS GRÁFICOS ---
+let opcoesEstrategiasChart = null;
 let opcoesRendaMensalChart = null;
 let movimentacaoChart = null;
 let proventosPorAtivoChart = null;
@@ -1155,5 +1156,50 @@ export function renderOpcoesRendaMensalChart(opcoes) {
             }]
         },
         options: getBarChartOptions('x') // Usando 'x' para barras verticais
+    });
+}
+// --- ADICIONE ESTA NOVA FUNÇÃO NO FINAL DO ARQUIVO ---
+/**
+ * Renderiza o gráfico de pizza com a distribuição de estratégias de opções.
+ * @param {Array<object>} opcoes - A lista de todas as operações com opções.
+ */
+export function renderOpcoesEstrategiasChart(opcoes) {
+    const canvas = document.getElementById('opcoes-estrategias-chart');
+    if (!canvas) return;
+
+    if (opcoesEstrategiasChart) {
+        opcoesEstrategiasChart.destroy();
+    }
+
+    const contagemEstrategias = opcoes.reduce((acc, op) => {
+        const key = `${op.operacao} de ${op.tipo}`;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+
+    const labels = Object.keys(contagemEstrategias);
+    const data = Object.values(contagemEstrategias);
+
+    const colors = getThemeColors();
+    const backgroundColors = [
+        colors.primary,
+        colors.negative,
+        colors.secondary,
+        colors.quaternary
+    ];
+
+    opcoesEstrategiasChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: backgroundColors,
+                borderColor: colors.pieBorderColor,
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        },
+        options: getDonutChartOptions()
     });
 }
