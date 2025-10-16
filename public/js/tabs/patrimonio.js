@@ -308,7 +308,7 @@ async function renderPatrimonioEvolutionChart(lancamentos, precosEInfos) {
             responsive: true, maintainAspectRatio: false,
             scales: {
                 x: { stacked: true, grid: { display: false }, ticks: { color: "#a0a7b3" } },
-                y: { stacked: true, grid: { color: "#fac9e7c2" }, ticks: { color: "#a0a7b3", callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}` } }
+                y: { stacked: true, grid: { color: "#ffdcf2c2" }, ticks: { color: "#a0a7b3", callback: (value) => value >= 1000 ? `R$ ${value / 1000}k` : `R$ ${value}` } }
             },
             plugins: {
                 legend: { position: 'top', align: 'end', labels: { color: '#a0a7b3', usePointStyle: true, boxWidth: 8 } },
