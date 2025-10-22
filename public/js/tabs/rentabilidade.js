@@ -465,7 +465,7 @@ async function renderVariacaoDiariaChart(lancamentos) {
         type: 'line',
         label: 'Variação Total (R$)',
         data: variacoes.totalReaisAjustado.slice(-displayCount),
-        borderColor: '#facc15', // Cor amarela/dourada para contraste
+        borderColor: '#ff5100ff', // Cor amarela/dourada para contraste
         borderWidth: 2,
         pointRadius: 0, // Sem pontos na linha
         fill: false,
