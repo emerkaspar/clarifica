@@ -18,7 +18,8 @@ import { updateMainSummaryHeader } from './summary.js';
 import { renderPatrimonioTab } from './tabs/patrimonio.js';
 import { renderRentabilidadeTab } from './tabs/rentabilidade.js';
 import { fetchCurrentPrices } from './api/brapi.js';
-import { initializePegCalculator } from './tabs/calculos.js';
+// ALTERADO AQUI: Importa a função renomeada
+import { initializeCalculosTab } from './tabs/calculos.js';
 import { renderAnalisesTab } from './tabs/analises.js';
 
 // --- ESTADO GLOBAL DA APLicação ---
@@ -66,7 +67,8 @@ const onLogin = (userID) => {
     currentUserID = userID;
     initializeDataListeners(userID);
     setupAllModals(userID);
-    initializePegCalculator(userID);
+    // ALTERADO AQUI: Chama a função renomeada
+    initializeCalculosTab(userID);
 };
 
 // Função que será chamada quando o usuário fizer logout
@@ -181,7 +183,7 @@ function initializeDataListeners(userID) {
 document.addEventListener("DOMContentLoaded", () => {
     initializeAuth(onLogin, onLogout);
     initializeUI();
-    window.openAssetListModal = openAssetListModal; 
+    window.openAssetListModal = openAssetListModal;
 
     // Listener para o evento de atualização da alocação ideal
     document.addEventListener('idealAllocationChanged', () => {

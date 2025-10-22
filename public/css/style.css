@@ -1792,14 +1792,13 @@ tbody.is-expanded .group-toggle-icon {
     grid-template-columns: 1fr; /* Força uma única coluna em telas menores */
   }
 
-  /* --- NOVAS REGRAS PARA O CABEÇALHO DO GRUPO --- */
   .patrimonio-group-header {
-    grid-template-columns: 1fr; /* Muda para uma única coluna */
-    gap: 15px; /* Adiciona espaço entre o título e o resumo */
+    grid-template-columns: 1fr;
+    gap: 15px;
   }
 
   .group-summary-grid {
-    justify-content: space-between; /* Distribui melhor os itens do resumo */
+    justify-content: space-between;
   }
 
   .performance-filters {
@@ -1834,14 +1833,12 @@ tbody.is-expanded .group-toggle-icon {
   gap: 25px 35px;
 }
 
-/* Layout para a calculadora de Teto Projetivo */
 .teto-calculator {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
-/* Layout para a calculadora PEG Ratio */
 .peg-calculator {
-  grid-template-columns: 1fr 1.2fr; /* Coluna de inputs menor que a de resultados */
+  grid-template-columns: 1fr 1.2fr;
 }
 
 .calculator-form-grid {
@@ -1850,7 +1847,6 @@ tbody.is-expanded .group-toggle-icon {
   gap: 15px 20px;
 }
 
-/* Remove a margem de baixo do último input */
 .calculator-form-grid .form-group-with-hint {
   margin-bottom: 0;
 }
@@ -1862,12 +1858,10 @@ tbody.is-expanded .group-toggle-icon {
   align-content: start;
 }
 
-/* Faz com que os resultados principais ocupem a linha toda */
 .calculator-results-grid .primary-result {
   grid-column: 1 / -1;
 }
 
-/* Estilo unificado para os itens de resultado */
 .calculator-card .result-item {
   background-color: var(--bg-quaternary);
   padding: 12px 15px;
@@ -1877,7 +1871,6 @@ tbody.is-expanded .group-toggle-icon {
   flex-direction: column;
 }
 
-/* Resultados principais maiores e com mais destaque */
 .calculator-card .primary-result {
   padding: 15px 20px;
 }
@@ -1892,22 +1885,21 @@ tbody.is-expanded .group-toggle-icon {
 }
 
 .calculator-card .result-label .hint-icon {
-  position: static; /* Reseta a posição absoluta */
+  position: static;
   transform: none;
   font-size: 0.8rem;
 }
 
 .calculator-card .result-value {
-  font-size: 1.25rem; /* Fonte menor */
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .calculator-card .primary-result .result-value {
-  font-size: 1.7rem; /* Mantém a fonte um pouco maior para os principais */
+  font-size: 1.7rem;
 }
 
-/* Ajustes no grid da calculadora PEG para melhor encaixe */
 .peg-calculator .calculator-form-grid {
   display: flex;
   flex-direction: column;
@@ -1918,15 +1910,13 @@ tbody.is-expanded .group-toggle-icon {
   grid-template-columns: 1fr 1fr;
 }
 
-/* Remove a grid antiga que não será mais usada, substituída por .calculator-card */
 .calculator-grid {
   display: none !important;
 }
 
-/* Responsividade */
 @media (max-width: 900px) {
   .calculator-card {
-    grid-template-columns: 1fr; /* Coloca inputs e resultados um embaixo do outro */
+    grid-template-columns: 1fr;
   }
   .peg-calculator {
     grid-template-columns: 1fr;
@@ -1959,13 +1949,13 @@ tbody.is-expanded .group-toggle-icon {
   text-align: center;
 }
 .status-pill.status-ok {
-  background-color: var(--positive-change); /* Verde */
+  background-color: var(--positive-change);
 }
 .status-pill.status-sub {
-  background-color: var(--accent-secondary); /* Azul */
+  background-color: var(--accent-secondary);
 }
 .status-pill.status-sobre {
-  background-color: var(--negative-change); /* Vermelho */
+  background-color: var(--negative-change);
 }
 /* --- NOVOS ESTILOS PARA PATRIMÔNIO CONSOLIDADO (CARDS) --- */
 .patrimonio-group-card {
@@ -2004,7 +1994,7 @@ tbody.is-expanded .group-toggle-icon {
   transition: transform 0.3s ease;
   font-size: 0.9rem;
   color: var(--text-secondary);
-  transform: rotate(0deg); /* Estado inicial expandido */
+  transform: rotate(0deg);
 }
 
 .patrimonio-group-content.collapsed
@@ -2052,7 +2042,7 @@ tbody.is-expanded .group-toggle-icon {
 
 .patrimonio-group-content {
   padding: 20px;
-  max-height: 5000px; /* Valor alto para permitir a animação de colapso */
+  max-height: 5000px;
   overflow: hidden;
   transition: max-height 0.5s ease-in-out, padding-top 0.5s ease-in-out,
     padding-bottom 0.5s ease-in-out;
@@ -2165,47 +2155,36 @@ tbody.is-expanded .group-toggle-icon {
   margin-left: 5px;
 }
 
-/* Garante que a transição de recolher funcione corretamente no ícone */
 .patrimonio-group-header .group-toggle-icon {
   transition: transform 0.3s ease-out;
 }
 /* --- CORREÇÕES FINAIS DE RESPONSIVIDADE --- */
 
-/* Para telas de tablet e celular em geral (até 768px) */
 @media (max-width: 768px) {
-  /* Garante que o cabeçalho do grupo de ativos quebre a linha */
   .patrimonio-group-header {
-    grid-template-columns: 1fr; /* Muda para uma única coluna */
-    gap: 15px; /* Adiciona espaço entre o título e o resumo */
+    grid-template-columns: 1fr;
+    gap: 15px;
   }
-
-  /* Distribui melhor os itens do resumo no cabeçalho */
   .group-summary-grid {
     justify-content: space-between;
   }
-
-  /* Garante que os cards de ativos ocupem a largura toda */
   .asset-cards-grid {
     grid-template-columns: 1fr;
   }
 }
 
-/* Para telas de celular muito estreitas (até 380px) */
 @media (max-width: 380px) {
-  /* Faz o "Resultado Total" e "Proventos" quebrarem a linha dentro do card */
   .result-line {
-    flex-direction: column; /* Empilha o label e o valor */
-    align-items: flex-start; /* Alinha ambos à esquerda */
-    gap: 2px; /* Adiciona um pequeno espaço entre eles */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
-
   .result-line .value {
-    text-align: left; /* Alinha o texto do valor à esquerda */
+    text-align: left;
   }
 }
 /* --- ESTILOS PARA TABELA/CARD DE LANÇAMENTOS --- */
 
-/* Layout Padrão (Desktop) */
 .lista-item.lancamento-card {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr auto;
@@ -2213,66 +2192,54 @@ tbody.is-expanded .group-toggle-icon {
 }
 
 .lancamento-card .card-cell {
-  display: flex; /* Alinha o conteúdo verticalmente */
+  display: flex;
   align-items: center;
 }
 
-/* Esconde os labels dos cards ("Ativo:", "Data:", etc.) na visão de desktop */
 .lancamento-card .card-cell::before {
   display: none;
 }
 
-/* --- RESPONSIVIDADE TABELA DE LANÇAMENTOS (CELULAR) --- */
 @media (max-width: 768px) {
-  /* Esconde o cabeçalho da tabela em telas pequenas */
   .lancamentos-header {
     display: none;
   }
-
-  /* Transforma cada linha em um card */
   .lista-item.lancamento-card {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Duas colunas para os dados */
+    grid-template-columns: 1fr 1fr;
     gap: 15px 10px;
     padding: 15px;
     position: relative;
-    padding-bottom: 50px; /* Espaço para os botões de ação */
-    min-width: 0; /* Remove a largura mínima no mobile */
+    padding-bottom: 50px;
+    min-width: 0;
   }
-
-  /* Estiliza cada célula do card no mobile */
   .lancamento-card .card-cell {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    align-items: flex-start; /* Alinha o conteúdo à esquerda */
+    align-items: flex-start;
   }
-
-  /* Mostra o label (título da coluna) antes de cada dado */
   .lancamento-card .card-cell::before {
     content: attr(data-label);
-    display: block; /* Garante que o label seja exibido */
+    display: block;
     color: var(--text-secondary);
     font-size: 0.75rem;
     font-weight: normal;
     text-transform: uppercase;
     margin-bottom: 2px;
   }
-
-  /* Célula do Ativo (primeira) ocupa a largura toda no card */
   .lancamento-card .card-cell:first-child {
-    grid-column: 1 / -1; /* Ocupa as duas colunas */
+    grid-column: 1 / -1;
   }
-
-  /* Posiciona os botões de ação no canto inferior direito do card */
   .lancamento-card .lista-acoes {
     position: absolute;
     bottom: 10px;
     right: 15px;
   }
+  .lancamento-card .lista-acoes::before {
+    display: none;
+  }
 }
-/* ... (todo o seu CSS existente) ... */
-
 /* --- NOVOS ESTILOS PARA A ABA DE PROVENTOS (CARDS) --- */
 .provento-group-card {
   background-color: var(--bg-tertiary);
@@ -2317,7 +2284,7 @@ tbody.is-expanded .group-toggle-icon {
 .provento-group-header .group-summary strong {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--positive-change); /* Cor verde para destaque no total */
+  color: var(--positive-change);
 }
 
 .provento-group-header .group-toggle-icon {
@@ -2368,23 +2335,19 @@ tbody.is-expanded .group-toggle-icon {
   padding-bottom: 20px;
 }
 
-/* Esconde o cabeçalho em telas menores, a informação estará no data-label */
 @media (max-width: 768px) {
   .provento-item-header {
     display: none;
   }
-
   .provento-group-header {
-    grid-template-columns: 1fr auto; /* Ajusta o header do card */
+    grid-template-columns: 1fr auto;
   }
-
   .provento-item-row {
-    grid-template-columns: 1fr 1fr; /* Duas colunas para os dados */
+    grid-template-columns: 1fr 1fr;
     gap: 15px 10px;
     position: relative;
-    padding-bottom: 50px; /* Espaço para os botões */
+    padding-bottom: 50px;
   }
-
   .provento-item-row .card-cell::before {
     content: attr(data-label);
     display: block;
@@ -2394,26 +2357,25 @@ tbody.is-expanded .group-toggle-icon {
     text-transform: uppercase;
     margin-bottom: 2px;
   }
-
   .provento-item-row .card-cell {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
   }
-
   .provento-item-row .lista-acoes {
     position: absolute;
     bottom: 10px;
     right: 0;
   }
+  .provento-item-row .lista-acoes::before {
+    display: none;
+  }
 }
 @media (max-width: 780px) {
   .proventos-dashboard {
-    grid-template-columns: 1fr; /* Muda para uma única coluna em telas menores */
+    grid-template-columns: 1fr;
   }
 }
-/* ... (todo o seu CSS existente) ... */
-
 /* --- NOVOS ESTILOS PARA GRÁFICO DE PERFORMANCE CONSOLIDADO --- */
 .performance-box {
   background-color: var(--bg-tertiary);
@@ -2452,7 +2414,7 @@ tbody.is-expanded .group-toggle-icon {
 .performance-summary .summary-value {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--positive-change); /* Default positive */
+  color: var(--positive-change);
 }
 
 .performance-filters {
@@ -2511,116 +2473,7 @@ tbody.is-expanded .group-toggle-icon {
 .opcoes-container {
     display: flex;
     flex-direction: column;
-    gap: 15px; /* Espaço entre os cards */
-}
-
-.opcao-card {
-    background-color: var(--bg-tertiary);
-    border: 1px solid var(--border-primary);
-    border-radius: 12px;
-    padding: 15px 20px;
-    display: flex;
-    flex-direction: column;
     gap: 15px;
-    transition: box-shadow 0.2s ease-in-out;
-}
-
-.opcao-card:hover {
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.card-row-1, .card-row-2 {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 20px 15px;
-}
-
-.card-row-1 {
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--border-primary);
-}
-
-.ticker-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-grow: 1;
-}
-
-.ticker-badge {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.type-info {
-    display: flex;
-    flex-direction: column;
-    text-align: center;
-    min-width: 80px;
-}
-
-.type-info .tipo-operacao {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-.type-info .compra-venda {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-}
-
-.strike-info {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.strike-info span {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-}
-
-.strike-info strong {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--accent-primary);
-}
-
-.data-group {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    align-items: center;
-    flex-grow: 1;
-}
-
-.data-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.data-item span {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin-bottom: 2px;
-}
-
-.data-item strong {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-/* --- ESTILOS PARA ABA DE OPÇÕES (CARDS) --- */
-.opcoes-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* Espaço entre os cards */
 }
 
 .opcao-card {
@@ -2655,8 +2508,8 @@ tbody.is-expanded .group-toggle-icon {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-grow: 1; /* Permite que o grupo cresça */
-    min-width: 150px; /* Largura mínima para evitar quebra de linha */
+    flex-grow: 1;
+    min-width: 150px;
 }
 
 .ticker-badge {
@@ -2685,6 +2538,9 @@ tbody.is-expanded .group-toggle-icon {
     color: var(--text-secondary);
     text-transform: uppercase;
 }
+.type-info .operacao-venda { color: var(--negative-change); }
+.type-info .operacao-compra { color: var(--positive-change); }
+
 
 .strike-info {
     display: flex;
@@ -2705,7 +2561,7 @@ tbody.is-expanded .group-toggle-icon {
 
 .data-group {
     display: flex;
-    gap: 25px; /* Aumenta o espaçamento entre os itens */
+    gap: 25px;
     flex-wrap: wrap;
     align-items: center;
     width: 100%;
@@ -2714,7 +2570,7 @@ tbody.is-expanded .group-toggle-icon {
 .data-item {
     display: flex;
     flex-direction: column;
-    min-width: 80px; /* Largura mínima para cada item */
+    min-width: 80px;
 }
 
 .data-item span {
@@ -2734,26 +2590,24 @@ tbody.is-expanded .group-toggle-icon {
 .nav-tabs-wrapper {
   padding: 0 25px;
   border-bottom: 1px solid var(--border-primary);
-  /* MODIFICADO: Remove a rolagem e adiciona espaço para quebra de linha */
-  overflow-x: visible; 
-  padding-bottom: 15px; /* Espaço para a segunda linha, se quebrar */
+  overflow-x: visible;
+  padding-bottom: 15px;
 }
 .nav-tabs {
   display: flex;
-  /* MODIFICADO: Permite que os itens quebrem a linha */
-  flex-wrap: wrap; 
+  flex-wrap: wrap;
   list-style: none;
   padding: 0;
   margin: 0;
-  gap: 15px 25px; /* Espaço vertical e horizontal entre os itens */
+  gap: 15px 25px;
 }
 .nav-tabs .nav-link {
-    margin-bottom: -16px; /* Ajuste para manter a borda inferior alinhada */
+    margin-bottom: -16px;
 }
 
 /* --- ESTILOS PARA O MENU HAMBURGER (MÓVEL) --- */
 .mobile-menu-btn {
-  display: none; /* Escondido por padrão no desktop */
+  display: none;
   background: transparent;
   border: 1px solid var(--border-secondary);
   color: var(--text-secondary);
@@ -2761,11 +2615,11 @@ tbody.is-expanded .group-toggle-icon {
   padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
-  margin: 0 25px 15px; /* Posicionamento no mobile */
+  margin: 0 25px 15px;
 }
 
 #mobile-nav-menu {
-  display: none; /* Escondido por padrão */
+  display: none;
   position: fixed;
   top: 0;
   left: 0;
@@ -2803,11 +2657,11 @@ tbody.is-expanded .group-toggle-icon {
 /* --- REGRAS DE RESPONSIVIDADE --- */
 @media (max-width: 992px) {
   .nav-tabs-wrapper {
-    display: none; /* Esconde o menu de abas original */
+    display: none;
   }
   .mobile-menu-btn,
   #mobile-nav-menu {
-    display: block; /* Mostra o botão hamburger e prepara o menu móvel */
+    display: block;
   }
 }
 /* --- ESTILOS PARA PAGINAÇÃO --- */
@@ -2843,4 +2697,107 @@ tbody.is-expanded .group-toggle-icon {
 .pagination-controls span {
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+/* --- ESTILOS PARA ACOMPANHAMENTO PREÇO TETO --- */
+.acompanhamento-header {
+    display: grid;
+    gap: 15px;
+    padding: 0 20px;
+    margin-bottom: 5px;
+}
+
+.lista-item.acompanhamento-item {
+    align-items: center; /* Alinha verticalmente */
+}
+
+.acompanhamento-item div {
+    font-size: 0.9rem;
+}
+
+.acompanhamento-item .lista-item-valor i {
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+
+.diferenca-positiva {
+    color: var(--positive-change);
+    font-weight: 600;
+}
+
+.diferenca-negativa {
+    color: var(--negative-change);
+    font-weight: 600;
+}
+
+.btn-excluir-acompanhamento:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--negative-change);
+}
+
+#form-acompanhamento-teto .btn-adicionar {
+    margin-bottom: 0;
+    align-self: end;
+    padding-top: 9px;
+    padding-bottom: 9px;
+}
+
+#acompanhamento-preco-atual {
+    pointer-events: none;
+}
+
+/* Responsividade para a lista de acompanhamento */
+@media (max-width: 768px) {
+    .acompanhamento-header {
+        display: none; /* Esconde cabeçalho no mobile */
+    }
+
+    /* Transforma o item em um card flexível */
+    .lista-item.acompanhamento-item {
+        display: flex; /* Muda para flexbox */
+        flex-direction: column; /* Empilha os itens verticalmente */
+        gap: 10px; /* Espaço entre os itens de dados */
+        position: relative;
+        padding: 15px;
+        padding-bottom: 50px; /* Espaço para botão */
+        min-width: 0;
+        /* Remove o grid-template-columns inline se houver */
+        grid-template-columns: none !important;
+    }
+
+    /* Estilo para cada célula de dado (div filha) no mobile */
+    .lista-item.acompanhamento-item > div:not(.lista-acoes) {
+        display: flex; /* Muda para flex para alinhar label e valor */
+        flex-direction: column; /* Label acima do valor */
+        align-items: flex-start; /* Alinha à esquerda */
+        text-align: left !important;
+        /* Remove estilo de grid item se houver */
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    /* Adiciona o label ANTES de cada valor, exceto para .lista-acoes */
+    .lista-item.acompanhamento-item > div:not(.lista-acoes)::before {
+        content: attr(data-label); /* Pega o label do atributo data-label */
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: normal;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        display: block;
+    }
+
+    /* Garante que a div de ações não tenha label antes */
+    .lista-item.acompanhamento-item .lista-acoes::before {
+        display: none;
+    }
+
+    /* Posiciona os botões de ação */
+    .lista-item.acompanhamento-item .lista-acoes {
+        position: absolute;
+        bottom: 10px;
+        right: 15px;
+        align-self: flex-end; /* Garante que fique no canto */
+        justify-self: flex-end;
+    }
 }
