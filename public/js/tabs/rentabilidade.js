@@ -263,14 +263,12 @@ async function renderConsolidatedHighlights(lancamentos) {
 
 // --- FUNÇÕES PARA O GRÁFICO DE VARIAÇÃO DIÁRIA ---
 async function fetchHistoricoPatrimonio(intervalo) {
-    if (!auth.currentUser) return; // Retorna se não houver usuário logado
+    if (!auth.currentUser) return;
 
-    // Define a data limite para forçar a busca de novos dados (ex: 15 minutos)
     const CACHE_EXPIRATION_MS = 15 * 60 * 1000;
     const now = Date.now();
     const lastFetchTime = allHistoricoPatrimonio._lastFetchTime || 0;
 
-    // Se os dados já existem, não expiraram E o intervalo não é 'Anual' (que pode precisar de mais dados), retorna
     if (allHistoricoPatrimonio.length > 0 && (now - lastFetchTime < CACHE_EXPIRATION_MS) && intervalo !== 'Anual') {
        return;
     }
@@ -283,7 +281,6 @@ async function fetchHistoricoPatrimonio(intervalo) {
         } else if (intervalo === 'Mensal') {
             dataFiltro.setFullYear(hoje.getFullYear() - 1);
         } else {
-            // Ajuste para garantir que tenhamos pelo menos 30 dias + 1 dia anterior para cálculo
             dataFiltro.setDate(hoje.getDate() - 35);
         }
         const dataFiltroStr = dataFiltro.toISOString().split('T')[0];
@@ -295,10 +292,10 @@ async function fetchHistoricoPatrimonio(intervalo) {
         );
         const querySnapshot = await getDocs(q);
         allHistoricoPatrimonio = querySnapshot.docs.map(doc => doc.data());
-        allHistoricoPatrimonio._lastFetchTime = now; // Armazena o timestamp da busca
+        allHistoricoPatrimonio._lastFetchTime = now;
     } catch (error) {
         console.error("Erro ao buscar histórico de patrimônio:", error);
-        allHistoricoPatrimonio = []; // Limpa em caso de erro
+        allHistoricoPatrimonio = [];
     }
 }
 
@@ -330,14 +327,13 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
     let dadosAgregados = {};
     const sortedDates = Object.keys(patrimonioPorDia).sort();
 
-    // Agregação por intervalo (Diário, Mensal, Anual)
     if (intervalo === 'Diário') {
         dadosAgregados = patrimonioPorDia;
     } else {
         const getKey = (date) => intervalo === 'Mensal' ? date.substring(0, 7) : date.substring(0, 4);
         sortedDates.forEach(date => {
             const key = getKey(date);
-            dadosAgregados[key] = patrimonioPorDia[date]; // Pega o ÚLTIMO registro do mês/ano
+            dadosAgregados[key] = patrimonioPorDia[date];
         });
     }
 
@@ -371,15 +367,16 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
             labels.push(label);
 
             let variacaoTotalAjustadaDia = 0;
-            const operacoesDoPeriodo = operacoesPorDia[keyAtual] || {}; // Simplificado para o dia final
+            const operacoesDoPeriodo = operacoesPorDia[keyAtual] || {};
 
             assetTypes.forEach(tipo => {
                 const valorAtual = dadosAtuais[tipo] || 0;
                 const valorAnterior = dadosAnteriores[tipo] || 0;
 
                 const opsDoTipo = operacoesDoPeriodo[tipo] || { compra: 0, venda: 0 };
-                const aportes = intervalo === 'Diário' ? opsDoTipo.compra : 0; // Ajuste só no diário
-                const vendas = intervalo === 'Diário' ? opsDoTipo.venda : 0; // Ajuste só no diário
+                 // Aportes e Vendas só são considerados para ajuste no cálculo diário
+                const aportes = intervalo === 'Diário' ? opsDoTipo.compra : 0;
+                const vendas = intervalo === 'Diário' ? opsDoTipo.venda : 0;
 
                 const variacaoAjustada = (valorAtual - valorAnterior) - aportes + vendas;
 
@@ -391,7 +388,6 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
             const basePercentualAjustado = valorTotalAnterior;
             variacoes.totalPercentAjustado.push(basePercentualAjustado > 0 ? (variacaoTotalAjustadaDia / basePercentualAjustado) * 100 : 0);
 
-            // Cálculo da Variação Bruta (Patrimônio Atual - Patrimônio Anterior)
             const valorTotalAtual = dadosAtuais.total;
             const variacaoBrutaReais = valorTotalAtual - valorTotalAnterior;
             const variacaoBrutaPercent = valorTotalAnterior > 0 ? (variacaoBrutaReais / valorTotalAnterior) * 100 : 0;
@@ -429,8 +425,7 @@ async function renderVariacaoDiariaChart(lancamentos) {
     }
 
     const isConsolidado = filtroAtivo === 'Todos';
-    let datasets = [];
-
+    let barDatasets = []; // Renomeado para clareza
     const displayCount = filtroIntervalo === 'Diário' ? 30 : (filtroIntervalo === 'Mensal' ? 12 : 5);
 
     if (isConsolidado) {
@@ -442,7 +437,8 @@ async function renderVariacaoDiariaChart(lancamentos) {
             'Renda Fixa': { bg: 'rgba(160, 167, 179, 0.8)', bd: '#a0a7b3' }
         };
 
-        datasets = Object.keys(colors).map(tipo => ({
+        barDatasets = Object.keys(colors).map(tipo => ({
+            type: 'bar', // Define o tipo aqui
             label: tipo,
             data: variacoes[tipo].slice(-displayCount),
             backgroundColor: colors[tipo].bg,
@@ -453,7 +449,8 @@ async function renderVariacaoDiariaChart(lancamentos) {
 
     } else {
         const data = variacoes[filtroAtivo].slice(-displayCount);
-        datasets.push({
+        barDatasets.push({
+            type: 'bar', // Define o tipo aqui
             label: `Variação ${filtroAtivo}`,
             data: data,
             backgroundColor: data.map(v => v >= 0 ? 'rgba(0, 217, 195, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
@@ -463,11 +460,28 @@ async function renderVariacaoDiariaChart(lancamentos) {
         });
     }
 
+    // --- INÍCIO DA ADIÇÃO DA LINHA ---
+    const lineDataset = {
+        type: 'line',
+        label: 'Variação Total (R$)',
+        data: variacoes.totalReaisAjustado.slice(-displayCount),
+        borderColor: '#facc15', // Cor amarela/dourada para contraste
+        borderWidth: 2,
+        pointRadius: 0, // Sem pontos na linha
+        fill: false,
+        tension: 0.1, // Leve curvatura
+        yAxisID: 'y', // Garante que usa o mesmo eixo Y das barras
+        order: 0 // Tenta desenhar a linha por cima das barras
+    };
+    // --- FIM DA ADIÇÃO DA LINHA ---
+
     dailyVariationChart = new Chart(canvas, {
+        // O tipo geral pode ser 'bar', mas datasets individuais podem ter tipos diferentes
         type: 'bar',
         data: {
             labels: labels.slice(-displayCount),
-            datasets: datasets
+            // Combina os datasets das barras com o da linha
+            datasets: [...barDatasets, lineDataset]
         },
         options: {
             responsive: true,
@@ -481,20 +495,34 @@ async function renderVariacaoDiariaChart(lancamentos) {
                 y: { stacked: isConsolidado, grid: { color: "#2a2c30" }, ticks: { color: "#a0a7b3", callback: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) } }
             },
             plugins: {
-                legend: { display: isConsolidado, position: 'bottom', labels: { color: '#a0a7b3' } },
+                legend: {
+                    display: isConsolidado,
+                    position: 'bottom',
+                    labels: {
+                        color: '#a0a7b3',
+                         // Filtra a legenda da linha para não aparecer lá
+                        filter: item => item.datasetIndex < barDatasets.length
+                    }
+                },
                 tooltip: {
+                     // Filtra itens da linha do corpo do tooltip principal
+                    filter: item => item.dataset.type !== 'line',
                     callbacks: {
                         label: function (context) {
+                            // Não mostra o label se for o dataset da linha
+                            if (context.dataset.type === 'line') {
+                                return null;
+                            }
                             const valorReal = context.raw;
-                             // Mostra zero apenas se for o único valor ou se for relevante
                             if (valorReal === 0 && context.dataset.data.every(v => v === 0) && !isConsolidado) return null;
-                            if (valorReal === 0 && isConsolidado) return null; // Oculta zero no empilhado
+                            if (valorReal === 0 && isConsolidado) return null;
                             return `${context.dataset.label}: ${valorReal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
                         },
-                        // --- INÍCIO DA CORREÇÃO ---
                         footer: function (tooltipItems) {
-                            const index = tooltipItems[0].dataIndex;
-                            // Usa os arrays AJUSTADOS que excluem aportes/vendas
+                             // Pega o índice correto, ignorando o item da linha se estiver presente
+                            const barTooltipItem = tooltipItems.find(item => item.dataset.type !== 'line') || tooltipItems[0];
+                            const index = barTooltipItem.dataIndex;
+
                             const totalReais = variacoes.totalReaisAjustado.slice(-displayCount)[index];
                             const totalPercent = variacoes.totalPercentAjustado.slice(-displayCount)[index];
 
@@ -510,7 +538,6 @@ async function renderVariacaoDiariaChart(lancamentos) {
                                 `Percentual Total: ${formatPercent(totalPercent)}`
                             ];
                         }
-                        // --- FIM DA CORREÇÃO ---
                     }
                 }
             }
@@ -556,6 +583,8 @@ async function updatePerformanceChart() {
 export async function renderRentabilidadeTab(lancamentos, proventos, summaryData) {
     const rentabilidadePane = document.getElementById('rentabilidade');
     if (!rentabilidadePane) return;
+    const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
 
     if (!lancamentos || lancamentos.length === 0 || !summaryData) {
         document.getElementById('rentabilidade-consolidada-total-investido').textContent = formatCurrency(0);
@@ -570,17 +599,19 @@ export async function renderRentabilidadeTab(lancamentos, proventos, summaryData
     }
 
     renderConsolidatedSummary(summaryData);
-    await renderConsolidatedDayValorization(summaryData, lancamentos); // Passa lancamentos aqui
+    await renderConsolidatedDayValorization(summaryData, lancamentos);
 
     await updatePerformanceChart();
-    await renderVariacaoDiariaChart(lancamentos); // Passa lancamentos aqui
+    await renderVariacaoDiariaChart(lancamentos);
 }
 
 
 // --- EVENT LISTENERS ---
 document.addEventListener('DOMContentLoaded', () => {
     const assetFilter = document.getElementById('daily-variation-asset-filter');
-    if (assetFilter) assetFilter.addEventListener('change', () => renderVariacaoDiariaChart(window.allLancamentos));
+    if (assetFilter) assetFilter.addEventListener('change', () => {
+        if (window.allLancamentos) renderVariacaoDiariaChart(window.allLancamentos);
+    });
 
     const intervalFilter = document.getElementById('daily-variation-interval-filter');
     if (intervalFilter) {
@@ -588,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.matches('.filter-btn')) {
                 intervalFilter.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
-                renderVariacaoDiariaChart(window.allLancamentos);
+                if (window.allLancamentos) renderVariacaoDiariaChart(window.allLancamentos);
             }
         });
     }
