@@ -1244,50 +1244,77 @@
             <div class="tab-pane" id="calculos">
               <div class="content-container" style="max-width: 1100px">
                 <div class="content-header" style="margin-top: 0; justify-content: space-between;">
-                    <h3>Acompanhamento de Preço Teto</h3>
-                </div>
+                <h3>Acompanhamento de Preço Teto</h3>
+            </div>
 
-                <div class="calculator-card" style="margin-bottom: 30px;">
-                    <form id="form-acompanhamento-teto" class="calculator-form-grid" style="grid-template-columns: 2fr 1fr 1fr auto; align-items: end; gap: 15px;">
-                        <div class="form-group-with-hint input-wrapper">
-                            <label for="acompanhamento-ticker" class="form-label">Ticker do Ativo</label>
-                            <input type="text" id="acompanhamento-ticker" class="form-input" placeholder="Ex: BBAS3, BTLG11..." autocomplete="off" />
-                            <div id="acompanhamento-ticker-sugestoes" class="sugestoes-lista"></div>
-                            <span id="acompanhamento-preco-atual" style="position: absolute; right: 10px; top: 35px; font-size: 0.8rem; color: var(--text-secondary);"></span>
+            <div class="calculator-card" style="margin-bottom: 30px;">
+                <form id="form-acompanhamento-teto" style="display: flex; flex-direction: column; gap: 20px;">
+                    
+                    <div class="form-group-with-hint input-wrapper" style="max-width: 500px;">
+                        <label for="acompanhamento-ticker" class="form-label">Ticker do Ativo</label>
+                        <input type="text" id="acompanhamento-ticker" class="form-input" placeholder="Ex: BBAS3, BTLG11..." autocomplete="off" />
+                        <div id="acompanhamento-ticker-sugestoes" class="sugestoes-lista"></div>
+                        <span id="acompanhamento-preco-atual" style="position: absolute; right: 10px; top: 35px; font-size: 0.8rem; color: var(--text-secondary);"></span>
+                    </div>
+
+                    <div class="calculator-form-grid" style="grid-template-columns: 1fr 1fr; gap: 15px 20px;">
+                        <div class="form-group-with-hint">
+                            <label for="acompanhamento-meu-preco-teto" class="form-label">Meu preço teto (R$)</label>
+                            <input type="text" id="acompanhamento-meu-preco-teto" class="form-input" inputmode="decimal" placeholder="R$ 0,00" />
                         </div>
                         <div class="form-group-with-hint">
-                            <label for="acompanhamento-preco-teto" class="form-label">Preço Teto (R$)</label>
-                            <input type="text" id="acompanhamento-preco-teto" class="form-input" inputmode="decimal" placeholder="Ex: 60,50" />
-                            <i class="fas fa-info-circle hint-icon" title="Seu preço teto projetado para este ativo."></i>
+                            <label for="acompanhamento-preco-teto-ward" class="form-label">Preço teto Ward (R$)</label>
+                            <input type="text" id="acompanhamento-preco-teto-ward" class="form-input" inputmode="decimal" placeholder="R$ 0,00" />
                         </div>
-                         <div></div>
-                        <button type="submit" id="btn-salvar-acompanhamento" class="btn-adicionar" style="height: 40px;">
+                        <div class="form-group-with-hint">
+                            <label for="acompanhamento-preco-teto-status-invest" class="form-label">Preço teto Status Invest (R$)</label>
+                            <input type="text" id="acompanhamento-preco-teto-status-invest" class="form-input" inputmode="decimal" placeholder="R$ 0,00" />
+                        </div>
+                        <div class="form-group-with-hint">
+                            <label for="acompanhamento-preco-teto-btg" class="form-label">Preço teto BTG (R$)</label>
+                            <input type="text" id="acompanhamento-preco-teto-btg" class="form-input" inputmode="decimal" placeholder="R$ 0,00" />
+                        </div>
+                    </div>
+                    <div class="form-group-with-hint" style="max-width: 500px;">
+                        <label for="acompanhamento-preco-teto" class="form-label">Preço Teto (Média Calculada) (R$)</label>
+                        <input type="text" id="acompanhamento-preco-teto" class="form-input" inputmode="decimal" placeholder="Média calculada..." readonly style="background-color: var(--input-bg-disabled); cursor: not-allowed;" />
+                        <i class="fas fa-info-circle hint-icon" title="Este valor é a média dos 4 campos acima e será o salvo."></i>
+                    </div>
+
+                    <div style="align-self: flex-start;">
+                        <button type="submit" id="btn-salvar-acompanhamento" class="btn-adicionar" style="height: 40px; min-width: 120px;">
                             <i class="fas fa-plus"></i> Adicionar
                         </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
+            </div>
 
-                <div class="content-header" style="margin-top: 20px;">
-                    <h4>Ativos Acompanhados</h4>
-                    </div>
-                <div class="lista-wrapper">
-                    
-                    <div id="acompanhamento-header" class="lista-header acompanhamento-header" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
-                        <div class="header-col">Ativo</div>
-                        <div class="header-col" style="text-align: right;">Data Def.</div>
-                        <div class="header-col" style="text-align: right;">Preço Atual</div>
-                        <div class="header-col" style="text-align: right;">Preço Teto</div>
-                        <div class="header-col" style="text-align: right;">Diferença (R$)</div>
-                        <div class="header-col" style="text-align: right;">Diferença (%)</div>
-                        <div class="header-col" style="text-align: right;">Ações</div>
-                    </div>
-                    <div id="acompanhamento-lista">
-                        <p>Nenhum ativo adicionado para acompanhamento.</p>
-                    </div>
-                    
-                    <div id="acompanhamento-pagination" class="pagination-controls" style="margin-top: 20px;"></div>
+            <div class="content-header" style="margin-top: 20px;">
+                <h4>Ativos Acompanhados</h4>
                 </div>
-                <hr style="border-color: #2a2c30; margin: 40px 0;">
+            <div class="lista-wrapper">
+                
+                <div id="acompanhamento-header" class="lista-header acompanhamento-header" style="grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr auto; min-width: 950px;">
+                    <div class="header-col sortable-header" data-sort-key="ticker">Ativo</div>
+                    <div class="header-col sortable-header" style="text-align: right;" data-sort-key="dataDefinicao">Data Def.</div>
+                    <div class="header-col sortable-header" style="text-align: right;" data-sort-key="precoAtual">Preço Atual</div>
+                    <div class="header-col sortable-header" style="text-align: right;" data-sort-key="precoTeto">Preço Teto (Média)</div>
+                    <div class="header-col" style="text-align: right;">Meu Teto</div>
+                    <div class="header-col" style="text-align: right;">Ward</div>
+                    <div class="header-col" style="text-align: right;">Status Invest</div>
+                    <div class="header-col" style="text-align: right;">BTG</div>
+                    <div class="header-col sortable-header" style="text-align: right;" data-sort-key="diferencaReais">Diferença (R$)</div>
+                    <div class="header-col sortable-header" style="text-align: right;" data-sort-key="diferencaPercent">Diferença (%)</div>
+                    <div class="header-col" style="text-align: right;">Ações</div>
+                </div>
+                <div id="acompanhamento-lista">
+                    <p>Nenhum ativo adicionado para acompanhamento.</p>
+                </div>
+                
+                <div id="acompanhamento-pagination" class="pagination-controls" style="margin-top: 20px;"></div>
+            </div>
+               </div>
+                <hr style="border-color: #b87ca9; margin: 40px 0;">
                 <div
                   class="content-header"
                   style="justify-content: space-between"

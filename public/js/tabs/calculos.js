@@ -4,6 +4,20 @@ import { collection, addDoc, doc, deleteDoc, serverTimestamp, query, where, orde
 import { auth } from '../firebase-config.js';
 import { searchAssets, fetchCurrentPrices } from '../api/brapi.js';
 
+// --- NOVA FUNÇÃO HELPER ---
+/**
+ * Converte um valor de string formatado (ex: "R$ 1.234,56") para float.
+ * @param {string} value A string a ser convertida.
+ * @returns {number} O valor numérico.
+ */
+function parseCurrencyValue(value) {
+    if (!value || typeof value !== 'string') return 0;
+    // Remove "R$", espaços, e pontos de milhar, depois troca vírgula por ponto
+    return parseFloat(value.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+// --- FIM FUNÇÃO HELPER ---
+
+
 // --- ELEMENTOS DO FORMULÁRIO E RESULTADOS (GERAL) ---
 const salvarCalculoModal = document.getElementById('salvar-calculo-modal');
 const formSalvarCalculo = document.getElementById('form-salvar-calculo');
@@ -62,7 +76,11 @@ async function renderAcompanhamentoLista() {
                 <div class="header-col sortable-header" data-sort-key="ticker">Ativo</div>
                 <div class="header-col sortable-header" style="text-align: right;" data-sort-key="dataDefinicao">Data Def.</div>
                 <div class="header-col sortable-header" style="text-align: right;" data-sort-key="precoAtual">Preço Atual</div>
-                <div class="header-col sortable-header" style="text-align: right;" data-sort-key="precoTeto">Preço Teto</div>
+                <div class="header-col sortable-header" style="text-align: right;" data-sort-key="precoTeto">Preço Teto (Média)</div>
+                <div class="header-col" style="text-align: right;">Meu Teto</div>
+                <div class="header-col" style="text-align: right;">Ward</div>
+                <div class="header-col" style="text-align: right;">Status Invest</div>
+                <div class="header-col" style="text-align: right;">BTG</div>
                 <div class="header-col sortable-header" style="text-align: right;" data-sort-key="diferencaReais">Diferença (R$)</div>
                 <div class="header-col sortable-header" style="text-align: right;" data-sort-key="diferencaPercent">Diferença (%)</div>
                 <div class="header-col" style="text-align: right;">Ações</div>
@@ -88,16 +106,17 @@ async function renderAcompanhamentoLista() {
         acompanhamentos = acompanhamentos.map(item => {
             const precoAtualInfo = precosAtuaisAcompanhamento[item.ticker];
             const precoAtual = precoAtualInfo?.price ?? 0;
-            const precoTeto = item.precoTeto || 0;
-            const diferencaReais = precoAtual - precoTeto;
-            const diferencaPercent = precoTeto > 0 ? (diferencaReais / precoTeto) * 100 : (precoAtual > 0 ? Infinity : 0);
+            // Usa o novo campo precoTetoMedia (ou precoTeto para dados antigos)
+            const precoTetoMedia = item.precoTetoMedia || item.precoTeto || 0;
+            const diferencaReais = precoAtual - precoTetoMedia;
+            const diferencaPercent = precoTetoMedia > 0 ? (diferencaReais / precoTetoMedia) * 100 : (precoAtual > 0 ? Infinity : 0);
              // Converte string 'YYYY-MM-DD' para objeto Date ou null
             const dataDefinicaoDate = item.dataDefinicao ? new Date(item.dataDefinicao + 'T00:00:00') : null;
 
             return {
                 ...item,
                 precoAtualNum: precoAtual,
-                precoTetoNum: precoTeto,
+                precoTetoNum: precoTetoMedia, // Mapeia a média para precoTetoNum para ordenação
                 diferencaReaisNum: diferencaReais,
                 diferencaPercentNum: isFinite(diferencaPercent) ? diferencaPercent : (diferencaReais > 0 ? Infinity : -Infinity), // Trata Infinity para ordenação
                  dataDefinicaoDate: dataDefinicaoDate // Armazena como objeto Date
@@ -111,7 +130,7 @@ async function renderAcompanhamentoLista() {
              // Mapeia a chave de ordenação para a chave de dados correta (Num/Date)
              const sortKeyMap = {
                  'precoAtual': 'precoAtualNum',
-                 'precoTeto': 'precoTetoNum',
+                 'precoTeto': 'precoTetoNum', // 'precoTeto' (do header) agora usa 'precoTetoNum' (que é a média)
                  'diferencaReais': 'diferencaReaisNum',
                  'diferencaPercent': 'diferencaPercentNum',
                  'dataDefinicao': 'dataDefinicaoDate'
@@ -164,11 +183,16 @@ async function renderAcompanhamentoLista() {
          const displaySortColumn = displaySortKeyMap[sortColumnAcompanhamento] || sortColumnAcompanhamento;
 
         // Renderiza Cabeçalho com indicadores de ordenação
+        // ** MODIFICADO: Adicionado 4 novas colunas e atualizado grid-template-columns e min-width **
         headerContainer.innerHTML = `
             <div class="header-col sortable-header ${displaySortColumn === 'ticker' ? `sort-${sortDirectionAcompanhamento}` : ''}" data-sort-key="ticker">Ativo</div>
             <div class="header-col sortable-header ${displaySortColumn === 'dataDefinicao' ? `sort-${sortDirectionAcompanhamento}` : ''}" style="text-align: right;" data-sort-key="dataDefinicao">Data Def.</div>
             <div class="header-col sortable-header ${displaySortColumn === 'precoAtual' ? `sort-${sortDirectionAcompanhamento}` : ''}" style="text-align: right;" data-sort-key="precoAtual">Preço Atual</div>
-            <div class="header-col sortable-header ${displaySortColumn === 'precoTeto' ? `sort-${sortDirectionAcompanhamento}` : ''}" style="text-align: right;" data-sort-key="precoTeto">Preço Teto</div>
+            <div class="header-col sortable-header ${displaySortColumn === 'precoTeto' ? `sort-${sortDirectionAcompanhamento}` : ''}" style="text-align: right;" data-sort-key="precoTeto">Preço Teto (Média)</div>
+            <div class="header-col" style="text-align: right;">Meu Teto</div>
+            <div class="header-col" style="text-align: right;">Ward</div>
+            <div class="header-col" style="text-align: right;">Status Invest</div>
+            <div class="header-col" style="text-align: right;">BTG</div>
             <div class="header-col sortable-header ${displaySortColumn === 'diferencaReais' ? `sort-${sortDirectionAcompanhamento}` : ''}" style="text-align: right;" data-sort-key="diferencaReais">Diferença (R$)</div>
             <div class="header-col sortable-header ${displaySortColumn === 'diferencaPercent' ? `sort-${sortDirectionAcompanhamento}` : ''}" style="text-align: right;" data-sort-key="diferencaPercent">Diferença (%)</div>
             <div class="header-col" style="text-align: right;">Ações</div>
@@ -183,12 +207,23 @@ async function renderAcompanhamentoLista() {
                 ? item.dataDefinicaoDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
                 : '-';
 
+            // ** MODIFICADO: Adicionado 4 novos campos de dados **
+            const meuTeto = item.meuPrecoTeto || 0;
+            const ward = item.precoTetoWard || 0;
+            const statusInvest = item.precoTetoStatusInvest || 0;
+            const btg = item.precoTetoBtg || 0;
+
+            // ** MODIFICADO: Adicionado 4 novas colunas e atualizado grid-template-columns e min-width **
             return `
-                <div class="lista-item acompanhamento-item" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto; min-width: 700px;">
+                <div class="lista-item acompanhamento-item" style="grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr auto; min-width: 950px;">
                     <div class="lista-item-valor" data-label="Ativo">${item.ticker} ${icone}</div>
                     <div style="text-align: right;" data-label="Data Def.">${dataDefinicaoFormatada}</div>
                     <div style="text-align: right;" data-label="Preço Atual">${item.precoAtualNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                    <div style="text-align: right;" data-label="Preço Teto">${item.precoTetoNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div style="text-align: right;" data-label="Preço Teto (Média)">${item.precoTetoNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div style="text-align: right;" data-label="Meu Teto">${meuTeto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div style="text-align: right;" data-label="Ward">${ward.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div style="text-align: right;" data-label="Status Invest">${statusInvest.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    <div style="text-align: right;" data-label="BTG">${btg.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                     <div class="${corClasse}" style="text-align: right;" data-label="Diferença (R$)">${item.diferencaReaisNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                     <div class="${corClasse}" style="text-align: right;" data-label="Diferença (%)">${isFinite(item.diferencaPercentNum) ? `${item.diferencaPercentNum.toFixed(2)}%` : 'N/A'}</div>
                     <div class="lista-acoes" data-label="Ações">
@@ -260,11 +295,53 @@ function initializeAcompanhamentoPrecoTeto(userID) {
     const form = document.getElementById('form-acompanhamento-teto');
     const tickerInput = document.getElementById('acompanhamento-ticker');
     const sugestoesDiv = document.getElementById('acompanhamento-ticker-sugestoes');
-    const precoTetoInput = document.getElementById('acompanhamento-preco-teto');
     const precoAtualSpan = document.getElementById('acompanhamento-preco-atual');
     const headerContainer = document.getElementById('acompanhamento-header'); // Seleciona o container do cabeçalho
     const listaDiv = document.getElementById('acompanhamento-lista'); // Seleciona a lista para delegação do botão excluir
     let timeoutBusca;
+
+    // --- CAMPOS MODIFICADOS ---
+    // Este agora é o campo da MÉDIA (readonly)
+    const precoTetoInput = document.getElementById('acompanhamento-preco-teto'); 
+
+    // --- NOVOS CAMPOS ---
+    const meuPrecoTetoInput = document.getElementById('acompanhamento-meu-preco-teto');
+    const precoTetoWardInput = document.getElementById('acompanhamento-preco-teto-ward');
+    const precoTetoStatusInvestInput = document.getElementById('acompanhamento-preco-teto-status-invest');
+    const precoTetoBtgInput = document.getElementById('acompanhamento-preco-teto-btg');
+    
+    // Array com os novos inputs para facilitar os listeners
+    const inputsMedia = [meuPrecoTetoInput, precoTetoWardInput, precoTetoStatusInvestInput, precoTetoBtgInput];
+    
+    // --- NOVA FUNÇÃO: CALCULAR MÉDIA ---
+    const calcularMediaPrecoTeto = () => {
+        let soma = 0;
+        let contagem = 0;
+        inputsMedia.forEach(input => {
+            const valor = parseCurrencyValue(input.value); // Usa a nova helper
+            if (valor > 0) {
+                soma += valor;
+                contagem++;
+            }
+        });
+
+        if (contagem > 0) {
+            const media = soma / contagem;
+            // Formata a média e insere no campo readonly
+            precoTetoInput.value = media.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else {
+            precoTetoInput.value = ''; // Limpa se não houver valores
+        }
+    };
+    
+    // --- NOVOS LISTENERS: Adiciona formatação e cálculo da média aos 4 novos inputs ---
+    inputsMedia.forEach(input => {
+        input.addEventListener('input', (e) => {
+            formatCurrencyDecimalInput(e.target); // Formata o input
+            calcularMediaPrecoTeto(); // Recalcula a média
+        });
+    });
+    // --- FIM NOVOS LISTENERS ---
 
     // --- Lógica de Input e Busca de Ticker (sem alterações) ---
     tickerInput.addEventListener('input', () => {
@@ -307,7 +384,8 @@ function initializeAcompanhamentoPrecoTeto(userID) {
                                 console.error("Erro ao buscar preço:", fetchError);
                                 precoAtualSpan.textContent = 'Erro';
                             }
-                            precoTetoInput.focus();
+                            // Foca no primeiro campo de input da média
+                            meuPrecoTetoInput.focus(); 
                         });
                         sugestoesDiv.appendChild(div);
                     });
@@ -322,7 +400,8 @@ function initializeAcompanhamentoPrecoTeto(userID) {
         }, 400);
     });
 
-    precoTetoInput.addEventListener('input', (e) => formatCurrencyDecimalInput(e.target));
+    // ** REMOVIDO: Listener do input de preço teto antigo, pois agora é readonly **
+    // precoTetoInput.addEventListener('input', (e) => formatCurrencyDecimalInput(e.target));
 
     document.addEventListener('click', (e) => {
         if (sugestoesDiv && !sugestoesDiv.contains(e.target) && e.target !== tickerInput) {
@@ -331,24 +410,37 @@ function initializeAcompanhamentoPrecoTeto(userID) {
     });
     // --- FIM Lógica de Input ---
 
-    // --- Lógica de Submit do Formulário (sem alterações) ---
+    // --- Lógica de Submit do Formulário (MODIFICADA) ---
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const ticker = tickerInput.value.trim().toUpperCase();
-        const precoTetoRaw = precoTetoInput.value;
-        const precoTeto = parseFloat(precoTetoRaw.replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
+        
+        // Pega a média calculada e os 4 valores individuais
+        const precoTetoMedia = parseCurrencyValue(precoTetoInput.value); // Este é o campo da média
+        const meuPrecoTeto = parseCurrencyValue(meuPrecoTetoInput.value);
+        const precoTetoWard = parseCurrencyValue(precoTetoWardInput.value);
+        const precoTetoStatusInvest = parseCurrencyValue(precoTetoStatusInvestInput.value);
+        const precoTetoBtg = parseCurrencyValue(precoTetoBtgInput.value);
 
-        if (!ticker || precoTeto <= 0) {
-            alert("Por favor, preencha o ticker e um preço teto válido.");
+
+        if (!ticker || precoTetoMedia <= 0) {
+            alert("Por favor, preencha o ticker e pelo menos um campo de preço teto para calcular a média.");
             return;
         }
 
         // Usa o ticker como ID do documento para fácil sobrescrita/atualização
         const docRef = doc(db, "acompanhamentoTeto", ticker); // Alterado aqui
+        
+        // ** MODIFICADO: Objeto de dados para salvar **
         const dataToSave = {
             userID: userID,
             ticker: ticker,
-            precoTeto: precoTeto,
+            precoTeto: precoTetoMedia, // Campo original 'precoTeto' agora armazena a média
+            precoTetoMedia: precoTetoMedia, // Adiciona campo explícito para a média
+            meuPrecoTeto: meuPrecoTeto,
+            precoTetoWard: precoTetoWard,
+            precoTetoStatusInvest: precoTetoStatusInvest,
+            precoTetoBtg: precoTetoBtg,
             dataDefinicao: new Date().toISOString().split('T')[0],
             timestamp: serverTimestamp()
         };
@@ -360,7 +452,13 @@ function initializeAcompanhamentoPrecoTeto(userID) {
         try {
             await setDoc(docRef, dataToSave, { merge: true }); // Usa setDoc com merge
             tickerInput.value = '';
-            precoTetoInput.value = '';
+            precoTetoInput.value = ''; // Limpa o campo da média
+            // ** MODIFICADO: Limpa os 4 novos campos **
+            meuPrecoTetoInput.value = '';
+            precoTetoWardInput.value = '';
+            precoTetoStatusInvestInput.value = '';
+            precoTetoBtgInput.value = '';
+            
             precoAtualSpan.textContent = '';
             sugestoesDiv.innerHTML = '';
             sugestoesDiv.style.display = 'none';
@@ -789,15 +887,61 @@ function initializePegRatioCalculator() {
 function initializeDCFCalculatorSimplified() {
     const dcfForm = document.getElementById('dcf-form-simplified');
     if (!dcfForm) return;
-
+    
     // Funções auxiliares (parse, format, etc.) - Sem alterações
-    const parseNumber = (value) => { /* ... */ };
-    const parsePercent = (value) => { /* ... */ };
-    const formatCurrency = (value, fractionDigits = 2) => { /* ... */ };
-    const formatPercent = (value) => { /* ... */ };
-    const formatBigNumberInput = (input) => { /* ... */ };
-    const formatCurrencyInput = (input) => { /* ... */ };
-    const formatPercentInput = (input) => { /* ... */ };
+    const parseNumber = (value) => {
+        if (!value || typeof value !== 'string') return 0;
+        return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+    };
+    
+    const parsePercent = (value) => {
+        if (!value || typeof value !== 'string') return 0;
+        return (parseFloat(value.replace('%', '').replace(',', '.')) || 0) / 100;
+    };
+
+    const formatCurrency = (value, fractionDigits = 2) => {
+        return value.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: fractionDigits,
+            maximumFractionDigits: fractionDigits
+        });
+    };
+
+    const formatPercent = (value) => {
+        return (value * 100).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }) + '%';
+    };
+
+    const formatBigNumberInput = (input) => {
+        let value = input.value.replace(/\D/g, '');
+        if (value) {
+            input.value = Number(value).toLocaleString('pt-BR');
+        } else {
+            input.value = '';
+        }
+    };
+
+    const formatCurrencyInput = (input) => {
+        let value = input.value.replace(/\D/g, '');
+        if (value) {
+            let numberValue = parseInt(value, 10) / 100;
+            input.value = numberValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else {
+            input.value = '';
+        }
+    };
+    
+    const formatPercentInput = (input) => {
+         let value = input.value.replace(/[^\d,.]/g, '');
+         // Permite digitação com vírgula
+         if (value.trim() === '' || !isNaN(parseFloat(value.replace(/\./g, '').replace(',', '.')))) {
+            input.value = value; 
+         }
+    };
+
 
     const inputs = {
         ticker: document.getElementById('dcf-ticker'),
@@ -822,14 +966,111 @@ function initializeDCFCalculatorSimplified() {
     };
 
     // Função calculateDCF - Sem alterações
-    function calculateDCF() { /* ... */ }
+    function calculateDCF() {
+        try {
+            const fclBase = parseNumber(inputs.fcl[4].value); // Ano -1
+            const taxaDesconto = parsePercent(inputs.taxaDesconto.value);
+            const gProjetado = parsePercent(inputs.crescimentoProjetado.value);
+            const gPerpetuo = parsePercent(inputs.crescimentoPerpetuo.value);
+            const numAcoes = parseNumber(inputs.numAcoes.value);
+            const dividaLiquida = parseNumber(inputs.dividaLiquida.value);
+            const precoAtual = parseNumber(inputs.precoAtual.value);
+
+            if (fclBase === 0 || taxaDesconto === 0 || numAcoes === 0) {
+                clearResults();
+                return;
+            }
+
+            let projecoes = { fcl: [], fclDescontado: [] };
+            let somaFclDescontado = 0;
+
+            for (let i = 1; i <= 5; i++) {
+                const fclProjetado = projecoes.fcl.length === 0 ? fclBase * (1 + gProjetado) : projecoes.fcl[projecoes.fcl.length - 1] * (1 + gProjetado);
+                const fclDescontado = fclProjetado / Math.pow(1 + taxaDesconto, i);
+                projecoes.fcl.push(fclProjetado);
+                projecoes.fclDescontado.push(fclDescontado);
+                somaFclDescontado += fclDescontado;
+            }
+            
+            const fclAno5 = projecoes.fcl[4];
+            const valorPerpetuo = (fclAno5 * (1 + gPerpetuo)) / (taxaDesconto - gPerpetuo);
+            const valorPerpetuoDescontado = valorPerpetuo / Math.pow(1 + taxaDesconto, 5);
+
+            const enterpriseValue = somaFclDescontado + valorPerpetuoDescontado;
+            const equityValue = enterpriseValue - dividaLiquida;
+            const intrinsicValue = equityValue / numAcoes;
+            const upsidePotential = precoAtual > 0 ? (intrinsicValue / precoAtual) - 1 : (intrinsicValue > 0 ? Infinity : 0);
+
+            const finalResults = { enterpriseValue, equityValue, intrinsicValue, upsidePotential, valorPerpetuo, valorPerpetuoDescontado, somaFclDescontado };
+            updateUI(projecoes, finalResults);
+
+        } catch (error) {
+            console.error("Erro no cálculo DCF:", error);
+            clearResults();
+        }
+    }
     // Função updateUI - Sem alterações
-    function updateUI(projecoes, finalResults) { /* ... */ }
+    function updateUI(projecoes, finalResults) {
+        if (!projectionTableBody || !results.enterpriseValue) return;
+
+        projectionTableBody.innerHTML = `
+            <tr>
+                <td>FCL Projetado</td>
+                ${projecoes.fcl.map(val => `<td>${formatCurrency(val, 0)}</td>`).join('')}
+            </tr>
+            <tr>
+                <td>FCL Descontado (VPL)</td>
+                ${projecoes.fclDescontado.map(val => `<td>${formatCurrency(val, 0)}</td>`).join('')}
+            </tr>
+            <tr>
+                <td colspan="5">Valor na Perpetuidade (Descontado)</td>
+                <td>${formatCurrency(finalResults.valorPerpetuoDescontado, 0)}</td>
+            </tr>
+            <tr>
+                <td colspan="5">Soma do FCL Descontado (Anos 1-5)</td>
+                <td>${formatCurrency(finalResults.somaFclDescontado, 0)}</td>
+            </tr>
+        `;
+
+        results.enterpriseValue.textContent = formatCurrency(finalResults.enterpriseValue, 0);
+        results.equityValue.textContent = formatCurrency(finalResults.equityValue, 0);
+        results.intrinsicValue.textContent = formatCurrency(finalResults.intrinsicValue);
+        
+        if (isFinite(finalResults.upsidePotential)) {
+            results.upsidePotential.textContent = formatPercent(finalResults.upsidePotential);
+            results.upsidePotential.style.color = finalResults.upsidePotential >= 0 ? 'var(--positive-change)' : 'var(--negative-change)';
+        } else {
+             results.upsidePotential.textContent = '+∞%';
+             results.upsidePotential.style.color = 'var(--positive-change)';
+        }
+    }
     // Função clearResults - Sem alterações
-    function clearResults() { /* ... */ }
+    function clearResults() {
+         if (projectionTableBody) projectionTableBody.innerHTML = '';
+         if (results.enterpriseValue) results.enterpriseValue.textContent = 'R$ 0,00';
+         if (results.equityValue) results.equityValue.textContent = 'R$ 0,00';
+         if (results.intrinsicValue) results.intrinsicValue.textContent = 'R$ 0,00';
+         if (results.upsidePotential) {
+             results.upsidePotential.textContent = '0,00%';
+             results.upsidePotential.style.color = 'var(--text-primary)';
+         }
+    }
 
     // Listener de input do formulário DCF - Sem alterações
-    dcfForm.addEventListener('input', (e) => { /* ... */ });
+    dcfForm.addEventListener('input', (e) => {
+        const id = e.target.id;
+        if (id === 'dcf-num-acoes-simplified' || id === 'dcf-divida-liquida-simplified' || id.startsWith('dcf-fcl-ano-')) {
+            formatBigNumberInput(e.target);
+        } else if (id === 'dcf-preco-atual-simplified') {
+            formatCurrencyInput(e.target);
+        } else if (id === 'dcf-taxa-desconto' || id === 'dcf-crescimento-projetado' || id === 'dcf-crescimento-perpetuo-simplified') {
+            formatPercentInput(e.target);
+        } else if (id === 'dcf-ticker') {
+             e.target.value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        }
+        
+        calculateDCF();
+    });
 
     calculateDCF(); // Cálculo inicial
 }
@@ -837,9 +1078,134 @@ function initializeDCFCalculatorSimplified() {
 
 // --- LÓGICA COMPARTILHADA DE SALVAMENTO E CONSULTA ---
 // Função loadCalculation - Sem alterações
-function loadCalculation(calc) { /* ... */ }
+function loadCalculation(calc) {
+    if (!calc || !calc.type) return;
+
+    if (calc.type === 'PEG_RATIO' && calc.data && calc.data.inputs) {
+        const { inputs } = calc.data;
+        document.getElementById('ticker').value = inputs.ticker || '';
+        document.getElementById('pl-atual').value = (inputs.plAtual || 0).toString().replace('.', ',');
+        document.getElementById('roe-medio').value = (inputs.roeMedio || 0).toString().replace('.', ',');
+        document.getElementById('payout-medio').value = (inputs.payoutMedio || 0).toString().replace('.', ',');
+        document.getElementById('inflacao').value = (inputs.inflacao || 0).toString().replace('.', ',');
+        
+        // Dispara o evento de input no formulário para recalcular e exibir
+        document.getElementById('peg-calculator-form').dispatchEvent(new Event('input', { bubbles: true }));
+        
+        calculosSalvosModal.classList.remove('show');
+        
+    } else if (calc.type === 'TETO_PROJETIVO' && calc.data && calc.data.inputs) {
+        const { inputs } = calc.data;
+        
+        // Função para formatar números grandes para os inputs
+        const formatForInput = (val, type) => {
+            if (val === undefined || val === null) return '';
+            const num = Number(val);
+            if (isNaN(num)) return '';
+            
+            if (type === 'integer') {
+                return num.toLocaleString('pt-BR');
+            } else if (type === 'percent') {
+                 // Converte para string com vírgula para o input
+                 return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else if (type === 'currency') {
+                 // Converte para string com vírgula para o input
+                 return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            return val.toString();
+        };
+
+        document.getElementById('teto-ticker').value = inputs.ticker || '';
+        document.getElementById('teto-lucro-projetivo').value = formatForInput(inputs.lucro_projetivo, 'integer');
+        document.getElementById('teto-quantidade-papeis').value = formatForInput(inputs.quantidade_papeis, 'integer');
+        document.getElementById('teto-payout').value = formatForInput(inputs.payout, 'percent');
+        document.getElementById('teto-yield-minimo').value = formatForInput(inputs.yield_minimo, 'percent');
+        document.getElementById('teto-cotacao-atual').value = formatForInput(inputs.cotacao_atual, 'currency');
+        
+        // Dispara o evento de input no formulário para recalcular e exibir
+        document.getElementById('teto-projetivo-form').dispatchEvent(new Event('input', { bubbles: true }));
+
+        calculosSalvosModal.classList.remove('show');
+    }
+}
 // Função renderSavedCalculations - Sem alterações
-function renderSavedCalculations(searchTerm = '') { /* ... */ }
+function renderSavedCalculations(searchTerm = '') {
+    if (!calculosSalvosListaDiv) return;
+
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    const filteredCalcs = allSavedCalculations.filter(calc => {
+        const titleMatch = calc.title && calc.title.toLowerCase().includes(lowerSearchTerm);
+        const tickerMatch = calc.data && calc.data.inputs && calc.data.inputs.ticker && calc.data.inputs.ticker.toLowerCase().includes(lowerSearchTerm);
+        return titleMatch || tickerMatch;
+    });
+
+    if (filteredCalcs.length === 0) {
+        calculosSalvosListaDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 15px;">Nenhum cálculo salvo encontrado.</p>';
+        return;
+    }
+
+    calculosSalvosListaDiv.innerHTML = filteredCalcs.map(calc => {
+        let detailsHtml = '';
+        if (calc.type === 'PEG_RATIO' && calc.data && calc.data.resultados) {
+            const { peg, desconto } = calc.data.resultados;
+            detailsHtml = `
+                <span class="calc-detail">PEG: <strong>${(peg || 0).toFixed(2).replace('.', ',')}</strong></span>
+                <span class="calc-detail">Desconto: <strong>${(desconto || 0).toFixed(2).replace('.', ',')}%</strong></span>
+            `;
+        } else if (calc.type === 'TETO_PROJETIVO' && calc.data && calc.data.resultados) {
+            const { preco_justo, margem_seguranca } = calc.data.resultados;
+            const margemClass = margem_seguranca >= 0 ? 'good' : 'bad';
+            detailsHtml = `
+                <span class="calc-detail">Preço Teto: <strong>${(preco_justo || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></span>
+                <span class="calc-detail">Margem: <strong class="${margemClass}">${isFinite(margem_seguranca) ? (margem_seguranca || 0).toFixed(2).replace('.', ',') + '%' : '+∞%'}</strong></span>
+            `;
+        }
+
+        return `
+            <div class="saved-calc-item">
+                <div class="saved-calc-header">
+                    <span class="calc-title">${calc.title || 'Cálculo Salvo'}</span>
+                    <span class="calc-date">${calc.timestamp ? new Date(calc.timestamp.seconds * 1000).toLocaleDateString('pt-BR') : ''}</span>
+                </div>
+                <div class="saved-calc-body">
+                    <p class="calc-notes">${calc.notes || 'Sem notas.'}</p>
+                    <div class="saved-calc-details">
+                        ${detailsHtml}
+                    </div>
+                </div>
+                <div class="saved-calc-actions">
+                    <button class="btn-crud btn-load-calc" data-id="${calc.id}"><i class="fas fa-upload"></i> Carregar</button>
+                    <button class="btn-crud btn-delete-calc" data-id="${calc.id}"><i class="fas fa-trash-alt"></i> Excluir</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Adiciona listeners para os botões de carregar e excluir
+    calculosSalvosListaDiv.querySelectorAll('.btn-load-calc').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const calcId = btn.dataset.id;
+            const calcToLoad = allSavedCalculations.find(c => c.id === calcId);
+            loadCalculation(calcToLoad);
+        });
+    });
+
+    calculosSalvosListaDiv.querySelectorAll('.btn-delete-calc').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const calcId = btn.dataset.id;
+             const calcToDelete = allSavedCalculations.find(c => c.id === calcId);
+            if (confirm(`Tem certeza que deseja excluir o cálculo "${calcToDelete.title || 'este cálculo'}"?`)) {
+                try {
+                    await deleteDoc(doc(db, "calculosSalvos", calcId));
+                    // A lista será atualizada pelo listener onSnapshot
+                } catch (error) {
+                    console.error("Erro ao excluir cálculo:", error);
+                    alert("Erro ao excluir.");
+                }
+            }
+        });
+    });
+}
 
 /**
  * Inicializa todas as calculadoras e funcionalidades da aba.
@@ -851,9 +1217,53 @@ export function initializeCalculosTab(userID) {
     initializeDCFCalculatorSimplified();
 
     // Listeners para abrir/fechar modais e salvar cálculos (sem alterações)
-     if(btnVerSalvos) { /* ... */ }
-     if(formSalvarCalculo) { /* ... */ }
-     if(searchSavedCalcInput) { /* ... */ }
+     if(btnVerSalvos) {
+        btnVerSalvos.addEventListener('click', () => {
+            renderSavedCalculations(); // Renderiza todos os cálculos ao abrir
+            calculosSalvosModal.classList.add('show');
+        });
+     }
+     
+     if(formSalvarCalculo) {
+         formSalvarCalculo.addEventListener('submit', async (e) => {
+             e.preventDefault();
+             if (!auth.currentUser || !calculationTypeToSave) return;
+             
+             let dataToSave = {};
+             if (calculationTypeToSave === 'PEG_RATIO') {
+                 dataToSave = currentPegCalculations;
+             } else if (calculationTypeToSave === 'TETO_PROJETIVO') {
+                 dataToSave = currentTetoCalculations;
+             } else {
+                 return; // Tipo desconhecido
+             }
+             
+             const calculo = {
+                 userID: auth.currentUser.uid,
+                 type: calculationTypeToSave,
+                 title: salvarTituloInput.value || 'Cálculo Salvo',
+                 notes: salvarNotasInput.value || '',
+                 data: dataToSave,
+                 timestamp: serverTimestamp()
+             };
+             
+             try {
+                 await addDoc(collection(db, "calculosSalvos"), calculo);
+                 salvarCalculoModal.classList.remove('show');
+                 formSalvarCalculo.reset();
+                 calculationTypeToSave = ''; // Reseta o tipo
+             } catch (error) {
+                 console.error("Erro ao salvar cálculo: ", error);
+                 alert("Não foi possível salvar o cálculo.");
+             }
+         });
+     }
+
+     if(searchSavedCalcInput) {
+        searchSavedCalcInput.addEventListener('input', (e) => {
+            renderSavedCalculations(e.target.value);
+        });
+     }
 
     // Listener do Firestore para cálculos salvos (sem alterações)
     const qCalculos = query(collection(db, "calculosSalvos"), where("userID", "==", userID), orderBy("timestamp", "desc"));
@@ -865,8 +1275,32 @@ export function initializeCalculosTab(userID) {
     }, (error) => {
          console.error("Erro no listener de cálculos salvos:", error);
     });
-    window.unsubscribeCalculosSalvos = unsubscribeCalculosSalvos;
+    // Armazena a função de unsubscribe globalmente para ser chamada no logout
+    if (!window.firestoreUnsubscribers) {
+        window.firestoreUnsubscribers = [];
+    }
+    window.firestoreUnsubscribers.push(unsubscribeCalculosSalvos);
 }
 
 // Listener de autenticação para limpar listeners (sem alterações)
-auth.onAuthStateChanged(user => { /* ... */ });
+auth.onAuthStateChanged(user => {
+    if (!user) {
+        // Limpa listeners do Firestore quando o usuário desloga
+        if (acompanhamentoListenerUnsubscribe) {
+            acompanhamentoListenerUnsubscribe();
+            acompanhamentoListenerUnsubscribe = null;
+        }
+         if (window.firestoreUnsubscribers) {
+             window.firestoreUnsubscribers.forEach(unsub => unsub());
+             window.firestoreUnsubscribers = [];
+         }
+         // Limpa caches locais
+         precosAtuaisAcompanhamento = {};
+         allSavedCalculations = [];
+         // Limpa as listas na UI
+         const listaAcompanhamento = document.getElementById('acompanhamento-lista');
+         if (listaAcompanhamento) listaAcompanhamento.innerHTML = '<p>Você precisa estar logado para ver seus acompanhamentos.</p>';
+         const listaCalculosSalvos = document.getElementById('calculos-salvos-lista');
+         if (listaCalculosSalvos) listaCalculosSalvos.innerHTML = '<p>Você precisa estar logado para ver seus cálculos.</p>';
+    }
+});
