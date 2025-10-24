@@ -1383,11 +1383,21 @@
                         id="teto-quantidade-papeis"
                         class="form-input"
                         inputmode="numeric"
-                        placeholder="Ex: 4.539.008.000"
+                        placeholder="Em units (11) a quantidade deve ser calculada"
                       />
                       <i
                         class="fas fa-info-circle hint-icon"
-                        title="Número total de ações emitidas"
+                        title="Atenção: Se o ticker for uma unit (como BRBI11), lembre-se de ajustar a quantidade de ações equivalentes.
+Cada unit pode representar mais de uma ação (ex.: BRBI11 = 1 ON + 1 PN).
+Nesse caso, divida o total de ações emitidas pela quantidade de ações que compõem cada unit para obter o número correto de units na conta.
+Isso garante que o LPA e o DPA projetivos reflitam o valor real por unit.
+
+🧱 Exemplo prático (incluir como texto auxiliar opcional):
+
+Exemplo:
+O BRBI11 tem 314.987.112 ações (ON + PN).
+Como cada unit tem 2 ações, o número de units é 157.493.556.
+Use esse valor no campo "Quantidade de papéis" ao calcular o preço teto projetivo."
                       ></i>
                     </div>
                     <div class="form-group-with-hint">
