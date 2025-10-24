@@ -12,7 +12,10 @@ let BRAAPI_IS_PERMANENTLY_DOWN = false;
  * Função interna para chamar a API BRAPI com tratamento de erro e bloqueio 401.
  */
 async function getFromBrapi(url) {
-    const fullUrl = `${url}&token=${BRAAPI_TOKEN}`;
+    // Verifica se a URL já possui parâmetros de consulta (se inclui '?')
+    const separator = url.includes('?') ? '&' : '?';
+    const fullUrl = `${url}${separator}token=${BRAAPI_TOKEN}`;
+    
     try {
         const response = await fetch(fullUrl);
         
