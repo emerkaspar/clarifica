@@ -215,7 +215,7 @@ async function renderAcompanhamentoLista() {
 
             // ** MODIFICADO: Adicionado 4 novas colunas e atualizado grid-template-columns e min-width **
             return `
-                <div class="lista-item acompanhamento-item" style="grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr auto; min-width: 950px;">
+                <div class="lista-item acompanhamento-item">
                     <div class="lista-item-valor" data-label="Ativo">${item.ticker} ${icone}</div>
                     <div style="text-align: right;" data-label="Data Def.">${dataDefinicaoFormatada}</div>
                     <div style="text-align: right;" data-label="Preço Atual">${item.precoAtualNum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
@@ -544,7 +544,9 @@ function initializeAcompanhamentoPrecoTeto(userID) {
         console.error("Erro no listener de acompanhamento:", error);
     });
 
+    setTimeout(() => {
     renderAcompanhamentoLista(); // Renderização inicial
+}, 1500); // Atraso de 1.5 segundos
 }
 
 // --- RESTANTE DO CÓDIGO (Calculadoras PEG, Teto, DCF, Salvamento, etc.) ---

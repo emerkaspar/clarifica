@@ -696,7 +696,10 @@ body {
   padding: 8px 15px;
 }
 .lista-wrapper {
-  overflow-x: auto;
+  width: 100%;
+  margin-top: 20px;
+  overflow-x: auto; /* <-- ADICIONE ESTA LINHA */
+  /* ...outras regras que já existam aqui... */
 }
 .lista-header {
   display: grid;
@@ -2699,14 +2702,6 @@ tbody.is-expanded .group-toggle-icon {
   font-size: 0.9rem;
 }
 
-/* --- ESTILOS PARA ACOMPANHAMENTO PREÇO TETO --- */
-.acompanhamento-header {
-    display: grid;
-    gap: 15px;
-    padding: 0 20px;
-    margin-bottom: 5px;
-}
-
 .lista-item.acompanhamento-item {
     align-items: center; /* Alinha verticalmente */
 }
@@ -2747,60 +2742,7 @@ tbody.is-expanded .group-toggle-icon {
 }
 
 /* Responsividade para a lista de acompanhamento */
-@media (max-width: 768px) {
-    .acompanhamento-header {
-        display: none; /* Esconde cabeçalho no mobile */
-    }
 
-    /* Transforma o item em um card flexível */
-    .lista-item.acompanhamento-item {
-        display: flex; /* Muda para flexbox */
-        flex-direction: column; /* Empilha os itens verticalmente */
-        gap: 10px; /* Espaço entre os itens de dados */
-        position: relative;
-        padding: 15px;
-        padding-bottom: 50px; /* Espaço para botão */
-        min-width: 0;
-        /* Remove o grid-template-columns inline se houver */
-        grid-template-columns: none !important;
-    }
-
-    /* Estilo para cada célula de dado (div filha) no mobile */
-    .lista-item.acompanhamento-item > div:not(.lista-acoes) {
-        display: flex; /* Muda para flex para alinhar label e valor */
-        flex-direction: column; /* Label acima do valor */
-        align-items: flex-start; /* Alinha à esquerda */
-        text-align: left !important;
-        /* Remove estilo de grid item se houver */
-        grid-column: auto;
-        grid-row: auto;
-    }
-
-    /* Adiciona o label ANTES de cada valor, exceto para .lista-acoes */
-    .lista-item.acompanhamento-item > div:not(.lista-acoes)::before {
-        content: attr(data-label); /* Pega o label do atributo data-label */
-        color: var(--text-secondary);
-        font-size: 0.75rem;
-        font-weight: normal;
-        text-transform: uppercase;
-        margin-bottom: 2px;
-        display: block;
-    }
-
-    /* Garante que a div de ações não tenha label antes */
-    .lista-item.acompanhamento-item .lista-acoes::before {
-        display: none;
-    }
-
-    /* Posiciona os botões de ação */
-    .lista-item.acompanhamento-item .lista-acoes {
-        position: absolute;
-        bottom: 10px;
-        right: 15px;
-        align-self: flex-end; /* Garante que fique no canto */
-        justify-self: flex-end;
-    }
-}
 
 /* --- ESTILOS PARA PAGINAÇÃO (Acompanhamento) --- */
 #acompanhamento-pagination {
@@ -2883,3 +2825,79 @@ tbody.is-expanded .group-toggle-icon {
     right: auto;
     left: 0;
 }
+/* --- INÍCIO: SOLUÇÃO TABELA CÁLCULOS (DESKTOP E MOBILE) --- */
+
+/* PASSO 1: Estilo DESKTOP (Telas > 950px) */
+/* Este é o padrão: sem scrollbar, alinhamento perfeito */
+
+/* Garante que o wrapper não tenha scrollbar no desktop */
+.tab-pane#calculos .lista-wrapper {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+}
+
+/* Seletores MUITO específicos para forçar o alinhamento de grid
+   no header E nos itens, SÓ na aba de cálculos */
+.tab-pane#calculos .lista-wrapper > .acompanhamento-header,
+.tab-pane#calculos #acompanhamento-lista > .acompanhamento-item {
+  display: grid;
+  /* Esta é a definição das suas colunas */
+  grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1.5fr 1.5fr 1.5fr 1.5fr 1.5fr 1.5fr auto;
+  min-width: 0; /* Reseta o min-width no desktop */
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+/* Ajusta o padding do header no desktop */
+.tab-pane#calculos .lista-wrapper > .acompanhamento-header {
+   border-bottom: 2px solid var(--border-color); /* Linha grossa p/ header */
+}
+.tab-pane#calculos .lista-wrapper > .acompanhamento-header .header-col {
+    padding: 12px 10px;
+}
+
+/* Ajusta o padding dos itens no desktop */
+ .tab-pane#calculos #acompanhamento-lista > .acompanhamento-item > div {
+   padding: 12px 10px;
+   font-size: 0.9rem;
+   white-space: nowrap; /* Impede quebra de linha */
+}
+
+
+/* PASSO 2: Estilo MOBILE (Telas <= 950px) */
+/* Aqui ativamos a barra de rolagem e compactamos tudo */
+@media (max-width: 950px) {
+
+  /* Adiciona a barra de rolagem e a borda SÓ no mobile */
+  .tab-pane#calculos .lista-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+  }
+  
+  /* Força a largura mínima SÓ no mobile (para ativar a rolagem) */
+  .tab-pane#calculos .lista-wrapper > .acompanhamento-header,
+  .tab-pane#calculos #acompanhamento-lista > .acompanhamento-item {
+      min-width: 950px;
+  }
+
+  /* Compacta as fontes do header SÓ no mobile */
+  .tab-pane#calculos .lista-wrapper > .acompanhamento-header .header-col {
+      font-size: 0.8rem;
+      padding: 10px 8px;
+      white-space: nowrap;
+  }
+
+  /* Compacta as fontes dos itens SÓ no mobile */
+  .tab-pane#calculos #acompanhamento-lista > .acompanhamento-item > div {
+      font-size: 0.85rem;
+      padding: 10px 8px;
+      white-space: nowrap;
+      border-bottom: none;
+  }
+  
+  .tab-pane#calculos #acompanhamento-lista > .acompanhamento-item:last-child {
+       border-bottom: none;
+  }
+}
+/* --- FIM: SOLUÇÃO TABELA CÁLCULOS --- */
