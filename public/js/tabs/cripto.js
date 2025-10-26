@@ -67,7 +67,6 @@ async function fetchPreviousDayPrices(userID, tickers) {
     }
 }
 
-
 /**
  * Calcula e renderiza a valorização do dia para a carteira de Criptos.
  * @returns {Promise<object>} Retorna o objeto com os preços do dia anterior.
@@ -88,7 +87,7 @@ async function renderCriptoDayValorization(tickers, carteira, precosAtuais) {
         let patrimonioTotalHoje = 0;
         let patrimonioTotalOntem = 0;
         let hasPreviousDayData = false;
-        
+
         tickers.forEach(ticker => {
             const ativo = carteira[ticker];
             const precoHoje = precosAtuais[ticker]?.price;
@@ -133,7 +132,6 @@ async function renderCriptoDayValorization(tickers, carteira, precosAtuais) {
         return {};
     }
 }
-
 
 /**
  * Calcula e renderiza o resumo da carteira de Criptomoedas.
@@ -183,7 +181,6 @@ function renderCriptoSummary(carteira, precosAtuais) {
     return patrimonioAtual;
 }
 
-
 /**
  * Renderiza os cards da carteira de Criptomoedas.
  */
@@ -197,7 +194,6 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
     const valorizationPercentDiv = document.getElementById("cripto-valorization-percent");
     if (valorizationReaisDiv) valorizationReaisDiv.textContent = "Calculando...";
     if (valorizationPercentDiv) valorizationPercentDiv.innerHTML = "";
-
 
     const criptoLancamentos = lancamentos.filter(l => l.tipoAtivo === 'Cripto');
 
@@ -244,6 +240,15 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
         const precosDiaAnterior = await renderCriptoDayValorization(tickers, carteira, precosAtuais);
 
+        // DEBUG: Log para verificar os preços
+        console.log("DEBUG - Preços atuais:", precosAtuais);
+        tickers.forEach(ticker => {
+            console.log(`DEBUG ${ticker}:`, {
+                precoAtual: precosAtuais[ticker]?.price,
+                precoAtualFormatado: precosAtuais[ticker]?.price?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                tipo: typeof precosAtuais[ticker]?.price
+            });
+        });
 
         const html = tickers.map(ticker => {
             const ativo = carteira[ticker];
@@ -260,7 +265,6 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
 
             const variacaoDiaReais = (precoAtual - precoOntem) * ativo.quantidade;
             const variacaoDiaPercent = precoOntem > 0 ? ((precoAtual - precoOntem) / precoOntem) * 100 : 0;
-
 
             return `
                 <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Cripto">
