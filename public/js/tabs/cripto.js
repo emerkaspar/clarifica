@@ -1,4 +1,4 @@
-import { fetchCurrentPrices } from '../api/brapi.js';
+import { fetchCoinbasePrices } from '../api/coinbase.js'; // MODIFICADO
 import { db, auth } from '../firebase-config.js';
 import { collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
@@ -235,13 +235,14 @@ export async function renderCriptoCarteira(lancamentos, proventos) {
     }
 
     try {
-        const precosAtuais = await fetchCurrentPrices(tickers);
+        // MODIFICADO: Chamando a nova função da Coinbase
+        const precosAtuais = await fetchCoinbasePrices(tickers);
         renderCriptoSummary(carteira, precosAtuais);
 
         const precosDiaAnterior = await renderCriptoDayValorization(tickers, carteira, precosAtuais);
 
         // DEBUG: Log para verificar os preços
-        console.log("DEBUG - Preços atuais:", precosAtuais);
+        console.log("DEBUG - Preços atuais (Coinbase):", precosAtuais);
         tickers.forEach(ticker => {
             console.log(`DEBUG ${ticker}:`, {
                 precoAtual: precosAtuais[ticker]?.price,
