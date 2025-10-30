@@ -4,6 +4,52 @@ import { collection, query, where, orderBy, limit, getDocs } from "https://www.g
 import { renderAcoesValorAtualChart } from '../charts.js';
 
 /**
+ * Calcula um estilo de borda com base na variação percentual.
+ * - Usa verde para altas > 2% e laranja para baixas < -2%.
+ * - Usa ciano e vermelho para variações menores.
+ * - A opacidade da borda reflete a intensidade da variação.
+ * - Aplica a borda na direita e no rodapé do card.
+ * @param {number} percent - O percentual de variação (ex: -1.25, 2.5).
+ * @returns {string} - A string de estilo para as bordas ou "".
+ */
+function getDynamicBackgroundColor(percent) {
+    // Paleta de cores com ênfase
+    const strongPositiveRGB = [22, 163, 74];   // Verde
+    const regularPositiveRGB = [0, 217, 195];   // Ciano
+    const strongNegativeRGB = [249, 115, 22];  // Laranja
+    const regularNegativeRGB = [239, 68, 68];  // Vermelho
+
+    // Limiar para usar as cores de ênfase
+    const emphasisThreshold = 2.0;
+
+    if (Math.abs(percent) < 0.01) {
+        return ""; // Usa a borda padrão do CSS
+    }
+    
+    let targetRGB;
+    if (percent > 0) {
+        targetRGB = percent >= emphasisThreshold ? strongPositiveRGB : regularPositiveRGB;
+    } else {
+        targetRGB = percent <= -emphasisThreshold ? strongNegativeRGB : regularNegativeRGB;
+    }
+
+    // A intensidade da cor (opacidade) ainda é baseada em quão perto de 3% de variação está.
+    const maxPercentForSaturation = 3.0;
+    const minAlpha = 0.35; 
+    const maxAlpha = 1.0; 
+    
+    const intensity = Math.min(Math.abs(percent) / maxPercentForSaturation, 1.0);
+    const finalAlpha = (intensity * (maxAlpha - minAlpha)) + minAlpha;
+
+    const borderWidth = '3px'; // Largura da borda
+    const colorString = `rgba(${targetRGB[0]}, ${targetRGB[1]}, ${targetRGB[2]}, ${finalAlpha})`;
+
+    // Aplica o estilo na borda direita e inferior
+    return `border-right: ${borderWidth} solid ${colorString}; border-bottom: ${borderWidth} solid ${colorString};`;
+}
+
+
+/**
  * Busca os preços de fechamento do dia anterior para uma lista de tickers,
  * respeitando o limite de 10 itens do Firestore para o operador 'in'.
  * @param {string} userID - O ID do usuário logado.
@@ -348,8 +394,11 @@ export async function renderAcoesCarteira(lancamentos, proventos, precosEInfos) 
 
             historicalPerformance.push({ ticker, changePercent: variacaoPercent });
 
+            // *** MODIFICAÇÃO AQUI ***
+            const dynamicBgStyle = getDynamicBackgroundColor(variacaoDiaPercent);
+
             return `
-                <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações">
+                <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="Ações" style="${dynamicBgStyle}">
                     <div class="asset-card-header" style="width: 100%; justify-content: center;">
                         ${logoHtml}
                         <div class="asset-card-ticker-info">
