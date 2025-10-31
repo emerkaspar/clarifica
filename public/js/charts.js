@@ -874,78 +874,82 @@ function processAndCalculatePerformance(seriesData, startDate, endDate, lancamen
         cashFlowByDate.set(l.data, (cashFlowByDate.get(l.data) || 0) + fluxo);
     });
 
-    // --- INÍCIO DA LÓGICA CORRIGIDA (Tentativa 4 - Acumulação de Variação Absoluta Ajustada) ---
-    const calculateAdjustedPerformance = (series, cashFlowMap, dateLabels) => {
-        if (!series || series.length === 0) return new Array(dateLabels.length).fill(null);
+    // --- NOVA VERSÃO: TWR de verdade, diário ---
+// --- VERSÃO TWR com proteção p/ aporte sem patrimônio ---
+// --- VERSÃO TWR com proteção p/ aporte sem patrimônio ---
+// --- VERSÃO TWR à prova de aporte sem patrimônio do dia ---
+const calculateAdjustedPerformance = (series, cashFlowMap, dateLabels) => {
+    if (!series || series.length === 0) {
+        return new Array(dateLabels.length).fill(null);
+    }
 
-        const seriesMap = new Map(series.map(s => [s.date, s.value]));
-        const performance = [];
-        let firstValidIndex = -1;
-        let initialPatrimony = null;
-        let previousPatrimony = null;
-        let totalAdjustedVariationAccumulated = 0; // Acumulador da variação em Reais
+    // patrimônio por data
+    const seriesMap = new Map(series.map(s => [s.date, s.value]));
 
-        // Encontra o primeiro dia com dados de patrimônio válidos (> 0)
-        for (let i = 0; i < dateLabels.length; i++) {
-            const date = dateLabels[i];
-            const currentValue = seriesMap.get(date);
-            if (currentValue !== undefined && currentValue > 0) {
-                firstValidIndex = i;
-                initialPatrimony = currentValue;
-                previousPatrimony = initialPatrimony;
-                break;
+    const twrValues = [];
+    let twrCum = 1;
+    let prevMV = null; // BMV
+
+    for (let i = 0; i < dateLabels.length; i++) {
+        const date = dateLabels[i];
+        const rawMV = seriesMap.get(date);              // patrimônio vindo do Firestore
+        const cashFlow = cashFlowMap.get(date) || 0;    // aportes/retiradas do dia
+
+        // 1) primeiro dia válido
+        if (prevMV === null) {
+            // se já veio patrimônio nesse dia, usamos
+            if (rawMV !== undefined && rawMV !== null && rawMV > 0) {
+                prevMV = rawMV;
+                twrValues.push(0);
+            } else {
+                // não tem patrimônio ainda -> fica null
+                twrValues.push(null);
             }
-             else if (currentValue !== undefined && currentValue === 0 && firstValidIndex === -1) {
-                 firstValidIndex = i;
-                 initialPatrimony = 0;
-                 previousPatrimony = 0;
-            }
+            continue;
         }
 
-        if (firstValidIndex === -1 || initialPatrimony === null || initialPatrimony < 0) { // Permite initialPatrimony 0
-             console.warn("Não foi possível encontrar um valor de patrimônio inicial válido (>=0) para calcular a performance ajustada.");
-             return new Array(dateLabels.length).fill(null);
-        }
-         // Se a base inicial for 0, toda performance subsequente será 0 até que haja um fluxo positivo.
-         // A lógica abaixo já trata isso, pois initialPatrimony > 0 será falso.
-
-        for (let i = 0; i < firstValidIndex; i++) {
-            performance.push(null);
-        }
-        performance.push(0); // Performance no primeiro dia é 0%
-
-        for (let i = firstValidIndex + 1; i < dateLabels.length; i++) {
-            const date = dateLabels[i];
-            const currentPatrimonyRaw = seriesMap.get(date);
-            const currentPatrimony = currentPatrimonyRaw !== undefined ? currentPatrimonyRaw : previousPatrimony;
-            const netCashFlow = cashFlowMap.get(date) || 0;
-
-            if (previousPatrimony === null || previousPatrimony < 0) {
-                performance.push(performance[performance.length - 1]);
-                if (currentPatrimony !== null && currentPatrimony >= 0) {
-                     previousPatrimony = currentPatrimony;
-                }
-                continue;
-            }
-
-            const currentPatrimonyNumeric = (currentPatrimony === null || currentPatrimony === undefined) ? previousPatrimony : currentPatrimony;
-            const dailyAdjustedVariation = (currentPatrimonyNumeric - previousPatrimony) - netCashFlow;
-
-            totalAdjustedVariationAccumulated += dailyAdjustedVariation;
-
-            // Usa initialPatrimony como base, que foi o primeiro valor > 0 encontrado
-            const currentPerformancePercent = (initialPatrimony > 0)
-                ? (totalAdjustedVariationAccumulated / initialPatrimony) * 100
-                : 0; // Retorna 0% se a base inicial for 0
-
-            performance.push(currentPerformancePercent);
-
-            previousPatrimony = (currentPatrimonyNumeric !== null && currentPatrimonyNumeric >= 0) ? currentPatrimonyNumeric : previousPatrimony;
+        // 2) caso crítico: teve aporte mas o patrimônio do dia NÃO veio
+        //    (isso está acontecendo com você)
+        if ((rawMV === undefined || rawMV === null) && cashFlow > 0) {
+            // considera que o patrimônio do dia é o de ontem + o fluxo,
+            // mas o retorno é 0%, porque não houve variação de preço
+            const todayMV = prevMV + cashFlow;
+            prevMV = todayMV;
+            twrValues.push( +(((twrCum - 1) * 100).toFixed(2)) );
+            continue;
         }
 
-        return performance;
-    };
-    // --- FIM DA LÓGICA CORRIGIDA (Tentativa 4) ---
+        // 3) se não veio patrimônio nem teve fluxo -> repete o anterior e retorno 0
+        if ((rawMV === undefined || rawMV === null) && cashFlow === 0) {
+            const todayMV = prevMV;
+            // retorno 0
+            twrValues.push( +(((twrCum - 1) * 100).toFixed(2)) );
+            prevMV = todayMV;
+            continue;
+        }
+
+        // 4) caso normal TWR
+        const todayMV = rawMV;
+        let dailyReturn = 0;
+
+        if (prevMV > 0) {
+            // fórmula TWR: (EMV - CF - BMV) / BMV
+            dailyReturn = (todayMV - cashFlow - prevMV) / prevMV;
+        }
+
+        twrCum = twrCum * (1 + dailyReturn);
+        twrValues.push( +(((twrCum - 1) * 100).toFixed(2)) );
+
+        // atualiza BMV
+        prevMV = todayMV;
+    }
+
+    return twrValues;
+};
+
+
+
+
 
 
     // Função original para normalizar índices (sem ajuste de fluxo)
