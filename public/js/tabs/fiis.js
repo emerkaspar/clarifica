@@ -42,7 +42,7 @@ function getDynamicBackgroundColor(percent) {
 
     const colorString = `rgba(${targetRGB[0]}, ${targetRGB[1]}, ${targetRGB[2]}, ${finalAlpha})`;
 
-    return `border-left: ${borderWidth} solid ${colorString};`;
+    return `border-right: ${borderWidth} solid ${colorString}; border-bottom: ${borderWidth} solid ${colorString};`;
 }
 
 
