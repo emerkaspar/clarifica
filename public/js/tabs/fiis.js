@@ -6,42 +6,47 @@ import { renderFiisValorAtualChart } from '../charts.js';
 
 
 /**
- * Calcula uma cor de borda esquerda com base na variação percentual.
- * Usa as cores puras (vermelho/ciano) e ajusta a opacidade (alpha)
- * com base na intensidade da variação, preservando o fundo do card.
- *
+ * Calcula um estilo de borda com base na variação percentual.
+ * - Usa verde para altas > 2% e laranja para baixas < -2%.
+ * - Usa ciano e vermelho para variações menores.
+ * - A opacidade da borda reflete a intensidade da variação.
+ * - Aplica a borda na direita e no rodapé do card.
  * @param {number} percent - O percentual de variação (ex: -1.25, 2.5).
- * @returns {string} - A string de estilo 'border-left: 4px solid rgba(r, g, b, a);' ou "".
+ * @returns {string} - A string de estilo para as bordas ou "".
  */
 function getDynamicBackgroundColor(percent) {
-    // Valores RGB puros das cores de status
-    const positiveRGB = [0, 217, 195]; // --positive-change: #00d9c3
-    const negativeRGB = [239, 68, 68]; // --negative-change: #ef4444
+    // Paleta de cores com ênfase
+    const strongPositiveRGB = [22, 163, 74];   // Verde
+    const regularPositiveRGB = [0, 217, 195];   // Ciano
+    const strongNegativeRGB = [249, 115, 22];  // Laranja
+    const regularNegativeRGB = [239, 68, 68];  // Vermelho
 
-    // Se a variação for muito próxima de zero, não aplica estilo.
+    // Limiar para usar as cores de ênfase
+    const emphasisThreshold = 2.0;
+
     if (Math.abs(percent) < 0.01) {
-        return ""; // Usará a borda padrão do CSS
+        return ""; // Usa a borda padrão do CSS
+    }
+    
+    let targetRGB;
+    if (percent > 0) {
+        targetRGB = percent >= emphasisThreshold ? strongPositiveRGB : regularPositiveRGB;
+    } else {
+        targetRGB = percent <= -emphasisThreshold ? strongNegativeRGB : regularNegativeRGB;
     }
 
-    // Define o ponto de saturação máxima. +/- 3% de variação diária terá a cor máxima.
+    // A intensidade da cor (opacidade) ainda é baseada em quão perto de 3% de variação está.
     const maxPercentForSaturation = 3.0;
+    const minAlpha = 0.35; 
+    const maxAlpha = 1.0; 
     
-    // Define a opacidade mínima e máxima da borda.
-    // Mesmo uma variação pequena (ex: 0.1%) terá 30% de opacidade.
-    const minAlpha = 0.3; 
-    const maxAlpha = 1.0; // Variações de 3% ou mais terão 100% de opacidade.
-    
-    // Calcula a intensidade (0.0 a 1.0) com base no percentual
     const intensity = Math.min(Math.abs(percent) / maxPercentForSaturation, 1.0);
-    
-    // Interpola a opacidade final
     const finalAlpha = (intensity * (maxAlpha - minAlpha)) + minAlpha;
 
-    const targetRGB = percent > 0 ? positiveRGB : negativeRGB;
-    const borderWidth = '4px'; // Define a largura da borda indicadora
-
+    const borderWidth = '3px'; // Largura da borda
     const colorString = `rgba(${targetRGB[0]}, ${targetRGB[1]}, ${targetRGB[2]}, ${finalAlpha})`;
 
+    // Aplica o estilo na borda direita e inferior
     return `border-right: ${borderWidth} solid ${colorString}; border-bottom: ${borderWidth} solid ${colorString};`;
 }
 
@@ -393,7 +398,7 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
             }
             
             // *** MODIFICAÇÃO AQUI ***
-            // Chama a nova função que retorna um estilo de 'border-left'
+            // Chama a nova função que retorna um estilo de 'border-right' e 'border-bottom'
             const dynamicBgStyle = getDynamicBackgroundColor(variacaoDiaPercent);
 
             return `
