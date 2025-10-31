@@ -6,6 +6,47 @@ import { renderFiisValorAtualChart } from '../charts.js';
 
 
 /**
+ * Calcula uma cor de borda esquerda com base na variação percentual.
+ * Usa as cores puras (vermelho/ciano) e ajusta a opacidade (alpha)
+ * com base na intensidade da variação, preservando o fundo do card.
+ *
+ * @param {number} percent - O percentual de variação (ex: -1.25, 2.5).
+ * @returns {string} - A string de estilo 'border-left: 4px solid rgba(r, g, b, a);' ou "".
+ */
+function getDynamicBackgroundColor(percent) {
+    // Valores RGB puros das cores de status
+    const positiveRGB = [0, 217, 195]; // --positive-change: #00d9c3
+    const negativeRGB = [239, 68, 68]; // --negative-change: #ef4444
+
+    // Se a variação for muito próxima de zero, não aplica estilo.
+    if (Math.abs(percent) < 0.01) {
+        return ""; // Usará a borda padrão do CSS
+    }
+
+    // Define o ponto de saturação máxima. +/- 3% de variação diária terá a cor máxima.
+    const maxPercentForSaturation = 3.0;
+    
+    // Define a opacidade mínima e máxima da borda.
+    // Mesmo uma variação pequena (ex: 0.1%) terá 30% de opacidade.
+    const minAlpha = 0.3; 
+    const maxAlpha = 1.0; // Variações de 3% ou mais terão 100% de opacidade.
+    
+    // Calcula a intensidade (0.0 a 1.0) com base no percentual
+    const intensity = Math.min(Math.abs(percent) / maxPercentForSaturation, 1.0);
+    
+    // Interpola a opacidade final
+    const finalAlpha = (intensity * (maxAlpha - minAlpha)) + minAlpha;
+
+    const targetRGB = percent > 0 ? positiveRGB : negativeRGB;
+    const borderWidth = '4px'; // Define a largura da borda indicadora
+
+    const colorString = `rgba(${targetRGB[0]}, ${targetRGB[1]}, ${targetRGB[2]}, ${finalAlpha})`;
+
+    return `border-left: ${borderWidth} solid ${colorString};`;
+}
+
+
+/**
  * Busca os preços de fechamento do dia anterior para uma lista de tickers,
  * respeitando o limite de 10 itens do Firestore para o operador 'in'.
  * @param {string} userID - O ID do usuário logado.
@@ -350,9 +391,13 @@ export async function renderFiisCarteira(lancamentos, proventos, classificacoes,
                     if (valoresAtuais.especiePapel.hasOwnProperty(classif['Espécie'])) { valoresAtuais.especiePapel[classif['Espécie']] += valorPosicaoAtual; }
                 }
             }
+            
+            // *** MODIFICAÇÃO AQUI ***
+            // Chama a nova função que retorna um estilo de 'border-left'
+            const dynamicBgStyle = getDynamicBackgroundColor(variacaoDiaPercent);
 
             return `
-                <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="FIIs">
+                <div class="fii-card" data-ticker="${ativo.ativo}" data-tipo-ativo="FIIs" style="${dynamicBgStyle}">
                     <div class="fii-card-ticker">
                         <i class="fas fa-building"></i> ${ativo.ativo}
                     </div>
