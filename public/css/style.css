@@ -2900,4 +2900,218 @@ tbody.is-expanded .group-toggle-icon {
        border-bottom: none;
   }
 }
-/* --- FIM: SOLUÇÃO TABELA CÁLCULOS --- */
+/* --------- PALETA POR TEMA (usa data-theme no <html>) --------- */
+:root[data-theme="dark"] {
+  --surface: #1b1f27;
+  --surface-2: #2a2c30;
+  --text: #e5e7eb;
+  --text-muted: #a0a7b3;
+  --text-strong: #e5e7eb;
+  --heat-ink: #073a36; /* texto em cima do heat */
+  /* Teal base para heatmap (mais visível no escuro) */
+  --heat-10: rgba(45,212,191,0.18);
+  --heat-20: rgba(45,212,191,0.26);
+  --heat-30: rgba(45,212,191,0.34);
+  --heat-40: rgba(45,212,191,0.42);
+  --heat-50: rgba(45,212,191,0.52);
+  --border: #2a2c30;
+  --hover-shadow: rgba(0,0,0,.18);
+}
+
+:root[data-theme="light"] {
+  --surface: #ffffff;
+  --surface-2: #e5e7eb;
+  --text: #1f2937;
+  --text-muted: #4b5563;
+  --text-strong: #111827;
+  --heat-ink: #0b3b37; /* texto em cima do heat */
+  /* Teal mais escuro/transparências diferentes p/ contraste em fundo claro */
+  --heat-10: rgba(134, 133, 134, 0.322);
+  --heat-20: rgba(160, 83, 160, 0.247);
+  --heat-30: rgba(223, 101, 186, 0.308);
+  --heat-40: rgba(233, 88, 149, 0.46);
+  --heat-50: rgba(148, 0, 81, 0.46);
+  --border: #dbd1d7;
+  --hover-shadow: rgba(0,0,0,.08);
+}
+
+/* --------- HEADER DA GRADE --------- */
+.heatgrid-header {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 0.7fr;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+/* --------- GRID DE CARDS --------- */
+.heatgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+/* --------- CARD BASE --------- */
+.heatcard {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+}
+.heatcard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px var(--hover-shadow);
+}
+
+/* --------- TIPOGRAFIA --------- */
+.heatcard-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.heatcard-title .classe {
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.heatcard-values {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.heatcard .valor { font-weight: 600; color: var(--text); }
+.heatcard .pct   { font-weight: 700; color: var(--heat-ink); }
+
+/* --------- HEATMAP (quantis) --------- */
+.heatcard.q0 { background: linear-gradient(90deg, var(--heat-10), rgba(0,0,0,0)); }
+.heatcard.q1 { background: linear-gradient(90deg, var(--heat-20), rgba(0,0,0,0)); }
+.heatcard.q2 { background: linear-gradient(90deg, var(--heat-30), rgba(0,0,0,0)); }
+.heatcard.q3 { background: linear-gradient(90deg, var(--heat-40), rgba(0,0,0,0)); }
+.heatcard.q4 { background: linear-gradient(90deg, var(--heat-50), rgba(0,0,0,0)); }
+
+/* Linhas alternadas (leve) para acessibilidade em ambos os temas */
+.heatgrid .heatcard:nth-child(even) {
+  outline: 0.5px solid var(--border);
+}
+
+/* Garante que todos os cards sejam exibidos */
+.chart-card #divisao-por-ativo-chart,
+#divisao-por-ativo-chart {
+  max-height: none !important;
+  overflow: visible !important;
+  padding-bottom: 10px;
+}
+
+.heatgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  overflow: visible;
+}
+/* Paleta por tema (auto, via data-theme no <html>) */
+:root[data-theme="dark"]{
+  --surface: #0f141b;
+  --text: #f3f4f6;
+  --text-muted:#9aa3b2;
+  --text-strong:#ffffff;
+  --border:#273041;
+  /* cor da barra de calor */
+  --heat-fill: rgba(0, 217, 195, 0.70);
+  --card-shadow: 0 8px 22px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --surface:#ffffff;
+  --text:#1f2937;
+  --text-muted:#4b5563;
+  --text-strong:#0b1220;
+  --border:#99999967;
+  --heat-fill: #d633847a;
+  --card-shadow: 0 6px 14px rgba(0,0,0,.10);
+}
+
+/* Cabeçalho e grid */
+.heatgrid-header{
+  display:grid;
+  grid-template-columns:1.2fr 1fr 1fr 0.7fr;
+  gap:8px; padding:8px 10px; margin-bottom:10px;
+  color:var(--text-muted); border-bottom:1px solid var(--border);
+  font-size:.9rem;
+}
+.heatgrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:12px; overflow:visible;
+}
+
+/* Card base */
+.heatcard{
+  position:relative;
+  display:grid; grid-template-rows:auto auto; gap:6px;
+  padding:10px 12px; border-radius:12px;
+  border:1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.heatcard:hover{ transform: translateY(-1px); }
+
+/* Barra de calor (preenchimento proporcional) */
+.heatcard::after{
+  content:"";
+  position:absolute; inset:0;
+  background: linear-gradient(90deg, var(--heat-fill) 0, var(--heat-fill) var(--pct), transparent var(--pct) 100%);
+  border-radius:inherit;
+  pointer-events:none;
+  opacity:.9;
+}
+
+/* Texto */
+.heatcard-title{
+  display:flex; justify-content:space-between; align-items:center;
+  font-weight:700; color:var(--text-strong);
+}
+.heatcard-title .classe{ font-weight:600; font-size:.85rem; color:var(--text-muted); }
+.heatcard-values{ display:flex; justify-content:space-between; align-items:baseline; }
+.heatcard .valor{ font-weight:700; color:var(--text); }
+.heatcard .pct{ font-weight:800; color:var(--text-strong); }
+
+/* Garante que nada corte os cards */
+#divisao-por-ativo-chart{ max-height:none!important; height:auto!important; overflow:visible!important; }
+
+
+/* Evita que wrappers herdados limitem a altura do heatmap */
+.chart-card:has(#divisao-por-ativo-chart) {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Alguns temas/partes usam containers de gráfico com altura fixa.
+   Solta apenas neste card específico. */
+.chart-card:has(#divisao-por-ativo-chart) .chart-container,
+.chart-card:has(#divisao-por-ativo-chart) .chart-container-large,
+.chart-card:has(#divisao-por-ativo-chart) .evolution-chart-container {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* O próprio bloco do heatmap vira um "bloco expansível" */
+#divisao-por-ativo-chart {
+  display: block;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;           /* garante que o botão do card seguinte não se sobreponha */
+  margin-bottom: 20px;  /* separação visual do próximo card */
+}

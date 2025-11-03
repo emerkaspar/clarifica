@@ -164,90 +164,93 @@ function calcularDadosAcoes(carteiraAtualizada) {
 }
 
 
-// --- FUNÇÕES DE RENDERIZAÇÃO DOS GRÁFICOS E TABELA ---
 
-/**
- * Renderiza o gráfico de barras horizontais mostrando a divisão por cada ativo.
- */
+// /public/js/tabs/analises.js
 function renderDivisaoPorAtivoChart(carteiraAtualizada) {
-    const canvas = document.getElementById('divisao-por-ativo-chart');
-    if (!canvas) return;
+  let container = document.getElementById('divisao-por-ativo-chart');
+  if (!container) return;
 
-    if (divisaoPorAtivoChart) {
-        divisaoPorAtivoChart.destroy();
-    }
+  // Se ainda for <canvas>, substitui por <div>
+  if (container.tagName.toLowerCase() === 'canvas') {
+    const div = document.createElement('div');
+    div.id = 'divisao-por-ativo-chart';
+    container.parentNode.replaceChild(div, container);
+    container = div;
+  }
 
-    const patrimonioTotal = carteiraAtualizada.reduce((acc, ativo) => acc + ativo.valorAtual, 0);
-    const sortedAssets = [...carteiraAtualizada].sort((a, b) => b.valorAtual - a.valorAtual);
+  // Destrava o card pai para não cortar a grid
+  const parentCard = container.closest('.chart-card');
+  if (parentCard) {
+    parentCard.style.overflow = 'visible';
+    parentCard.style.height = 'auto';
+    parentCard.style.maxHeight = 'none';
+  }
 
-    const labels = sortedAssets.map(a => a.ticker);
-    const dataValues = sortedAssets.map(a => a.valorAtual);
-    const percentages = sortedAssets.map(a => (patrimonioTotal > 0 ? (a.valorAtual / patrimonioTotal) * 100 : 0));
+  container.innerHTML = '';
 
-    divisaoPorAtivoChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Valor (R$)',
-                data: dataValues,
-                backgroundColor: 'rgba(0, 217, 195, 0.7)',
-                borderColor: '#00d9c3',
-                borderWidth: 1,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const index = context.dataIndex;
-                            const value = context.parsed.x;
-                            const percent = percentages[index];
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (value !== null) {
-                                label += value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                            }
-                            label += ` (${percent.toFixed(2)}%)`;
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: { color: "#2a2c30" },
-                    ticks: {
-                        color: "#a0a7b3",
-                        callback: function (value) {
-                            if (value >= 1000) {
-                                return "R$ " + (value / 1000).toLocaleString('pt-BR') + "k";
-                            }
-                            return "R$ " + value.toLocaleString('pt-BR');
-                        }
-                    }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: {
-                        color: "#a0a7b3"
-                    }
-                }
-            }
-        }
-    });
+  if (!Array.isArray(carteiraAtualizada) || carteiraAtualizada.length === 0) {
+    container.innerHTML = '<p style="color:#a0a7b3; margin:12px 0;">Sem dados para exibir.</p>';
+    return;
+  }
+
+  // Ordena por valor desc. e calcula % sobre o patrimônio
+  const patrimonioTotal = carteiraAtualizada.reduce((acc, a) => acc + (a.valorAtual || 0), 0);
+  const ativos = [...carteiraAtualizada]
+    .filter(a => (a.valorAtual || 0) > 0)
+    .sort((a, b) => (b.valorAtual || 0) - (a.valorAtual || 0))
+    .map(a => ({
+      ticker: a.ticker,
+      tipoAtivo: a.tipoAtivo,
+      valor: a.valorAtual || 0,
+      pct: patrimonioTotal > 0 ? (a.valorAtual / patrimonioTotal) * 100 : 0
+    }));
+
+  // Cabeçalho
+  const header = document.createElement('div');
+  header.className = 'heatgrid-header';
+  header.innerHTML = `
+    <div>Ativo</div>
+    <div>Classe</div>
+    <div style="text-align:right;">Valor (R$)</div>
+    <div style="text-align:right;">% Carteira</div>
+  `;
+  container.appendChild(header);
+
+  // Grid
+  const grid = document.createElement('div');
+  grid.className = 'heatgrid';
+  container.appendChild(grid);
+
+  // Quantis para contraste
+  const pcts = ativos.map(a => a.pct).sort((x, y) => x - y);
+  const q = (p) => pcts.length ? pcts[Math.min(pcts.length - 1, Math.floor(p * (pcts.length - 1)))] : 0;
+  const q1 = q(0.20), q2 = q(0.40), q3 = q(0.60), q4 = q(0.80);
+  const bucket = (v) => (v <= q1) ? 'q0' : (v <= q2) ? 'q1' : (v <= q3) ? 'q2' : (v <= q4) ? 'q3' : 'q4';
+
+  // Cards
+  ativos.forEach(item => {
+    const card = document.createElement('div');
+    card.className = `heatcard ${bucket(item.pct)}`;
+    // passa o percentual para a barra ::after no CSS
+    card.style.setProperty('--pct', `${item.pct}%`);
+    card.innerHTML = `
+      <div class="heatcard-title">
+        <span class="ticker">${item.ticker}</span>
+        <span class="classe">${item.tipoAtivo}</span>
+      </div>
+      <div class="heatcard-values">
+        <span class="valor">${item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        <span class="pct">${item.pct.toFixed(2)}%</span>
+      </div>
+    `;
+    grid.appendChild(card);
+    
+  });
 }
+
+
+
+
 
 
 // Substitua esta função em /public/js/tabs/analises.js
