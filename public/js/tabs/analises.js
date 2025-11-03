@@ -205,17 +205,6 @@ function renderDivisaoPorAtivoChart(carteiraAtualizada) {
       pct: patrimonioTotal > 0 ? (a.valorAtual / patrimonioTotal) * 100 : 0
     }));
 
-  // Cabeçalho
-  const header = document.createElement('div');
-  header.className = 'heatgrid-header';
-  header.innerHTML = `
-    <div>Ativo</div>
-    <div>Classe</div>
-    <div style="text-align:right;">Valor (R$)</div>
-    <div style="text-align:right;">% Carteira</div>
-  `;
-  container.appendChild(header);
-
   // Grid
   const grid = document.createElement('div');
   grid.className = 'heatgrid';
