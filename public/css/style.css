@@ -3115,3 +3115,49 @@ tbody.is-expanded .group-toggle-icon {
   z-index: 1;           /* garante que o botão do card seguinte não se sobreponha */
   margin-bottom: 20px;  /* separação visual do próximo card */
 }
+
+/* Espaçamento interno entre o título e o conteúdo de cada card na aba Análises */
+.chart-card {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* Afasta o texto do topo da área do gráfico */
+.chart-card h4,
+.chart-card h3,
+.chart-card h2,
+.chart-card .section-title {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/* Corrige o caso da Divisão da Carteira que encosta no topo */
+#divisao-por-ativo-chart {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+/* Mantém harmonia entre cards adjacentes */
+.analises-section .chart-card + .chart-card {
+  margin-top: 20px;
+}
+/* Espaçamento lateral interno de todos os cards da aba Análises */
+.analises-section .chart-card,
+.chart-card {
+  padding-left: 20px;
+  padding-right: 20px;
+  box-sizing: border-box; /* garante que o padding não estoure a largura */
+}
+
+/* Mantém alinhamento harmônico entre colunas de gráficos lado a lado */
+.chart-card .chart-container {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+/* Opcional: dá um pouco mais de margem entre o container geral e as bordas da página */
+.analises-section {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
