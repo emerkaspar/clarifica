@@ -3160,4 +3160,49 @@ tbody.is-expanded .group-toggle-icon {
   padding-left: 10px;
   padding-right: 10px;
 }
+/* Espaço lateral/vertical da aba Análises */
+.analises-wrapper{
+  padding-inline: clamp(12px, 2.5vw, 24px);
+  padding-top: 10px;
+  padding-bottom: 20px;
+  box-sizing: border-box;
+}
+
+/* Cards e títulos */
+.analises-wrapper .chart-card{
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+.analises-wrapper h4,
+.analises-wrapper h5{
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.section-title{ margin: 14px 0 8px; }
+
+/* Altura controlada dos gráficos (evita espaços gigantes) */
+.chart-container.fixed-260{
+  position: relative;
+  height: 260px;           /* ajuste aqui se quiser mais/menos altura */
+}
+.chart-container.fixed-260 > canvas{
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* O bloco do heatmap pode crescer livremente */
+#divisao-por-ativo-chart{
+  margin-top: 8px;
+}
+
+/* Se existir algum reset tipo Bootstrap que “puxa” as colunas,
+   garanta que a grid não estrague o padding do wrapper */
+.analises-wrapper .row{
+  margin-left: 0;
+  margin-right: 0;
+}
 
