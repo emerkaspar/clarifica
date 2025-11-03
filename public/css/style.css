@@ -2975,11 +2975,11 @@ tbody.is-expanded .group-toggle-icon {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 600;
+  font-weight: 100;
   color: var(--text-strong);
 }
 .heatcard-title .classe {
-  font-weight: 500;
+  font-weight: 100;
   font-size: 0.85rem;
   color: var(--text-muted);
 }
@@ -3077,7 +3077,7 @@ tbody.is-expanded .group-toggle-icon {
 /* Texto */
 .heatcard-title{
   display:flex; justify-content:space-between; align-items:center;
-  font-weight:700; color:var(--text-strong);
+  font-weight:100; color:var(--text-strong);
 }
 .heatcard-title .classe{ font-weight:600; font-size:.85rem; color:var(--text-muted); }
 .heatcard-values{ display:flex; justify-content:space-between; align-items:baseline; }
