@@ -430,11 +430,11 @@ async function renderVariacaoDiariaChart(lancamentos) {
 
     if (isConsolidado) {
         const colors = {
-            'Ações': { bg: 'rgba(0, 217, 195, 0.8)', bd: '#00d9c3' },
-            'FIIs': { bg: 'rgba(90, 103, 216, 0.8)', bd: '#5A67D8' },
-            'ETF': { bg: 'rgba(237, 100, 166, 0.8)', bd: '#ED64A6' },
-            'Cripto': { bg: 'rgba(236, 201, 75, 0.8)', bd: '#ECC94B' },
-            'Renda Fixa': { bg: 'rgba(160, 167, 179, 0.8)', bd: '#a0a7b3' }
+            'Ações': { bg: '#00bfa6ce', bd: '#00BFA6' },
+            'FIIs': { bg: '#e231face', bd: '#e231faff' },
+            'ETF': { bg: '#0091ce', bd: '#0091EA' },
+            'Cripto': { bg: '#FF6F00ce', bd: '#FF6F00' },
+            'Renda Fixa': { bg: '#9E9Ece', bd: '#9E9E9E' }
         };
 
         barDatasets = Object.keys(colors).map(tipo => ({
