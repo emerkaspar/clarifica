@@ -299,9 +299,14 @@ async function fetchHistoricoPatrimonio(intervalo) {
     }
 }
 
+// public/js/tabs/rentabilidade.js
+
 /**
  * Processa os dados do histórico de patrimônio para o gráfico de variação.
  * Calcula tanto a variação ajustada por operações quanto a variação bruta.
+ * * --- VERSÃO CORRIGIDA ---
+ * Esta versão agora soma (agrega) as operações (compras/vendas)
+ * também para os intervalos Mensal e Anual, e não apenas para o Diário.
  */
 function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
     const patrimonioPorDia = allHistoricoPatrimonio.reduce((acc, registro) => {
@@ -320,26 +325,55 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
         const tipoMapeado = ['Tesouro Direto', 'CDB', 'LCI', 'LCA', 'Outro'].includes(l.tipoAtivo) ? 'Renda Fixa' : l.tipoAtivo;
         if (!acc[l.data]) acc[l.data] = {};
         if (!acc[l.data][tipoMapeado]) acc[l.data][tipoMapeado] = { compra: 0, venda: 0 };
+        
+        // <-- MUDANÇA: Garante que o tipo exista no acumulador
+        if (!acc[l.data][tipoMapeado]) {
+             acc[l.data][tipoMapeado] = { compra: 0, venda: 0 };
+        }
+        
         acc[l.data][tipoMapeado][l.tipoOperacao] += (l.valorTotal || l.valorAplicado || 0);
         return acc;
     }, {});
 
     let dadosAgregados = {};
+    let operacoesAgregadas = {}; // <-- MUDANÇA: Objeto para agregar operações
     const sortedDates = Object.keys(patrimonioPorDia).sort();
+    const assetTypes = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa']; // <-- MUDANÇA: Definido aqui
 
     if (intervalo === 'Diário') {
         dadosAgregados = patrimonioPorDia;
+        operacoesAgregadas = operacoesPorDia; // <-- MUDANÇA: Usa as operações diárias
     } else {
         const getKey = (date) => intervalo === 'Mensal' ? date.substring(0, 7) : date.substring(0, 4);
+        
         sortedDates.forEach(date => {
-            const key = getKey(date);
-            dadosAgregados[key] = patrimonioPorDia[date];
+            const key = getKey(date); // '2025-11' ou '2025'
+            
+            // 1. Agrega patrimônio (pega o *último* dia do período)
+            dadosAgregados[key] = patrimonioPorDia[date]; 
+            
+            // 2. Agrega operações (SOMA todos os dias *dentro* do período)
+            if (!operacoesAgregadas[key]) { // <-- MUDANÇA: Inicializa o agregado do período
+                operacoesAgregadas[key] = {};
+                assetTypes.forEach(tipo => {
+                    operacoesAgregadas[key][tipo] = { compra: 0, venda: 0 };
+                });
+            }
+            
+            const opsDoDia = operacoesPorDia[date];
+            if (opsDoDia) {
+                for (const tipo in opsDoDia) {
+                    if (operacoesAgregadas[key][tipo]) {
+                        operacoesAgregadas[key][tipo].compra += opsDoDia[tipo].compra || 0;
+                        operacoesAgregadas[key][tipo].venda += opsDoDia[tipo].venda || 0;
+                    }
+                }
+            }
         });
     }
 
     const sortedKeys = Object.keys(dadosAgregados).sort();
     const labels = [];
-    const assetTypes = ['Ações', 'FIIs', 'ETF', 'Cripto', 'Renda Fixa'];
     const variacoes = {
         'Ações': [], 'FIIs': [], 'ETF': [], 'Cripto': [], 'Renda Fixa': [],
         totalReaisAjustado: [], totalPercentAjustado: [],
@@ -352,6 +386,10 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
 
         const dadosAtuais = dadosAgregados[keyAtual];
         const dadosAnteriores = dadosAgregados[keyAnterior];
+        
+        // Fallback: se dadosAnteriores for undefined (ex: pulou um mês), pula este cálculo
+        if (!dadosAnteriores) continue; 
+        
         const valorTotalAnterior = dadosAnteriores.total;
 
         if (valorTotalAnterior > 0) {
@@ -367,16 +405,18 @@ function processarVariacaoDiaria(lancamentos, tipoAtivoFiltro, intervalo) {
             labels.push(label);
 
             let variacaoTotalAjustadaDia = 0;
-            const operacoesDoPeriodo = operacoesPorDia[keyAtual] || {};
+            // <-- MUDANÇA: Usa 'operacoesAgregadas' ao invés de 'operacoesPorDia'
+            const operacoesDoPeriodo = operacoesAgregadas[keyAtual] || {}; 
 
             assetTypes.forEach(tipo => {
                 const valorAtual = dadosAtuais[tipo] || 0;
                 const valorAnterior = dadosAnteriores[tipo] || 0;
 
                 const opsDoTipo = operacoesDoPeriodo[tipo] || { compra: 0, venda: 0 };
-                 // Aportes e Vendas só são considerados para ajuste no cálculo diário
-                const aportes = intervalo === 'Diário' ? opsDoTipo.compra : 0;
-                const vendas = intervalo === 'Diário' ? opsDoTipo.venda : 0;
+                 
+                // <-- MUDANÇA: Remove a condição "intervalo === 'Diário'"
+                const aportes = opsDoTipo.compra;
+                const vendas = opsDoTipo.venda;
 
                 const variacaoAjustada = (valorAtual - valorAnterior) - aportes + vendas;
 
