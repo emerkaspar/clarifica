@@ -417,7 +417,7 @@ async function renderVariacaoDiariaChart(lancamentos) {
     const titleEl = canvas.closest('.performance-box')?.querySelector('h3');
     if (titleEl) {
         const periodos = { 'Diário': 'últimos 30 dias', 'Mensal': 'últimos 12 meses', 'Anual': 'últimos 5 anos' };
-        titleEl.textContent = `Variação ${filtroIntervalo} do Patrimônio (${periodos[filtroIntervalo]})`;
+        titleEl.textContent = `Variação ${filtroIntervalo} da Rentabilidade (${periodos[filtroIntervalo]})`;
     }
 
     if (dailyVariationChart) {
